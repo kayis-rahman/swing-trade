@@ -44,12 +44,15 @@ class LlmClientProviderRoutingTest {
     @Mock
     private OpenAiChatModel layaModel;
 
+    @Mock
+    private OpenAiChatModel mlxModel;
+
     private LlmClientProvider provider;
 
     @BeforeEach
     void setUp() {
         provider = new LlmClientProvider(selector, mock(LlamaCppClient.class), localModel,
-                piSshModel, openAiModel, ollamaModel, layaModel);
+                piSshModel, openAiModel, ollamaModel, layaModel, mlxModel);
     }
 
     @Nested

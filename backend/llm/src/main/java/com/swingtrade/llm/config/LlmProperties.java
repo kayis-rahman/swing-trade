@@ -67,6 +67,7 @@ public class LlmProperties {
         private final Provider openai = new Provider();
         private final Provider ollama = new Provider();
         private final Provider laya = new Provider();
+        private final Provider mlx = new Provider();
 
         public Provider getLocal() {
             return local;
@@ -86,6 +87,10 @@ public class LlmProperties {
 
         public Provider getLaya() {
             return laya;
+        }
+
+        public Provider getMlx() {
+            return mlx;
         }
     }
 

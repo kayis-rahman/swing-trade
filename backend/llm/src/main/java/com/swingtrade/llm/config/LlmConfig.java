@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Configuration class for LLM module.
- * Provides five OpenAiChatModel beans (local, pi_ssh, openai, ollama, laya),
+ * Provides six OpenAiChatModel beans (local, pi_ssh, openai, ollama, laya, mlx),
  * a default ChatClient/SpringAiLlmClient, and a news executor.
  * Reads base URLs from AppSettingsStore (DB) so the settings UI controls endpoints.
  *
@@ -177,6 +177,19 @@ public class LlmConfig {
         return createChatModel(appSettingsStore, "ollama.base_url", "ollama.model",
                 properties.getProviders().getOllama(), ApiKeySetting.OLLAMA, apiKey,
                 LOCAL_LLAMA_TIMEOUT, LOCAL_LLAMA_MAX_RETRIES);
+    }
+
+    @Bean
+    public OpenAiChatModel mlxChatModel(
+            AppSettingsStore appSettingsStore,
+            LlmProperties properties,
+            @Value("${spring.ai.openai.api-key:none}") String apiKey) {
+        // MLX is a local Apple Silicon backend running mlx_lm.server: its endpoint
+        // and model are discoverable and editable from the dashboard
+        // (mlx.server.url / mlx.model) with the same tight OpenAI defaults as the
+        // OpenAI backend.
+        return createChatModel(appSettingsStore, "mlx.server.url", "mlx.model",
+                properties.getProviders().getMlx(), ApiKeySetting.OPENAI, apiKey);
     }
 
     private OpenAiChatModel createChatModel(AppSettingsStore settings, String urlKey,

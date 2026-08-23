@@ -130,6 +130,49 @@ export async function getPiServerStatus(): Promise<{
   )
 }
 
+export async function startMlxServer(): Promise<{
+  success: boolean
+  running: boolean
+  message: string
+}> {
+  return apiRequest<{ success: boolean; running: boolean; message: string }>('/settings/mlx/start', {
+    method: 'POST',
+    responseContract: 'envelope',
+  })
+}
+
+export async function stopMlxServer(): Promise<{
+  success: boolean
+  running: boolean
+  message: string
+}> {
+  return apiRequest<{ success: boolean; running: boolean; message: string }>('/settings/mlx/stop', {
+    method: 'POST',
+    responseContract: 'envelope',
+  })
+}
+
+export async function getMlxServerStatus(): Promise<{
+  success: boolean
+  running: boolean
+  message: string
+}> {
+  return apiRequest<{ success: boolean; running: boolean; message: string }>('/settings/mlx/status', {
+    responseContract: 'envelope',
+  })
+}
+
+export async function testMlxConnection(): Promise<{
+  success: boolean
+  message: string
+}> {
+  return apiRequest<{ success: boolean; message: string }>('/settings/test/mlx', {
+    method: 'POST',
+    timeoutMs: 130_000,
+    responseContract: 'envelope',
+  })
+}
+
 export async function getTradingSettings(): Promise<Record<string, string>> {
   return apiRequest<Record<string, string>>('/settings/trading', { responseContract: 'envelope' })
 }

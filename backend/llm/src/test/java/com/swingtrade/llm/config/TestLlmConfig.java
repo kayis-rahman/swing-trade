@@ -133,9 +133,11 @@ public class TestLlmConfig {
             OpenAiChatModel piSshChatModel,
             OpenAiChatModel openAiChatModel,
             OpenAiChatModel ollamaChatModel,
-            OpenAiChatModel layaChatModel) {
+            OpenAiChatModel layaChatModel,
+            OpenAiChatModel mlxChatModel) {
         return new LlmClientProvider(selector, llamaCppClient,
-                localChatModel, piSshChatModel, openAiChatModel, ollamaChatModel, layaChatModel);
+                localChatModel, piSshChatModel, openAiChatModel, ollamaChatModel, layaChatModel,
+                mlxChatModel);
     }
 
     // ===== H2 Database Configuration for Testing =====

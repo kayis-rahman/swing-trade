@@ -25,7 +25,7 @@ interface ScanningConfig {
   maxConcurrent: number
 }
 
-type LlmBackend = 'local' | 'pi_ssh' | 'openai' | 'ollama' | 'laya' | 'pi_agent'
+type LlmBackend = 'local' | 'pi_ssh' | 'openai' | 'ollama' | 'laya' | 'pi_agent' | 'mlx'
 
 interface LlmSettings {
   llmBackend: LlmBackend
@@ -41,6 +41,7 @@ interface LlmSettings {
   piAgentProvider: string
   piAgentModel: string
   llamacppModel: string
+  mlxModel: string
   pdfBaseUrl: string
   pdfModel: string
 }
@@ -77,14 +78,10 @@ const defaults: SettingsState = {
     openaiBaseUrl: '',
     openaiModel: '',
     openaiApiKey: '',
-    ollamaBaseUrl: '',
-    ollamaModel: '',
-    ollamaApiKey: '',
-    layaBaseUrl: '',
-    layaModel: '',
     piAgentProvider: 'openai-codex',
     piAgentModel: 'gpt-5.6-luna',
     llamacppModel: '',
+    mlxModel: 'Qwen/Qwen2.5-3B-Instruct',
     pdfBaseUrl: '',
     pdfModel: '',
   },
@@ -101,6 +98,7 @@ const supportedLlmBackends = new Set<LlmBackend>([
   'ollama',
   'laya',
   'pi_agent',
+  'mlx',
 ])
 
 function createDefaultState(): SettingsState {
@@ -197,6 +195,7 @@ async function loadAll(): Promise<LoadAllResult> {
         piAgentProvider: llmData['pi-agent.provider'] ?? state.llmSettings.piAgentProvider,
         piAgentModel: llmData['pi-agent.model'] ?? state.llmSettings.piAgentModel,
         llamacppModel: llmData['llamacpp.model'] ?? state.llmSettings.llamacppModel,
+        mlxModel: llmData['mlx.model'] ?? state.llmSettings.mlxModel,
         pdfBaseUrl: llmData['llm.pdf.base_url'] ?? state.llmSettings.pdfBaseUrl,
         pdfModel: llmData['llm.pdf.model'] ?? state.llmSettings.pdfModel,
       })
@@ -274,6 +273,7 @@ function createLlmPayload(): Record<string, string> {
     'pi-agent.provider': state.llmSettings.piAgentProvider,
     'pi-agent.model': state.llmSettings.piAgentModel,
     'llamacpp.model': state.llmSettings.llamacppModel,
+    'mlx.model': state.llmSettings.mlxModel,
     'llm.pdf.base_url': state.llmSettings.pdfBaseUrl,
     'llm.pdf.model': state.llmSettings.pdfModel,
   }

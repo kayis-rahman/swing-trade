@@ -12,13 +12,16 @@ public class LlmServerManagerProvider {
     private final LlmBackendSelector selector;
     private final LlamaCppServerManager localServerManager;
     private final PiLlamaServerManager piServerManager;
+    private final MlxServerManager mlxServerManager;
 
     public LlmServerManagerProvider(LlmBackendSelector selector,
                                     LlamaCppServerManager localServerManager,
-                                    PiLlamaServerManager piServerManager) {
+                                    PiLlamaServerManager piServerManager,
+                                    MlxServerManager mlxServerManager) {
         this.selector = selector;
         this.localServerManager = localServerManager;
         this.piServerManager = piServerManager;
+        this.mlxServerManager = mlxServerManager;
     }
 
     /**
@@ -30,6 +33,7 @@ public class LlmServerManagerProvider {
         return switch (backend) {
             case LOCAL -> localServerManager;
             case PI_SSH -> piServerManager;
+            case MLX -> mlxServerManager;
             case OPENAI, OLLAMA, LAYA, PI_AGENT -> null;
         };
     }

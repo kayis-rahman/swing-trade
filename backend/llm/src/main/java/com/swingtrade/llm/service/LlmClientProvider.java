@@ -28,6 +28,7 @@ public class LlmClientProvider {
     private final OpenAiChatModel openAiModel;
     private final OpenAiChatModel ollamaModel;
     private final OpenAiChatModel layaModel;
+    private final OpenAiChatModel mlxModel;
     private final PiAgentLlmClient piAgentClient;
     private final String ollamaReasoningEffort;
 
@@ -37,9 +38,10 @@ public class LlmClientProvider {
                              OpenAiChatModel piSshModel,
                              OpenAiChatModel openAiModel,
                              OpenAiChatModel ollamaModel,
-                             OpenAiChatModel layaModel) {
+                             OpenAiChatModel layaModel,
+                             OpenAiChatModel mlxModel) {
         this(selector, llamaCppClient, localModel, piSshModel, openAiModel, ollamaModel,
-                layaModel, new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
+                layaModel, mlxModel, new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
     }
 
     /**
@@ -56,6 +58,7 @@ public class LlmClientProvider {
                              @Qualifier("openAiChatModel") OpenAiChatModel openAiModel,
                              @Qualifier("ollamaChatModel") OpenAiChatModel ollamaModel,
                              @Qualifier("layaChatModel") OpenAiChatModel layaModel,
+                             @Qualifier("mlxChatModel") OpenAiChatModel mlxModel,
                              PiAgentLlmClient piAgentClient,
                              @org.springframework.beans.factory.annotation.Value("${llm.providers.ollama.reasoning-effort:none}") String ollamaReasoningEffort) {
         this.ollamaReasoningEffort = ollamaReasoningEffort;
@@ -66,6 +69,7 @@ public class LlmClientProvider {
         this.openAiModel = openAiModel;
         this.ollamaModel = ollamaModel;
         this.layaModel = layaModel;
+        this.mlxModel = mlxModel;
         this.piAgentClient = piAgentClient;
     }
 
@@ -88,6 +92,7 @@ public class LlmClientProvider {
             case OPENAI -> openAiModel;
             case OLLAMA -> ollamaModel;
             case LAYA -> layaModel;
+            case MLX -> mlxModel;
             case PI_AGENT -> throw new IllegalStateException("Pi agent should be selected before model routing");
         };
         if (model.getOptions() != null) {

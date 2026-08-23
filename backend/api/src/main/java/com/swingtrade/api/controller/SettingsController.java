@@ -9,6 +9,7 @@ import com.swingtrade.llm.client.PiAgentLlmClient;
 import com.swingtrade.llm.config.LlmProperties;
 import com.swingtrade.llm.service.LlamaCppServerManager;
 import com.swingtrade.llm.service.LlmBackendSelector;
+import com.swingtrade.llm.service.MlxServerManager;
 import com.swingtrade.llm.service.LlmClientProvider;
 import com.swingtrade.llm.service.LlmServerManager;
 import com.swingtrade.llm.service.PiLlamaServerManager;
@@ -68,6 +69,7 @@ public class SettingsController {
     private final PiAgentLlmClient piAgentClient;
     private final LlamaCppServerManager localServerManager;
     private final PiLlamaServerManager piServerManager;
+    private final MlxServerManager mlxServerManager;
 
     @Autowired
     public SettingsController(MarketDataClientProvider marketDataClientProvider,
@@ -78,7 +80,8 @@ public class SettingsController {
                               LlmClientProvider llmClientProvider,
                               @Nullable PiAgentLlmClient piAgentClient,
                               LlamaCppServerManager localServerManager,
-                              PiLlamaServerManager piServerManager) {
+                              PiLlamaServerManager piServerManager,
+                              MlxServerManager mlxServerManager) {
         this.marketDataClientProvider = marketDataClientProvider;
         this.appSettingsService = appSettingsService;
         this.llmProperties = llmProperties;
@@ -88,6 +91,7 @@ public class SettingsController {
         this.piAgentClient = piAgentClient;
         this.localServerManager = localServerManager;
         this.piServerManager = piServerManager;
+        this.mlxServerManager = mlxServerManager;
     }
 
     @PostConstruct
@@ -137,6 +141,10 @@ public class SettingsController {
             "laya.base_url", llmProperties.getProviders().getLaya().getBaseUrl().toString()));
         settings.put("laya.model", appSettingsService.get(
             "laya.model", llmProperties.getProviders().getLaya().getModel()));
+        settings.put("mlx.server.url", appSettingsService.get(
+            "mlx.server.url", llmProperties.getProviders().getMlx().getBaseUrl().toString()));
+        settings.put("mlx.model", appSettingsService.get(
+            "mlx.model", llmProperties.getProviders().getMlx().getModel()));
         settings.put("pi-agent.provider", appSettingsService.get(
             "pi-agent.provider", "openai-codex"));
         settings.put("pi-agent.model", appSettingsService.get(
@@ -158,6 +166,8 @@ public class SettingsController {
         String oldBackend = appSettingsService.get("llm.backend", llmProperties.getBackend());
         String oldLlamaCppModel = appSettingsService.get(
             "llamacpp.model", llmProperties.getLlamaCpp().getModel());
+        String oldMlxModel = appSettingsService.get(
+            "mlx.model", llmProperties.getProviders().getMlx().getModel());
         body.forEach((key, value) -> appSettingsService.set(key, value));
         configurePiAgentFromSettings();
 
@@ -166,20 +176,23 @@ public class SettingsController {
         boolean backendChanged = !oldBackend.equals(newBackend);
         boolean modelChanged = body.containsKey("llamacpp.model")
                 && !body.get("llamacpp.model").equals(oldLlamaCppModel);
+        boolean mlxModelChanged = body.containsKey("mlx.model")
+                && !body.get("mlx.model").equals(oldMlxModel);
 
-        if (backendChanged || modelChanged) {
+        if (backendChanged || modelChanged || mlxModelChanged) {
             try {
                 var backend = selector.resolve();
                 LlmServerManager manager = switch (backend) {
                     case LOCAL -> localServerManager;
                     case PI_SSH -> piServerManager;
                     case OPENAI, OLLAMA, LAYA, PI_AGENT -> null; // no server to manage
+                    case MLX -> mlxServerManager;
                 };
                 if (manager != null && manager.isRunning()) {
                     manager.restart();
                 }
             } catch (Exception e) {
-                logger.warn("llama-server restart failed: {}", e.getMessage());
+                logger.warn("LLM server restart failed: {}", e.getMessage());
             }
         }
         return ResponseEntity.ok(ApiResponse.ok(safeSettingsResponse(body)));
@@ -523,6 +536,100 @@ public class SettingsController {
     }
 
     // -----------------------------------------------------------------------
+    // MLX Server Lifecycle
+    // -----------------------------------------------------------------------
+
+    @PostMapping("/settings/mlx/start")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> startMlxServer() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            logger.info("Starting MLX server...");
+            mlxServerManager.ensureRunning();
+            boolean running = mlxServerManager.isRunning();
+            result.put("success", running);
+            result.put("running", running);
+            result.put("message", running
+                ? "MLX server started and healthy"
+                : "MLX server failed to start");
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            logger.warn("MLX start failed: {}", e.getMessage());
+            result.put("success", false);
+            result.put("running", false);
+            result.put("message", "Failed to start: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        }
+    }
+
+    @PostMapping("/settings/mlx/stop")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> stopMlxServer() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            logger.info("Stopping MLX server...");
+            mlxServerManager.stop();
+            result.put("success", true);
+            result.put("running", false);
+            result.put("message", "MLX server stopped");
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            logger.warn("MLX stop failed: {}", e.getMessage());
+            result.put("success", false);
+            result.put("running", true);
+            result.put("message", "Failed to stop: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        }
+    }
+
+    @GetMapping("/settings/mlx/status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMlxServerStatus() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        boolean running = mlxServerManager.isRunning();
+        result.put("running", running);
+        result.put("success", true);
+        result.put("message", running
+            ? "MLX server is running"
+            : "MLX server is not running");
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    @PostMapping("/settings/test/mlx")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> testMlxConnection() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            logger.info("Testing MLX connection and lazy start...");
+            mlxServerManager.ensureRunning();
+            boolean serverRunning = mlxServerManager.isRunning();
+            if (!serverRunning) {
+                result.put("success", false);
+                result.put("message", "MLX server failed to start");
+                return ResponseEntity.ok(ApiResponse.ok(result));
+            }
+
+            // Test actual LLM inference with a temporary client — does NOT affect the active backend.
+            LlmProperties.Provider mlxDefaults = llmProperties.getProviders().getMlx();
+            URI baseUrl = URI.create(appSettingsService.get(
+                "mlx.server.url", mlxDefaults.getBaseUrl().toString()));
+            String model = appSettingsService.get("mlx.model", mlxDefaults.getModel());
+            String apiKey = appSettingsService.get("openai.api_key", "");
+            boolean inferenceOk = testInference(baseUrl, model, apiKey, OLLAMA_TEST_TIMEOUT);
+            result.put("success", inferenceOk);
+            result.put("message", inferenceOk
+                ? "MLX connection successful, server started and responded to inference"
+                : "MLX connected and server started, but inference failed");
+
+            if (!inferenceOk) {
+                mlxServerManager.stop();
+            }
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        } catch (Exception e) {
+            logger.warn("MLX test failed: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "Connection failed: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.ok(result));
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // Trading Configuration
     // -----------------------------------------------------------------------
 
@@ -600,8 +707,8 @@ public class SettingsController {
         if (body.containsKey("llm") && body.get("llm") instanceof Map<?, ?>) {
             ((Map<?, ?>) body.get("llm")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
         }
-        if (body.containsKey("gpuhub") && body.get("gpuhub") instanceof Map<?, ?>) {
-            ((Map<?, ?>) body.get("gpuhub")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
+        if (body.containsKey("openai") && body.get("openai") instanceof Map<?, ?>) {
+            ((Map<?, ?>) body.get("openai")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
         }
         if (body.containsKey("discord") && body.get("discord") instanceof Map<?, ?>) {
             ((Map<?, ?>) body.get("discord")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));

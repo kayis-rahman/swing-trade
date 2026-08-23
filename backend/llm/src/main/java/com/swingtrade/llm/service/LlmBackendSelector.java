@@ -17,7 +17,8 @@ public class LlmBackendSelector {
         OPENAI("openai"),
         OLLAMA("ollama"),
         LAYA("laya"),
-        PI_AGENT("pi_agent");
+        PI_AGENT("pi_agent"),
+        MLX("mlx");
 
         private final String key;
 
@@ -49,10 +50,6 @@ public class LlmBackendSelector {
             if (backend.key.equals(key)) {
                 return backend;
             }
-        }
-        // gpuhub is an alias for openai — uses openai.base_url
-        if ("gpuhub".equals(key)) {
-            return Backend.OPENAI;
         }
         return Backend.LOCAL;
     }

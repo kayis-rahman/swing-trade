@@ -31,7 +31,9 @@ _SENTIMENT_SCHEMA = {
 class LayaBackend:
     def __init__(self) -> None:
         logger.info("loading %s", MODEL_ID)
-        self._agent = laya.load(MODEL_ID)
+        # CPU_ONLY avoids a reproducible MPSGraph abort on this Core ML export
+        # (the model still runs natively on Apple Silicon; see README.md).
+        self._agent = laya.load(MODEL_ID, compute_units="cpu")
         logger.info("model loaded")
 
     def is_loaded(self) -> bool:

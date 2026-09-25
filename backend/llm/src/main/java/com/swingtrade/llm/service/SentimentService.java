@@ -10,10 +10,15 @@ import com.swingtrade.domain.store.StockStore;
 import com.swingtrade.domain.SentimentResult;
 import com.swingtrade.domain.Stock;
 import com.swingtrade.data.entity.LlmAnalysisAuditEntity;
+import com.swingtrade.data.entity.SentimentClassificationLogEntity;
 import com.swingtrade.data.repository.LlmAnalysisAuditRepository;
+import com.swingtrade.data.repository.SentimentClassificationLogRepository;
 import com.swingtrade.llm.SentimentOutput;
 import com.swingtrade.llm.SentimentType;
+import com.swingtrade.llm.client.LayaClient;
+import com.swingtrade.llm.client.LayaResult;
 import com.swingtrade.llm.client.LlmClient;
+import com.swingtrade.llm.config.LayaProperties;
 import com.swingtrade.llm.config.SentimentPromptLoader;
 import com.swingtrade.llm.config.LlmProperties;
 import com.swingtrade.llm.domain.EarningsData;
@@ -64,6 +69,8 @@ public class SentimentService {
     private static final long ANALYSIS_TIMEOUT_SECONDS = 2880;
     /** Result source when the LLM failed and keyword analysis substituted for it. */
     static final String KEYWORD_FALLBACK_SOURCE = "KEYWORD_FALLBACK";
+    /** Result source when Laya's high-confidence classification substituted for Qwen (live mode only). */
+    static final String LAYA_SOURCE = "LAYA";
     private static final int MAX_ARTICLES_FOR_LLM = 10;
     private static final int PI_MAX_ARTICLES_FOR_LLM = 6;
     private static final int PI_MAX_ARTICLE_CHARS = 450;
@@ -115,6 +122,9 @@ public class SentimentService {
     private final LlmAnalysisAuditRepository auditRepository;
     private final LlmProperties llmProperties;
     private final PdfExtractionService pdfExtractionService;
+    private final LayaClient layaClient;
+    private final LayaProperties layaProperties;
+    private final SentimentClassificationLogRepository classificationLogRepository;
 
     private final double defaultConfidence;
 
@@ -136,6 +146,9 @@ public class SentimentService {
             LlmProperties llmProperties,
             LlmAnalysisAuditRepository auditRepository,
             PdfExtractionService pdfExtractionService,
+            LayaClient layaClient,
+            LayaProperties layaProperties,
+            SentimentClassificationLogRepository classificationLogRepository,
             @Value("${llm.sentiment.default-confidence:0.75}") double defaultConfidence) {
 
         this.clientProvider = clientProvider;
@@ -151,6 +164,9 @@ public class SentimentService {
         this.auditRepository = auditRepository;
         this.llmProperties = llmProperties;
         this.pdfExtractionService = pdfExtractionService;
+        this.layaClient = layaClient;
+        this.layaProperties = layaProperties;
+        this.classificationLogRepository = classificationLogRepository;
         this.defaultConfidence = defaultConfidence;
 
         // Initialize thread pool with bounded capacity
@@ -328,7 +344,8 @@ public class SentimentService {
             double defaultConfidence) {
         this(clientProvider, serverManagerProvider, promptLoader, sentimentAnalyzer,
                 newsIngestionService, sentimentStore, stockStore, appSettingsStore,
-                llmMetrics, sentimentMetrics, null, null, pdfExtractionService, defaultConfidence);
+                llmMetrics, sentimentMetrics, null, null, pdfExtractionService,
+                null, null, null, defaultConfidence);
     }
 
     /** Compatibility constructor for lightweight unit tests. */
@@ -340,7 +357,8 @@ public class SentimentService {
             SentimentMetrics sentimentMetrics, double defaultConfidence) {
         this(clientProvider, serverManagerProvider, promptLoader, sentimentAnalyzer,
                 newsIngestionService, sentimentStore, stockStore, appSettingsStore,
-                llmMetrics, sentimentMetrics, null, null, null, defaultConfidence);
+                llmMetrics, sentimentMetrics, null, null, null,
+                null, null, null, defaultConfidence);
     }
 
     private Duration stageTimeout() {
@@ -369,6 +387,18 @@ public class SentimentService {
 
         // Combine all news content into a single prompt for comprehensive analysis
         String combinedContent = String.join("\n\n---\n\n", newsContent);
+
+        // Laya local pre-filter: a true no-op when disabled (laya.enabled=false is the
+        // shipped default), so nothing below this block runs or logs in that case. Laya
+        // sees exactly combinedContent — the same text Qwen sees below — so the two are
+        // directly comparable in the agreement-rate report.
+        boolean layaEnabled = layaProperties != null && layaProperties.isEnabled() && layaClient != null;
+        if (layaEnabled) {
+            SentimentOutput layaOnly = tryLaya(stockSymbol, analysisDate, combinedContent);
+            if (layaOnly != null) {
+                return layaOnly;
+            }
+        }
 
         // Create prompt using loaded templates
         String formattedUser = promptLoader.getUserPrompt()
@@ -422,6 +452,10 @@ public class SentimentService {
             persistAudit(requestId, stockSymbol, analysisDate, provider, modelVersion,
                     promptHash, messages, llmResponse, parsed, "SUCCESS", null, maxResponseTokens,
                     false, startedAt, latencyMs);
+            if (layaEnabled) {
+                logClassification(stockSymbol, analysisDate, SentimentClassificationLogEntity.ModelUsed.QWEN,
+                        parsed.getSentiment(), parsed.getConfidence(), latencyMs, layaProperties.isShadowMode());
+            }
             return parsed;
         } catch (Exception e) {
             String errorDetail = LlmErrorUtils.describeError(e);
@@ -442,6 +476,87 @@ public class SentimentService {
             throw e;
         }
 
+    }
+
+    /**
+     * Runs the Laya local pre-filter ahead of the Qwen/LLM call. Only called
+     * when {@code laya.enabled=true}; the caller ({@link #performSentimentAnalysis})
+     * guards this so a disabled Laya adds no overhead or logging.
+     *
+     * <p>In shadow mode ({@code laya.shadow-mode=true}, the shipped default once
+     * enabled), this always returns {@code null} so the caller falls through to
+     * the existing Qwen call unchanged — Laya's result is only logged, never
+     * used, and a Laya failure here has no effect on the Qwen path.
+     *
+     * <p>In live mode ({@code laya.shadow-mode=false}), a high-confidence Laya
+     * response (confidence &gt;= {@code laya.confidence-threshold}) is returned
+     * directly, skipping Qwen entirely. A low-confidence or unreachable Laya
+     * response returns {@code null}, falling through to Qwen as in shadow mode.
+     *
+     * @return a Laya-sourced {@link SentimentOutput} to use in place of Qwen, or
+     *         {@code null} to fall through to the existing Qwen call
+     */
+    private SentimentOutput tryLaya(String stockSymbol, LocalDate analysisDate, String combinedContent) {
+        long layaStart = System.currentTimeMillis();
+        Optional<LayaResult> layaOpt;
+        try {
+            layaOpt = layaClient.classify(combinedContent);
+        } catch (Exception e) {
+            // LayaClient contracts to never throw, but this stage must never fail
+            // the sentiment pipeline over Laya regardless.
+            logger.warn("Unexpected exception calling Laya for {}: {}", stockSymbol, e.getMessage());
+            layaOpt = Optional.empty();
+        }
+        long layaLatencyMs = System.currentTimeMillis() - layaStart;
+        LayaResult layaResult = layaOpt.orElse(null);
+
+        if (layaProperties.isShadowMode()) {
+            if (layaResult != null) {
+                logClassification(stockSymbol, analysisDate, SentimentClassificationLogEntity.ModelUsed.LAYA,
+                        layaResult.sentiment(), layaResult.confidence(), layaLatencyMs, true);
+                logger.info("Laya shadow-mode result for {}: {} (confidence={}); proceeding with Qwen as usual",
+                        stockSymbol, layaResult.sentiment(), layaResult.confidence());
+            } else {
+                logger.info("Laya unreachable/failed for {} in shadow mode; proceeding with Qwen as usual",
+                        stockSymbol);
+            }
+            return null;
+        }
+
+        // Live mode
+        if (layaResult != null && layaResult.confidence() >= layaProperties.getConfidenceThreshold()) {
+            logClassification(stockSymbol, analysisDate, SentimentClassificationLogEntity.ModelUsed.LAYA,
+                    layaResult.sentiment(), layaResult.confidence(), layaLatencyMs, false);
+            logger.info("Laya live-mode result for {}: {} (confidence={} >= threshold {}); skipping Qwen",
+                    stockSymbol, layaResult.sentiment(), layaResult.confidence(),
+                    layaProperties.getConfidenceThreshold());
+            return new SentimentOutput(layaResult.sentiment(), "Laya local pre-filter classification",
+                    layaResult.confidence(), List.of(), List.of(), LAYA_SOURCE);
+        }
+        if (layaResult != null) {
+            logClassification(stockSymbol, analysisDate, SentimentClassificationLogEntity.ModelUsed.LAYA,
+                    layaResult.sentiment(), layaResult.confidence(), layaLatencyMs, false);
+            logger.info("Laya live-mode result for {} below confidence threshold ({} < {}); falling back to Qwen",
+                    stockSymbol, layaResult.confidence(), layaProperties.getConfidenceThreshold());
+        } else {
+            logger.info("Laya unreachable/failed for {} in live mode; falling back to Qwen", stockSymbol);
+        }
+        return null;
+    }
+
+    /** Persists one row to {@code sentiment_classification_log}. Never throws. */
+    private void logClassification(String symbol, LocalDate analysisDate,
+                                    SentimentClassificationLogEntity.ModelUsed model,
+                                    SentimentType sentiment, Double confidence, long latencyMs,
+                                    boolean shadowMode) {
+        if (classificationLogRepository == null) return;
+        try {
+            classificationLogRepository.save(new SentimentClassificationLogEntity(
+                    symbol, analysisDate, model, sentiment != null ? sentiment.name() : "UNKNOWN",
+                    confidence, latencyMs, shadowMode));
+        } catch (Exception e) {
+            logger.warn("Failed to persist sentiment classification log for {}: {}", symbol, e.getMessage());
+        }
     }
 
     /**
@@ -1213,6 +1328,61 @@ public class SentimentService {
         // Fallback: return first 30 chars of snippet
         return snippet.trim().length() > 30 ? snippet.trim().substring(0, 30) + "..." : snippet.trim();
     }
+
+    // ============ Laya/Qwen Agreement Reporting ============
+
+    /**
+     * Computes the Laya/Qwen agreement rate over {@code [startDate, endDate]}
+     * (inclusive), for symbol/date pairs where both a LAYA and a QWEN row exist
+     * in the shadow-mode classification log. On-demand only — not wired to a
+     * scheduled job.
+     *
+     * @return the agreement result; {@code comparedPairs} is 0 (rate 0.0) when
+     *         the classification log isn't available or no pair exists in range
+     */
+    public LayaQwenAgreementResult computeLayaQwenAgreementRate(LocalDate startDate, LocalDate endDate) {
+        if (classificationLogRepository == null) {
+            return new LayaQwenAgreementResult(0, 0, 0.0);
+        }
+
+        List<SentimentClassificationLogEntity> rows =
+                classificationLogRepository.findByAnalysisDateBetweenAndShadowModeTrue(startDate, endDate);
+
+        record SymbolDate(String symbol, LocalDate date) {}
+        Map<SymbolDate, String> layaSentimentByPair = new HashMap<>();
+        Map<SymbolDate, String> qwenSentimentByPair = new HashMap<>();
+        for (SentimentClassificationLogEntity row : rows) {
+            SymbolDate key = new SymbolDate(row.getSymbol(), row.getAnalysisDate());
+            if (SentimentClassificationLogEntity.ModelUsed.LAYA.name().equals(row.getModelUsed())) {
+                layaSentimentByPair.put(key, row.getSentiment());
+            } else if (SentimentClassificationLogEntity.ModelUsed.QWEN.name().equals(row.getModelUsed())) {
+                qwenSentimentByPair.put(key, row.getSentiment());
+            }
+        }
+
+        long comparedPairs = 0;
+        long agreedPairs = 0;
+        for (Map.Entry<SymbolDate, String> entry : layaSentimentByPair.entrySet()) {
+            String qwenSentiment = qwenSentimentByPair.get(entry.getKey());
+            if (qwenSentiment == null) continue;
+            comparedPairs++;
+            if (qwenSentiment.equals(entry.getValue())) {
+                agreedPairs++;
+            }
+        }
+
+        double agreementRate = comparedPairs == 0 ? 0.0 : (double) agreedPairs / comparedPairs;
+        return new LayaQwenAgreementResult(comparedPairs, agreedPairs, agreementRate);
+    }
+
+    /**
+     * Result of {@link #computeLayaQwenAgreementRate}.
+     *
+     * @param comparedPairs number of symbol/date pairs with both a LAYA and a QWEN row
+     * @param agreedPairs   of those, the number where the two sentiments matched
+     * @param agreementRate {@code agreedPairs / comparedPairs}, or 0.0 if comparedPairs is 0
+     */
+    public record LayaQwenAgreementResult(long comparedPairs, long agreedPairs, double agreementRate) {}
 
     // ============ Test Accessor Methods ============
 

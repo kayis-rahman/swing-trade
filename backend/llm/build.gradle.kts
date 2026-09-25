@@ -21,6 +21,7 @@ dependencies {
     // 2.4.0+ is required for the resilience4j-spring-boot4 autoconfiguration module.
     implementation("io.github.resilience4j:resilience4j-spring-boot4:2.4.0")
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.4.0")
+    implementation("io.github.resilience4j:resilience4j-reactor:2.4.0")
     implementation("io.github.resilience4j:resilience4j-retry:2.4.0")
     implementation("io.github.resilience4j:resilience4j-bulkhead:2.4.0")
     implementation("io.github.resilience4j:resilience4j-timelimiter:2.4.0")

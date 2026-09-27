@@ -44,16 +44,27 @@ describe('App route runtime boundary', () => {
     vi.clearAllMocks()
   })
 
-  it('keys the route boundary so navigating resets only the route failure scope', async () => {
+  it('keeps the route boundary mounted while updating its route reset scope', async () => {
     let boundaryInstance = 0
     const BoundaryProbe = defineComponent({
       name: 'RuntimeErrorBoundary',
-      setup(_, { slots }) {
+      props: {
+        resetKey: { type: String, default: '' },
+        route: { type: String, default: '' },
+      },
+      setup(props, { slots }) {
         const instance = ++boundaryInstance
         return () =>
-          h('section', { 'data-testid': 'runtime-boundary', 'data-instance': instance }, [
-            slots.default?.(),
-          ])
+          h(
+            'section',
+            {
+              'data-testid': 'runtime-boundary',
+              'data-instance': instance,
+              'data-reset-key': props.resetKey,
+              'data-route': props.route,
+            },
+            [slots.default?.()]
+          )
       },
     })
     let shellMountCount = 0
@@ -90,14 +101,20 @@ describe('App route runtime boundary', () => {
     const firstBoundaryId = wrapper
       .get('[data-testid="runtime-boundary"]')
       .attributes('data-instance')
+    expect(wrapper.get('[data-testid="runtime-boundary"]').attributes('data-reset-key')).toBe(
+      '/first'
+    )
     expect(shellMountCount).toBe(4)
 
     await router.push('/second')
     await nextTick()
 
     expect(wrapper.text()).toContain('Second route')
-    expect(wrapper.get('[data-testid="runtime-boundary"]').attributes('data-instance')).not.toBe(
+    expect(wrapper.get('[data-testid="runtime-boundary"]').attributes('data-instance')).toBe(
       firstBoundaryId
+    )
+    expect(wrapper.get('[data-testid="runtime-boundary"]').attributes('data-reset-key')).toBe(
+      '/second'
     )
     expect(shellMountCount).toBe(4)
 

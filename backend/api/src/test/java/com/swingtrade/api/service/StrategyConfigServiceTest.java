@@ -73,6 +73,20 @@ class StrategyConfigServiceTest {
     }
 
     @Test
+    void deleteRetiresVariantAsOffInANewVersion() {
+        StrategyConfig current = config("AUDIT", 2, StrategyConfig.Mode.OFF, true);
+        StrategyConfig saved = config("AUDIT", 3, StrategyConfig.Mode.OFF, true);
+        when(store.findCurrentByVariantId("AUDIT")).thenReturn(Optional.of(current));
+        when(store.save(any(StrategyConfig.class))).thenReturn(saved);
+
+        var response = service.delete("AUDIT");
+
+        assertThat(response.version()).isEqualTo(3);
+        assertThat(response.mode()).isEqualTo(StrategyConfig.Mode.OFF);
+        verify(clearCurrentQuery).executeUpdate();
+    }
+
+    @Test
     void rejectsSecondChampion() {
         StrategyConfig champion = config("OTHER", 1, StrategyConfig.Mode.CHAMPION, true);
         when(repository.findAll()).thenReturn(List.of(StrategyConfigEntity.fromDomain(champion)));

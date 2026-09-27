@@ -30,7 +30,7 @@ public class LlmServerManagerProvider {
         return switch (backend) {
             case LOCAL -> localServerManager;
             case PI_SSH -> piServerManager;
-            case OPENAI, OLLAMA, LAYA -> null;
+            case OPENAI, OLLAMA, LAYA, PI_AGENT -> null;
         };
     }
 }

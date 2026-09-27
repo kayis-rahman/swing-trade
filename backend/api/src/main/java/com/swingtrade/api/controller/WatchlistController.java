@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -55,10 +56,17 @@ public class WatchlistController {
             @RequestParam(required = false, defaultValue = "") String name,
             @RequestParam(required = false, defaultValue = "NSE") String exchange
     ) {
-        if (watchlistService.getBySymbol(symbol).isPresent()) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Symbol " + symbol + " already in watchlist"));
+        String normalizedSymbol = symbol.trim().toUpperCase(Locale.ROOT);
+        if (normalizedSymbol.isEmpty() || normalizedSymbol.length() > 10
+                || name.length() > 255 || exchange.length() > 5) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Symbol, name, or exchange exceeds its allowed length"));
         }
-        var entity = watchlistService.addToWatchlist(symbol.toUpperCase().trim(), name, exchange);
+        var existing = watchlistService.getBySymbol(normalizedSymbol);
+        if (existing.filter(entry -> Boolean.TRUE.equals(entry.getIsActive())).isPresent()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Symbol " + normalizedSymbol + " already in watchlist"));
+        }
+        var entity = watchlistService.addToWatchlist(normalizedSymbol, name, exchange);
         return ResponseEntity.ok(ApiResponse.ok(entity));
     }
 

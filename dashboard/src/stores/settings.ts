@@ -25,7 +25,7 @@ interface ScanningConfig {
   maxConcurrent: number
 }
 
-type LlmBackend = 'local' | 'pi_ssh' | 'openai' | 'ollama' | 'laya'
+type LlmBackend = 'local' | 'pi_ssh' | 'openai' | 'ollama' | 'laya' | 'pi_agent'
 
 interface LlmSettings {
   llmBackend: LlmBackend
@@ -38,6 +38,8 @@ interface LlmSettings {
   ollamaApiKey: string
   layaBaseUrl: string
   layaModel: string
+  piAgentProvider: string
+  piAgentModel: string
   llamacppModel: string
   pdfBaseUrl: string
   pdfModel: string
@@ -80,6 +82,8 @@ const defaults: SettingsState = {
     ollamaApiKey: '',
     layaBaseUrl: '',
     layaModel: '',
+    piAgentProvider: 'openai-codex',
+    piAgentModel: 'gpt-5.6-luna',
     llamacppModel: '',
     pdfBaseUrl: '',
     pdfModel: '',
@@ -90,7 +94,14 @@ const defaults: SettingsState = {
   },
 }
 
-const supportedLlmBackends = new Set<LlmBackend>(['local', 'pi_ssh', 'openai', 'ollama', 'laya'])
+const supportedLlmBackends = new Set<LlmBackend>([
+  'local',
+  'pi_ssh',
+  'openai',
+  'ollama',
+  'laya',
+  'pi_agent',
+])
 
 function createDefaultState(): SettingsState {
   return {
@@ -183,6 +194,8 @@ async function loadAll(): Promise<LoadAllResult> {
         ollamaModel: llmData['ollama.model'] ?? state.llmSettings.ollamaModel,
         layaBaseUrl: llmData['laya.base_url'] ?? state.llmSettings.layaBaseUrl,
         layaModel: llmData['laya.model'] ?? state.llmSettings.layaModel,
+        piAgentProvider: llmData['pi-agent.provider'] ?? state.llmSettings.piAgentProvider,
+        piAgentModel: llmData['pi-agent.model'] ?? state.llmSettings.piAgentModel,
         llamacppModel: llmData['llamacpp.model'] ?? state.llmSettings.llamacppModel,
         pdfBaseUrl: llmData['llm.pdf.base_url'] ?? state.llmSettings.pdfBaseUrl,
         pdfModel: llmData['llm.pdf.model'] ?? state.llmSettings.pdfModel,
@@ -258,6 +271,8 @@ function createLlmPayload(): Record<string, string> {
     'ollama.model': state.llmSettings.ollamaModel,
     'laya.base_url': state.llmSettings.layaBaseUrl,
     'laya.model': state.llmSettings.layaModel,
+    'pi-agent.provider': state.llmSettings.piAgentProvider,
+    'pi-agent.model': state.llmSettings.piAgentModel,
     'llamacpp.model': state.llmSettings.llamacppModel,
     'llm.pdf.base_url': state.llmSettings.pdfBaseUrl,
     'llm.pdf.model': state.llmSettings.pdfModel,

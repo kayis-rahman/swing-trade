@@ -56,7 +56,7 @@ public class AnalysisOrchestrationController {
     @RateLimiter(name = "llmAnalysis")
     public SseEmitter runFullAnalysis(
             @RequestParam String symbol,
-            @RequestParam(defaultValue = "3") int backfillYears) {
+            @RequestParam(defaultValue = "5") int backfillYears) {
 
         SseEmitter emitter = new SseEmitter(streamTimeoutMs);
 

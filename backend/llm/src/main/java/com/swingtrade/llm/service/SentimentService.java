@@ -531,6 +531,7 @@ public class SentimentService {
                 case "pi_ssh" -> llmProperties.getProviders().getPiSsh().getModel();
                 case "openai" -> llmProperties.getProviders().getOpenai().getModel();
                 case "ollama" -> llmProperties.getProviders().getOllama().getModel();
+                case "pi_agent" -> "pi-agent";
                 default -> llmProperties.getProviders().getLocal().getModel();
             };
             if (configured != null && !configured.isBlank()) return configured;

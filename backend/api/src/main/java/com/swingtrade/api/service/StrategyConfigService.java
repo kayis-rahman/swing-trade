@@ -122,6 +122,7 @@ public class StrategyConfigService {
         return StrategyConfigResponse.from(saved);
     }
 
+    @Transactional
     public StrategyConfigResponse delete(String variantId) {
         return changeMode(variantId, new StrategyModeRequest(StrategyConfig.Mode.OFF, "Disabled via API"));
     }

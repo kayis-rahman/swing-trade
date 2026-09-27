@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,5 +70,39 @@ class WatchlistControllerTest {
         ResponseEntity<?> response = controller.toggleWatchlist("UNKNOWN", true);
 
         assertThat(response.getStatusCode().value()).isEqualTo(404);
+    }
+
+    @Test
+    void addToWatchlist_rejectsSymbolLongerThanDatabaseColumnBeforePersistence() {
+        ResponseEntity<?> response = controller.addToWatchlist("CODQA90508093", "", "NSE");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        verify(watchlistService, never()).getBySymbol(any());
+        verify(watchlistService, never()).addToWatchlist(any(), any(), any());
+    }
+
+    @Test
+    void addToWatchlist_normalizesBeforeCheckingForDuplicates() {
+        WatchlistEntity existing = new WatchlistEntity();
+        when(watchlistService.getBySymbol("RELIANCE")).thenReturn(java.util.Optional.of(existing));
+
+        ResponseEntity<?> response = controller.addToWatchlist(" reliance ", "", "NSE");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        verify(watchlistService).getBySymbol("RELIANCE");
+        verify(watchlistService, never()).addToWatchlist(any(), any(), any());
+    }
+
+    @Test
+    void addToWatchlist_reactivatesExistingInactiveSymbol() {
+        WatchlistEntity existing = new WatchlistEntity();
+        existing.setIsActive(false);
+        when(watchlistService.getBySymbol("RELIANCE")).thenReturn(java.util.Optional.of(existing));
+        when(watchlistService.addToWatchlist("RELIANCE", "", "NSE")).thenReturn(existing);
+
+        ResponseEntity<?> response = controller.addToWatchlist("RELIANCE", "", "NSE");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        verify(watchlistService).addToWatchlist("RELIANCE", "", "NSE");
     }
 }

@@ -115,7 +115,7 @@ describe('SettingsView — LLM Section', () => {
 
     // Laya is one of the backend options (local, pi_ssh, openai, ollama, laya).
     const backendOptions = wrapper.findAll('.llm-backend-option')
-    expect(backendOptions).toHaveLength(5)
+    expect(backendOptions).toHaveLength(6)
 
     // Selecting Laya wires the store backend to 'laya'.
     await backendOptions[4]?.trigger('click')

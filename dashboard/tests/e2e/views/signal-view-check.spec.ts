@@ -4,7 +4,7 @@ test('signals view loads', async ({ page }) => {
   await page.goto('http://localhost:3003/signals')
   await page.waitForLoadState('networkidle')
 
-  await expect(page).toHaveTitle(/SwingTrade/i)
+  await expect(page).toHaveTitle(/Swing\s?Trade/i)
   await expect(page.getByRole('heading', { name: 'Signals', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Generate All' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()

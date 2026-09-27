@@ -370,6 +370,13 @@
                 Remote Laya backend (OpenAI-compatible), configured from the dashboard. No server
                 management needed.
               </div>
+              <div
+                v-else-if="llmSettings.llmBackend === 'pi_agent'"
+                class="rounded-md bg-bg-primary p-3"
+              >
+                Local Pi CLI agent using its own authenticated provider session. Swing Trade never
+                stores the provider token.
+              </div>
             </div>
           </div>
 
@@ -478,6 +485,50 @@
               >
                 {{ piTestResult }}
               </span>
+            </div>
+          </div>
+
+          <!-- Pi CLI agent -->
+          <div v-show="llmSettings.llmBackend === 'pi_agent'" class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-text-secondary">Pi CLI Agent</h3>
+            <p class="text-xs text-text-muted">
+              Uses the locally installed Pi agent in print-only, no-tools mode. Authenticate Pi
+              separately with <code>pi /login</code> or its provider setup.
+            </p>
+            <div class="flex gap-2">
+              <input
+                v-model="llmSettings.piAgentProvider"
+                placeholder="openai-codex"
+                class="flex-1 rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+              />
+              <span class="self-center text-xs text-text-muted">Provider</span>
+            </div>
+            <div class="flex gap-2">
+              <input
+                v-model="llmSettings.piAgentModel"
+                placeholder="gpt-5.6-luna"
+                class="flex-1 rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+              />
+              <span class="self-center text-xs text-text-muted">Model</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-text-muted">
+                Inference runs through the local <code>pi</code> executable.
+              </p>
+              <button
+                :disabled="testingPiAgent"
+                class="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+                @click="testPiAgentConnection"
+              >
+                {{ testingPiAgent ? 'Testing...' : 'Test' }}
+              </button>
+            </div>
+            <div
+              v-if="piAgentTestResult"
+              class="text-xs"
+              :class="piAgentTestSuccess ? 'text-success' : 'text-danger'"
+            >
+              {{ piAgentTestResult }}
             </div>
           </div>
 
@@ -891,6 +942,7 @@ import {
   testPiConnection as apiTestPiConnection,
   testOpenAiConnection as apiTestOpenAiConnection,
   testOllamaConnection as apiTestOllamaConnection,
+  testPiAgentConnection as apiTestPiAgentConnection,
   startPiServer as apiStartPiServer,
   stopPiServer as apiStopPiServer,
   getPiServerStatus as apiGetPiServerStatus,
@@ -936,6 +988,7 @@ const testingDiscord = ref(false)
 const testingPi = ref(false)
 const testingOpenai = ref(false)
 const testingOllama = ref(false)
+const testingPiAgent = ref(false)
 const piTestResult = ref('')
 const piTestSuccess = ref(false)
 const piServerRunning = ref(false)
@@ -947,6 +1000,8 @@ const openaiTestResult = ref('')
 const openaiTestSuccess = ref(false)
 const ollamaTestResult = ref('')
 const ollamaTestSuccess = ref(false)
+const piAgentTestResult = ref('')
+const piAgentTestSuccess = ref(false)
 const saving = ref(false)
 const saved = ref(false)
 const toastMessage = ref('')
@@ -967,6 +1022,7 @@ const llmBackends = [
   { value: 'openai' as const, label: 'OpenAI' },
   { value: 'ollama' as const, label: 'Ollama' },
   { value: 'laya' as const, label: 'Laya' },
+  { value: 'pi_agent' as const, label: 'Pi Agent' },
 ]
 
 const healthColor = (status: string) => {
@@ -1392,6 +1448,41 @@ const testOpenAiConnection = async () => {
     }, 4000)
   } finally {
     testingOpenai.value = false
+  }
+}
+
+const testPiAgentConnection = async () => {
+  testingPiAgent.value = true
+  piAgentTestResult.value = ''
+  piAgentTestSuccess.value = false
+  try {
+    const result = confirmed(await apiTestPiAgentConnection())
+    if (result) {
+      piAgentTestResult.value = result.message ?? (result.success ? 'Connected!' : 'Failed')
+      piAgentTestSuccess.value = result.success
+      toastMessage.value =
+        result.message ??
+        (result.success ? 'Pi agent responded successfully' : 'Pi agent test failed')
+      toastType.value = result.success ? 'success' : 'error'
+      toastVisible.value = true
+      setTimeout(() => {
+        toastVisible.value = false
+      }, 4000)
+    }
+  } catch (err: unknown) {
+    piAgentTestResult.value = formatAppError(err, {
+      title: 'Pi agent test failed',
+      operation: 'mutation',
+    }).message
+    piAgentTestSuccess.value = false
+    toastMessage.value = piAgentTestResult.value
+    toastType.value = 'error'
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 4000)
+  } finally {
+    testingPiAgent.value = false
   }
 }
 

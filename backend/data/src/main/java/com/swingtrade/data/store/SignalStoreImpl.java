@@ -82,8 +82,8 @@ public class SignalStoreImpl implements SignalStore {
 
     @Override
     public List<Signal> findByType(Signal.SignalType type) {
-        return repository.findByDateRangeAndSignalType(
-                LocalDate.MIN, LocalDate.MAX, type.name(), org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).stream()
+        return repository.findBySignalType(
+                type.name(), org.springframework.data.domain.PageRequest.of(0, Integer.MAX_VALUE)).stream()
             .map(SignalEntity::toDomain)
             .toList();
     }

@@ -16,7 +16,8 @@ public class LlmBackendSelector {
         PI_SSH("pi_ssh"),
         OPENAI("openai"),
         OLLAMA("ollama"),
-        LAYA("laya");
+        LAYA("laya"),
+        PI_AGENT("pi_agent");
 
         private final String key;
 

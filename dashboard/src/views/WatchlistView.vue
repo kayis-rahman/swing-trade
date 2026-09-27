@@ -53,6 +53,7 @@
             v-model="newSymbol"
             type="text"
             placeholder="e.g. RELIANCE"
+            maxlength="10"
             required
             class="w-full rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-brand/30"
           />

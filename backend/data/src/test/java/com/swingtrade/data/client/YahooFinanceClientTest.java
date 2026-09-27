@@ -3,6 +3,8 @@ package com.swingtrade.data.client;
 import com.swingtrade.data.service.CandleData;
 import com.swingtrade.data.service.ChartMeta;
 import com.swingtrade.data.service.InstrumentDetails;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import tools.jackson.databind.ObjectMapper;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
@@ -249,6 +251,21 @@ class YahooFinanceClientTest {
                 "RELIANCE", LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15)))
                 .isInstanceOf(YahooFinanceClient.YahooDataUnavailableException.class);
         assertThat(mockWebServer.getRequestCount()).isEqualTo(4);
+    }
+
+    @Test
+    void fetchCandlesSurfacesOpenCircuitBreakerAsProviderFailure() {
+        CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("yahoo-test");
+        circuitBreaker.transitionToOpenState();
+        YahooFinanceClient resilientClient = new YahooFinanceClient(
+            mockWebServer.url("/").toString().replaceAll("/$", ""),
+            new ObjectMapper(), java.time.Clock.systemUTC(), circuitBreaker, null, null);
+
+        assertThatThrownBy(() -> resilientClient.fetchCandles(
+            "RELIANCE", LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15)))
+            .isInstanceOf(YahooFinanceClient.YahooDataUnavailableException.class)
+            .hasMessageContaining("Yahoo historical data unavailable");
+        assertThat(mockWebServer.getRequestCount()).isZero();
     }
 
     @Test

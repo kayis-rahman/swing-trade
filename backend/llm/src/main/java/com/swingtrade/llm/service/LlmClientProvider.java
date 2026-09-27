@@ -3,6 +3,7 @@ package com.swingtrade.llm.service;
 import com.swingtrade.llm.client.LlmClient;
 import com.swingtrade.llm.client.LlamaCppClient;
 import com.swingtrade.llm.client.SpringAiLlmClient;
+import com.swingtrade.llm.client.PiAgentLlmClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -27,6 +28,7 @@ public class LlmClientProvider {
     private final OpenAiChatModel openAiModel;
     private final OpenAiChatModel ollamaModel;
     private final OpenAiChatModel layaModel;
+    private final PiAgentLlmClient piAgentClient;
     private final String ollamaReasoningEffort;
 
     public LlmClientProvider(LlmBackendSelector selector,
@@ -37,7 +39,7 @@ public class LlmClientProvider {
                              OpenAiChatModel ollamaModel,
                              OpenAiChatModel layaModel) {
         this(selector, llamaCppClient, localModel, piSshModel, openAiModel, ollamaModel,
-                layaModel, null);
+                layaModel, new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
     }
 
     /**
@@ -54,6 +56,7 @@ public class LlmClientProvider {
                              @Qualifier("openAiChatModel") OpenAiChatModel openAiModel,
                              @Qualifier("ollamaChatModel") OpenAiChatModel ollamaModel,
                              @Qualifier("layaChatModel") OpenAiChatModel layaModel,
+                             PiAgentLlmClient piAgentClient,
                              @org.springframework.beans.factory.annotation.Value("${llm.providers.ollama.reasoning-effort:none}") String ollamaReasoningEffort) {
         this.ollamaReasoningEffort = ollamaReasoningEffort;
         this.selector = selector;
@@ -63,6 +66,7 @@ public class LlmClientProvider {
         this.openAiModel = openAiModel;
         this.ollamaModel = ollamaModel;
         this.layaModel = layaModel;
+        this.piAgentClient = piAgentClient;
     }
 
     /**
@@ -74,12 +78,17 @@ public class LlmClientProvider {
             logger.info("Using native llama.cpp HTTP client for PI_SSH backend");
             return llamaCppClient;
         }
+        if (selector.resolve() == LlmBackendSelector.Backend.PI_AGENT) {
+            logger.info("Using Pi CLI agent provider");
+            return piAgentClient;
+        }
         OpenAiChatModel model = switch (selector.resolve()) {
             case LOCAL -> localModel;
             case PI_SSH -> piSshModel;
             case OPENAI -> openAiModel;
             case OLLAMA -> ollamaModel;
             case LAYA -> layaModel;
+            case PI_AGENT -> throw new IllegalStateException("Pi agent should be selected before model routing");
         };
         if (model.getOptions() != null) {
             logger.info("Selected LLM backend {} with model {} at {}", selector.resolve(),

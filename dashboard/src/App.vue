@@ -21,11 +21,7 @@
       <!-- Page Content -->
       <main class="flex-1 overflow-auto bg-bg-primary">
         <router-view v-slot="{ Component, route }">
-          <RuntimeErrorBoundary
-            :key="route.fullPath"
-            :reset-key="route.fullPath"
-            :route="route.fullPath"
-          >
+          <RuntimeErrorBoundary :reset-key="route.fullPath" :route="route.fullPath">
             <Transition name="route" mode="out-in" @after-leave="mobileNavOpen = false">
               <component :is="Component" />
             </Transition>

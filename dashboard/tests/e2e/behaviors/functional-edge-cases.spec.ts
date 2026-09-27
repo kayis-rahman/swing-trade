@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { fulfillJson, mockDashboardApi } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
 
@@ -13,16 +14,17 @@ const watchlistEntry = (overrides: Record<string, unknown> = {}) => ({
 })
 
 async function mockApi(page: Page, handler: (path: string, method: string) => unknown) {
-  await page.route(/\/api(?:\/|$)/, async (route) => {
-    const request = route.request()
-    const url = new URL(request.url())
-    const path = url.pathname.replace(/^\/api/, '')
-    const response = handler(path, request.method())
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(response ?? { success: true, data: [] }),
-    })
+  await mockDashboardApi(page, async (route, path) => {
+    if (path === '/health') {
+      await fulfillJson(route, { status: 'UP', components: {} })
+      return true
+    }
+    if (path === '/signals/latest' || path === '/paper-portfolios') {
+      await fulfillJson(route, [])
+      return true
+    }
+    await fulfillJson(route, handler(path, route.request().method()) ?? { success: true, data: [] })
+    return true
   })
 }
 
@@ -46,12 +48,12 @@ test.describe('safe functional edge cases', () => {
 
     await page.goto(`${DASHBOARD}/watchlist`)
     await page.getByRole('button', { name: 'Add Stock' }).click()
-    await page.getByPlaceholder('e.g. RELIANCE').fill(' infy ')
+    await page.getByPlaceholder('e.g. RELIANCE', { exact: true }).fill(' infy ')
     await page.getByPlaceholder('e.g. Reliance Industries').fill('Infosys')
     await page.getByRole('button', { name: 'Add', exact: true }).click()
 
     await expect(page.locator('tbody')).toContainText('INFY')
-    await expect(page.getByPlaceholder('e.g. RELIANCE')).toHaveCount(0)
+    await expect(page.getByPlaceholder('e.g. RELIANCE', { exact: true })).toHaveCount(0)
     expect(addedRequest).toBeDefined()
   })
 
@@ -64,10 +66,10 @@ test.describe('safe functional edge cases', () => {
 
     await page.goto(`${DASHBOARD}/watchlist`)
     await page.getByRole('button', { name: 'Add Stock' }).click()
-    await page.getByPlaceholder('e.g. RELIANCE').fill('TCS')
+    await page.getByPlaceholder('e.g. RELIANCE', { exact: true }).fill('TCS')
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 
-    await expect(page.getByPlaceholder('e.g. RELIANCE')).toHaveCount(0)
+    await expect(page.getByPlaceholder('e.g. RELIANCE', { exact: true })).toHaveCount(0)
     expect(postCount).toBe(0)
   })
 

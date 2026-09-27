@@ -72,6 +72,15 @@ describe('matrixCellKind', () => {
       matrixCellKind({ variantId: 'A', version: 1, outcome: 'EVALUATED', signal: 'HOLD' })
     ).toBe('no-signal')
   })
+
+  it('supports the boolean signal flag returned by the orchestrator API', () => {
+    expect(matrixCellKind({ variantId: 'A', version: 1, outcome: 'EVALUATED', signal: true })).toBe(
+      'signal'
+    )
+    expect(
+      matrixCellKind({ variantId: 'A', version: 1, outcome: 'EVALUATED', signal: false })
+    ).toBe('no-signal')
+  })
 })
 
 describe('collectRunWarnings', () => {

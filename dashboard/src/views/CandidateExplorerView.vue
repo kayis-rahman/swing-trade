@@ -493,14 +493,19 @@ const metrics = computed(() => [
       run.value?.scanScope === 'WATCHLIST'
         ? 'active watchlist symbols'
         : run.value?.scanScope === 'NSE_BROAD'
-          ? 'scheduled NSE universe'
+          ? 'NSE symbol master'
           : 'scope unavailable for legacy run',
     tone: 'text-text-primary',
   },
   {
-    label: 'Completed',
+    label: 'Processed',
     value: run.value ? `${run.value.completedSymbols}/${run.value.totalSymbols}` : '—',
-    detail: 'processed',
+    detail:
+      run.value?.status === 'CANCELLED'
+        ? 'stopped before the universe finished'
+        : run.value?.status === 'COMPLETED'
+          ? 'universe scan finished'
+          : 'symbols processed so far',
     tone: 'text-text-primary',
   },
   {
@@ -518,7 +523,10 @@ const metrics = computed(() => [
   {
     label: 'Status',
     value: run.value?.status ?? 'READY',
-    detail: 'no trades run',
+    detail:
+      run.value?.orchestrationStatus === 'STARTED'
+        ? 'candidate handoff started'
+        : 'screening only; no trades run',
     tone: 'text-text-primary',
   },
 ])

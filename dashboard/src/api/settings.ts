@@ -72,6 +72,14 @@ export async function testOllamaConnection(): Promise<{ success: boolean; messag
   })
 }
 
+export async function testPiAgentConnection(): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>('/settings/test/pi-agent', {
+    method: 'POST',
+    timeoutMs: 200_000,
+    responseContract: 'envelope',
+  })
+}
+
 export async function getGpuHubSettings(): Promise<Record<string, string>> {
   return apiRequest<Record<string, string>>('/settings/gpuhub', { responseContract: 'envelope' })
 }

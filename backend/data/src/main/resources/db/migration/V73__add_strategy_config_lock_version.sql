@@ -1,0 +1,2 @@
+ALTER TABLE strategy_config
+    ADD COLUMN IF NOT EXISTS lock_version INTEGER NOT NULL DEFAULT 0;

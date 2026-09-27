@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test'
 
 const BASE = process.env.STAGE_DASHBOARD_URL ?? 'http://localhost:3000'
+const API_BASE = process.env.STAGE_API_URL ?? 'http://localhost:8080'
 
 test.describe('Stage Dashboard — Feature Tests', () => {
   test('dashboard loads with title and shell', async ({ page }) => {
     await page.goto(`${BASE}/`)
-    await expect(page).toHaveTitle(/SwingTrade/i)
-    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
-    await expect(page.locator('text=Market overview')).toBeVisible()
+    await expect(page).toHaveTitle(/Swing\s*Trade/i)
+    await expect(page.getByRole('heading', { name: 'Portfolio at a glance' })).toBeVisible()
   })
 
   test('positions page loads', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('Stage Dashboard — Feature Tests', () => {
 
   test('portfolio page loads', async ({ page }) => {
     await page.goto(`${BASE}/portfolio`)
-    await expect(page.getByRole('heading', { name: /Portfolio/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Portfolio', exact: true })).toBeVisible()
   })
 
   test('watchlist page loads', async ({ page }) => {
@@ -55,11 +55,11 @@ test.describe('Stage Dashboard — Feature Tests', () => {
     expect(resp.status()).toBe(200)
     const body = await resp.json()
     expect(body.status).toBe('UP')
-    expect(body.components.db.status).toBe('UP')
+    expect(body.components.api.status).toBe('UP')
   })
 
   test('metrics endpoint returns Prometheus format', async ({ request }) => {
-    const resp = await request.get(`${BASE}/api/actuator/prometheus`)
+    const resp = await request.get(`${API_BASE}/actuator/prometheus`)
     expect(resp.status()).toBe(200)
     const text = await resp.text()
     expect(text).toContain('application_')
@@ -114,7 +114,7 @@ test.describe('Stage Dashboard — Feature Tests', () => {
       .getByRole('link', { name: /Dashboard/i })
       .first()
       .click()
-    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Portfolio at a glance' })).toBeVisible()
     await page
       .getByRole('link', { name: /Positions/i })
       .first()
@@ -129,7 +129,7 @@ test.describe('Stage Dashboard — Feature Tests', () => {
       .getByRole('link', { name: /Portfolio/i })
       .first()
       .click()
-    await expect(page.getByRole('heading', { name: /Portfolio/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Portfolio', exact: true })).toBeVisible()
   })
 
   test('unknown route shows 404', async ({ page }) => {

@@ -52,7 +52,7 @@ describe('CandidateExplorerView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Find the next pilot symbol')
-    expect(wrapper.text()).toContain('Scan active watchlist')
+    expect(wrapper.text()).toContain('Scan NSE universe')
     expect(wrapper.text()).toContain('scope unavailable for legacy run')
     await wrapper.get('button[data-test="scan-toggle"]').trigger('click')
     await flushPromises()
@@ -126,6 +126,33 @@ describe('CandidateExplorerView', () => {
     expect(wrapper.text()).toContain('50.0%')
     expect(wrapper.text()).toContain('breakout-v1')
     expect(wrapper.text()).toContain('SKIPPED')
+  })
+
+  it('makes a cancelled partial scan distinct from a completed universe scan', async () => {
+    const cancelled = {
+      runId: 'run-cancelled',
+      status: 'CANCELLED',
+      totalSymbols: 2635,
+      completedSymbols: 1022,
+      failedSymbols: 8,
+      qualifiedSymbols: 0,
+      scanScope: 'NSE_BROAD',
+      orchestrationStatus: 'NOT_REQUIRED',
+      startedAt: '2026-09-27T00:00:00',
+    }
+    api.getCandidateScanHistory.mockResolvedValue([cancelled])
+    api.getCandidateScan.mockResolvedValue(cancelled)
+    api.getCandidateScanResults.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
+
+    const wrapper = mount(CandidateExplorerView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Processed')
+    expect(wrapper.text()).toContain('1022/2635')
+    expect(wrapper.text()).toContain('stopped before the universe finished')
+    expect(wrapper.text()).toContain('CANCELLED')
+    expect(wrapper.text()).toContain('screening only; no trades run')
+    expect(wrapper.text()).not.toContain('scheduled NSE universe')
   })
 
   it('pauses and resumes an active scan', async () => {

@@ -34,9 +34,14 @@ docker_compose() {
 
 # Run compose against pi-node WITHOUT flipping the global Docker context.
 # Never switch the global context (docker context "use") here: it mutates shared state for every other
-# shell/tool on this machine (plan E8). DOCKER_CONTEXT is scoped to the command.
+# shell/tool on this machine (plan E8). DOCKER_CONTEXT is scoped to the command. When local DNS cannot
+# resolve piworm.local, callers can provide PI_NODE_DOCKER_HOST=ssh://dietpi@192.168.0.100.
 pi_compose() {
-    DOCKER_CONTEXT=pi-node docker_compose "$@"
+    if [[ -n "${PI_NODE_DOCKER_HOST:-}" ]]; then
+        DOCKER_HOST="$PI_NODE_DOCKER_HOST" docker_compose "$@"
+    else
+        DOCKER_CONTEXT=pi-node docker_compose "$@"
+    fi
 }
 
 echo "=========================================="
@@ -617,5 +622,8 @@ case "${1:-help}" in
     echo "  $0 frontend start"
     echo "  $0 frontend stop"
     echo "  $0 frontend-logs"
+    echo ""
+    echo "If piworm.local is not resolvable, set:"
+    echo "  PI_NODE_DOCKER_HOST=ssh://dietpi@192.168.0.100 $0 status"
     ;;
 esac

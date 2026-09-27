@@ -5,6 +5,7 @@ import com.swingtrade.broker.service.DiscordNotificationService;
 import com.swingtrade.data.service.AppSettingsService;
 import com.swingtrade.data.service.MarketDataClientProvider;
 import com.swingtrade.llm.config.LlmProperties;
+import com.swingtrade.llm.client.PiAgentLlmClient;
 import com.swingtrade.llm.service.LlamaCppServerManager;
 import com.swingtrade.llm.service.LlmBackendSelector;
 import com.swingtrade.llm.service.LlmClientProvider;
@@ -44,6 +45,8 @@ class SettingsControllerDefaultsTest {
     @Mock
     private LlmClientProvider llmClientProvider;
     @Mock
+    private PiAgentLlmClient piAgentLlmClient;
+    @Mock
     private LlamaCppServerManager localServerManager;
     @Mock
     private PiLlamaServerManager piServerManager;
@@ -62,6 +65,7 @@ class SettingsControllerDefaultsTest {
             discordNotificationService,
             selector,
             llmClientProvider,
+            piAgentLlmClient,
             localServerManager,
             piServerManager
         );
@@ -187,6 +191,7 @@ class SettingsControllerDefaultsTest {
                 discordNotificationService,
                 selector,
                 llmClientProvider,
+                null,
                 localServerManager,
                 piServerManager
             );
@@ -198,6 +203,20 @@ class SettingsControllerDefaultsTest {
                 .containsEntry("llm.pdf.base_url", "")
                 .containsEntry("llm.pdf.model", "pdf-default");
         }
+    }
+
+    @Test
+    void llmSettingsConfigurePiAgentWithPersistedProviderAndModel() {
+        when(appSettingsService.get("pi-agent.provider", "openai-codex"))
+            .thenReturn("openai-codex");
+        when(appSettingsService.get("pi-agent.model", "gpt-5.6-luna"))
+            .thenReturn("gpt-5.6-luna");
+
+        controller.setLlmSettings(Map.of(
+            "pi-agent.provider", "openai-codex",
+            "pi-agent.model", "gpt-5.6-luna"));
+
+        verify(piAgentLlmClient).configure("openai-codex", "gpt-5.6-luna");
     }
 
     @Nested

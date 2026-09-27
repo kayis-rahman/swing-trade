@@ -46,7 +46,7 @@ test.describe('Paper Trading Behavior', () => {
     await page.waitForLoadState('networkidle')
 
     // Dashboard should have grid layout
-    const grid = page.locator('.grid')
+    const grid = page.locator('.grid').first()
     await expect(grid).toBeVisible()
 
     // No JS errors

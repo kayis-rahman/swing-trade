@@ -1,8 +1,54 @@
 import { test, expect } from '@playwright/test'
+import { fulfillJson, mockDashboardApi } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
+const signalFixture = {
+  id: 10001,
+  symbol: 'RELIANCE',
+  date: '2026-09-01',
+  signalType: 'BUY',
+  confidence: 0.85,
+  reasoning: 'Fixture signal for safe UI testing',
+  entryPrice: 2500,
+  stopLoss: 2450,
+  target: 2600,
+  riskRewardRatio: 2,
+  indicators: ['RSI'],
+  generatedAt: '2026-09-01T10:00:00',
+  strategy: 'PRICE_ACTION',
+}
 
 test.describe('Signals View', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockDashboardApi(page, async (route, path) => {
+      if (path === '/signals/latest') {
+        await fulfillJson(route, [signalFixture])
+        return true
+      }
+      if (path === '/strategy-configs') {
+        await fulfillJson(route, { success: true, data: [] })
+        return true
+      }
+      if (path === '/signal-selections') {
+        await fulfillJson(route, [])
+        return true
+      }
+      if (path === '/settings') {
+        await fulfillJson(route, { success: true, data: { selectedBroker: 'yahoo' } })
+        return true
+      }
+      if (path.startsWith('/settings/')) {
+        await fulfillJson(route, { success: true, data: {} })
+        return true
+      }
+      if (route.request().method() !== 'GET') {
+        await fulfillJson(route, { message: 'Writes are disabled in this UI suite' }, 405)
+        return true
+      }
+      return false
+    })
+  })
+
   test('page header renders', async ({ page }) => {
     await page.goto(`${DASHBOARD}/signals`)
     await page.waitForLoadState('networkidle')
@@ -151,37 +197,38 @@ test.describe('Signals View', () => {
     }
   })
 
-  test('clear selected button shows when signals selected', async ({ page }) => {
+  test('clear selected removes the chosen signal after the API confirms it', async ({ page }) => {
+    let removedSymbol: string | undefined
+    await page.route('**/api/signals/RELIANCE', async (route) => {
+      if (route.request().method() !== 'DELETE') return route.fallback()
+      removedSymbol = new URL(route.request().url()).pathname.split('/').at(-1)
+      await fulfillJson(route, { cleared: 1 })
+    })
+
     await page.goto(`${DASHBOARD}/signals`)
     await page.waitForLoadState('networkidle')
+    await page.locator('input[type="checkbox"]').first().check()
+    await page.getByRole('button', { name: 'Clear selected (1)' }).click()
 
-    const cards = page.locator('div.card-panel')
-    const cardCount = await cards.count()
-
-    if (cardCount > 0) {
-      const firstCheckbox = page.locator('input[type="checkbox"]').first()
-      const isChecked = await firstCheckbox.isChecked()
-      if (!isChecked) {
-        await firstCheckbox.click()
-      }
-
-      // Clear N button should appear
-      const clearBtn = page.getByRole('button', { name: /Clear \d+/ })
-      await expect(clearBtn).toBeVisible()
-    }
+    await expect(page.locator('.signal-card-wrapper')).toHaveCount(0)
+    expect(removedSymbol).toBe('RELIANCE')
   })
 
-  test('clear all button shows when signals exist', async ({ page }) => {
+  test('clear all deletes signals only after confirmation', async ({ page }) => {
+    let clearAllRequests = 0
+    await page.route('**/api/signals', async (route) => {
+      if (route.request().method() !== 'DELETE') return route.fallback()
+      clearAllRequests++
+      await fulfillJson(route, { cleared: 1 })
+    })
+    page.on('dialog', (dialog) => dialog.accept())
+
     await page.goto(`${DASHBOARD}/signals`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: 'Clear all' }).click()
 
-    const cards = page.locator('div.card-panel')
-    const cardCount = await cards.count()
-
-    if (cardCount > 0) {
-      const clearAllBtn = page.getByRole('button', { name: 'Clear all' })
-      await expect(clearAllBtn).toBeVisible()
-    }
+    await expect(page.locator('.signal-card-wrapper')).toHaveCount(0)
+    expect(clearAllRequests).toBe(1)
   })
 
   test('generate all button renders', async ({ page }) => {
@@ -204,28 +251,10 @@ test.describe('Signals View', () => {
     await page.goto(`${DASHBOARD}/signals`)
     await page.waitForLoadState('networkidle')
 
-    // Apply filters that might not match any signal
-    const buttons = page.locator('.flex.rounded-md.border button')
-    const texts = await buttons.allTextContents()
+    await page.getByRole('button', { name: 'SELL', exact: true }).click()
 
-    // Try to find a filter direction that, when applied, shows no signals
-    // If there are only BUY signals, clicking SELL should show "no matching"
-    for (const dir of ['BUY', 'SELL']) {
-      const idx = texts.indexOf(dir)
-      if (idx >= 0) {
-        await buttons.nth(idx).click()
-
-        const noMatch = page.locator('text=No signals matching filter')
-        const isVisible = await noMatch
-          .waitFor({ state: 'visible', timeout: 2000 })
-          .then(() => true)
-          .catch(() => false)
-        if (isVisible) {
-          await expect(noMatch).toBeVisible()
-          return
-        }
-      }
-    }
+    await expect(page.locator('.signal-card-wrapper')).toHaveCount(0)
+    await expect(page.getByText('No signals match this view')).toBeVisible()
   })
 
   test('signal card renders direction badge', async ({ page }) => {
@@ -354,34 +383,32 @@ test.describe('Signals View', () => {
   })
 
   test('execution results toast appears after execute', async ({ page }) => {
+    let executionBody: unknown
+    await page.route('**/api/positions', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      executionBody = route.request().postDataJSON()
+      await fulfillJson(route, { message: 'Execution blocked by test fixture' }, 409)
+    })
+
     await page.goto(`${DASHBOARD}/signals`)
     await page.waitForLoadState('networkidle')
 
-    const cards = page.locator('div.card-panel')
-    const cardCount = await cards.count()
+    await expect(page.locator('.signal-card-wrapper')).toHaveCount(1)
+    await page.locator('input[type="checkbox"]').first().check()
+    await page.getByRole('button', { name: 'Execute 1' }).click()
 
-    if (cardCount > 0) {
-      const firstCheckbox = page.locator('input[type="checkbox"]').first()
-      const isChecked = await firstCheckbox.isChecked()
-      if (!isChecked) {
-        await firstCheckbox.click()
-      }
-
-      const execBtn = page.getByRole('button', { name: /Execute \d+/ })
-      if (await execBtn.isVisible()) {
-        // Execute will likely fail (no real broker), but the toast should appear
-        await execBtn.click()
-
-        // Toast should appear (either success or failure)
-        const toast = page.locator('div.fixed.bottom-4.right-4')
-        const isVisible = await toast
-          .waitFor({ state: 'visible', timeout: 3000 })
-          .then(() => true)
-          .catch(() => false)
-        if (isVisible) {
-          await expect(toast).toBeVisible()
-        }
-      }
-    }
+    const toast = page.locator('div.fixed.bottom-4.right-4')
+    await expect(toast).toContainText('Failed')
+    await expect
+      .poll(() => executionBody)
+      .toEqual({
+        symbol: 'RELIANCE',
+        quantity: 40,
+        direction: 'LONG',
+        orderType: 'MARKET',
+        price: 2500,
+        target: 2600,
+        entryReason: 'Signal: RELIANCE — Fixture signal for safe UI testing',
+      })
   })
 })

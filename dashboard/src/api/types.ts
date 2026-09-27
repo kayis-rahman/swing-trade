@@ -542,7 +542,8 @@ export interface JobStageStrategyResult {
   outcome: StrategyOutcome
   reason?: string | null
   score?: number | null
-  signal?: string | null
+  /** Configured signal stage currently returns whether a signal was produced. */
+  signal?: string | boolean | null
 }
 
 export interface JobStageDetails {

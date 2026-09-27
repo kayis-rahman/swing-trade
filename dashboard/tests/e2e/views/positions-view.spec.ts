@@ -1,8 +1,103 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 const DASHBOARD = 'http://localhost:3003'
 
+const openPositions = [
+  {
+    id: 1,
+    symbol: 'RELIANCE',
+    entryPrice: 100,
+    currentPrice: 105,
+    entryDate: '2026-09-01',
+    quantity: 10,
+    stopLoss: 95,
+    target: 115,
+    status: 'OPEN',
+    unrealizedPnL: 50,
+    unrealizedPnLPercent: 5,
+  },
+]
+
+const closedPositions = [
+  {
+    id: 2,
+    symbol: 'TCS',
+    entryPrice: 200,
+    currentPrice: 190,
+    entryDate: '2026-08-20',
+    quantity: 5,
+    stopLoss: 190,
+    target: 220,
+    status: 'CLOSED',
+    unrealizedPnL: -50,
+    unrealizedPnLPercent: -5,
+  },
+]
+
+async function mockPositionApi(page: Page) {
+  await page.route(/^https?:\/\/[^/]+\/api\/positions(?:\/closed)?(?:\?.*)?$/, async (route) => {
+    const request = route.request()
+    if (request.method() !== 'GET') {
+      await route.fulfill({ status: 405, body: 'Position mutations are disabled in this UI suite' })
+      return
+    }
+
+    const closed = new URL(request.url()).pathname.endsWith('/closed')
+    const positions = closed ? closedPositions : openPositions
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        content: positions,
+        totalElements: positions.length,
+        totalPages: 1,
+        size: 20,
+        number: 0,
+      }),
+    })
+  })
+
+  await page.route('**/api/health', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'UP', components: { api: { status: 'UP' } } }),
+    })
+  )
+  await page.route('**/api/holidays', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { holidays: [], count: 0 } }),
+    })
+  )
+
+  // Keep the application shell deterministic as well; these reads are shared
+  // by every route and otherwise consume the local API's limited rate budget.
+  await page.route(
+    /^https?:\/\/[^/]+\/api\/(?:settings(?:\/llm|\/discord|\/trading|\/scanning)?|signals\/latest|fyers\/status)(?:\?.*)?$/,
+    async (route) => {
+      const path = new URL(route.request().url()).pathname
+      const body = path.endsWith('/fyers/status')
+        ? { connected: false }
+        : path.endsWith('/signals/latest')
+          ? []
+          : {
+              success: true,
+              data: path.endsWith('/settings') ? { selectedBroker: 'yahoo' } : {},
+            }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      })
+    }
+  )
+}
+
 test.describe('Positions View', () => {
+  test.beforeEach(async ({ page }) => mockPositionApi(page))
+
   test('page header renders', async ({ page }) => {
     await page.goto(`${DASHBOARD}/positions`)
     await page.waitForLoadState('networkidle')
@@ -382,6 +477,20 @@ test.describe('Positions View', () => {
   })
 
   test('empty state displays when no positions exist', async ({ page }) => {
+    await page.route('**/api/positions', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ content: [], totalElements: 0, totalPages: 0, size: 20, number: 0 }),
+      })
+    )
+    await page.route('**/api/positions/closed', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ content: [], totalElements: 0, totalPages: 0, size: 20, number: 0 }),
+      })
+    )
     await page.goto(`${DASHBOARD}/positions`)
     await page.waitForLoadState('networkidle')
 

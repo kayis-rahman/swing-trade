@@ -169,3 +169,80 @@ describe('SettingsView — unavailable and unconfirmed states', () => {
     wrapper.unmount()
   })
 })
+
+describe('SettingsView — Fyers not-configured state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    storeMocks.loadSettings.mockResolvedValue([])
+    apiMocks.getFyersStatus.mockResolvedValue({ connected: false, clientId: '' })
+    apiMocks.getPiServerStatus.mockResolvedValue({ running: false })
+    apiMocks.getHealthStatus.mockResolvedValue({ status: 'UP' })
+  })
+
+  async function clickConnectFyers(wrapper: VueWrapper) {
+    const connectButton = wrapper
+      .findAll('button')
+      .find((candidate) => candidate.text().includes('Connect Fyers Account'))
+    expect(connectButton, 'Expected the Connect Fyers Account button').toBeDefined()
+    await connectButton!.trigger('click')
+    await flushPromises()
+  }
+
+  it('reports not-configured instead of authentication-failed when the backend lacks Fyers credentials', async () => {
+    // Reproduction of the staging issue: GET /api/fyers/login → 400 with code
+    // FYERS_NOT_CONFIGURED must not surface as "Fyers authentication failed".
+    apiMocks.getFyersLoginUrl.mockRejectedValue(
+      new AppError({
+        kind: 'validation',
+        status: 400,
+        code: 'FYERS_NOT_CONFIGURED',
+        message: 'FYERS_CLIENT_ID not configured',
+      })
+    )
+
+    const wrapper = await mountSettings()
+    await flushPromises()
+    await clickConnectFyers(wrapper)
+
+    expect(wrapper.text()).toMatch(/Fyers is not configured on this environment/i)
+    expect(wrapper.text()).not.toContain('Fyers authentication failed')
+
+    wrapper.unmount()
+  })
+
+  it('detects not-configured from the error message when the backend sends no code', async () => {
+    // Backends predating the code field only return the 400 message.
+    apiMocks.getFyersLoginUrl.mockRejectedValue(
+      new AppError({
+        kind: 'validation',
+        status: 400,
+        message: 'FYERS_CLIENT_ID not configured',
+      })
+    )
+
+    const wrapper = await mountSettings()
+    await flushPromises()
+    await clickConnectFyers(wrapper)
+
+    expect(wrapper.text()).toMatch(/Fyers is not configured on this environment/i)
+    expect(wrapper.text()).not.toContain('Fyers authentication failed')
+
+    wrapper.unmount()
+  })
+
+  it('keeps the authentication-failed message for genuine failures', async () => {
+    // Guard against over-correction: unrelated errors must keep the original message.
+    apiMocks.getFyersLoginUrl.mockRejectedValue(
+      new AppError({ kind: 'server', status: 500, message: 'Backend exploded' })
+    )
+
+    const wrapper = await mountSettings()
+    await flushPromises()
+    await clickConnectFyers(wrapper)
+
+    expect(wrapper.text()).toContain('Fyers authentication failed. Please try again.')
+    expect(wrapper.text()).not.toMatch(/not configured on this environment/i)
+
+    wrapper.unmount()
+  })
+})

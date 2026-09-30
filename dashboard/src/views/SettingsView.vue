@@ -141,13 +141,19 @@
         v-if="authResultBanner"
         class="rounded-lg p-4 text-sm font-medium"
         :class="
-          authResultBanner === 'success' ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
+          authResultBanner === 'success'
+            ? 'bg-success-bg text-success'
+            : authResultBanner === 'not-configured'
+              ? 'bg-warning-bg text-warning'
+              : 'bg-danger-bg text-danger'
         "
       >
         {{
           authResultBanner === 'success'
             ? 'Fyers connected successfully!'
-            : 'Fyers authentication failed. Please try again.'
+            : authResultBanner === 'not-configured'
+              ? FYERS_NOT_CONFIGURED_MESSAGE
+              : 'Fyers authentication failed. Please try again.'
         }}
         <button class="ml-2 opacity-60 hover:opacity-100" @click="authResultBanner = null">
           &times;
@@ -948,7 +954,7 @@ import {
   getPiServerStatus as apiGetPiServerStatus,
 } from '../api/client'
 import type { FyersStatus, HealthStatus } from '../api/types'
-import { formatAppError } from '../errors/appError'
+import { formatAppError, isAppError } from '../errors/appError'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import Toast from '../components/Toast.vue'
 import {
@@ -978,7 +984,20 @@ const fyersConnected = computed(
 )
 const healthStatus = ref<HealthStatus | null>(null)
 const healthStatusError = ref(false)
-const authResultBanner = ref<'success' | 'error' | null>(null)
+const authResultBanner = ref<'success' | 'error' | 'not-configured' | null>(null)
+
+// Stage environments without Fyers credentials get a 400 "not configured" from
+// /api/fyers/login. That is an environment state, not an authentication failure —
+// report it honestly instead of the misleading "authentication failed" banner.
+const FYERS_NOT_CONFIGURED_MESSAGE =
+  'Fyers is not configured on this environment. Contact an administrator to enable broker access.'
+
+function isFyersNotConfiguredError(err: unknown): boolean {
+  if (!isAppError(err)) return false
+  if (err.code === 'FYERS_NOT_CONFIGURED') return true
+  // Fallback for backends that only return the message (pre-code deployments).
+  return err.status === 400 && /not configured/i.test(err.message)
+}
 
 const authing = ref(false)
 const showAuthCodeInput = ref(false)
@@ -1123,8 +1142,8 @@ const startFyersAuth = async () => {
         pollTimer = null
       }
     })
-  } catch {
-    authResultBanner.value = 'error'
+  } catch (err) {
+    authResultBanner.value = isFyersNotConfiguredError(err) ? 'not-configured' : 'error'
   } finally {
     authing.value = false
   }
@@ -1140,10 +1159,14 @@ const submitAuthCode = async () => {
     fyersStatus.value = data
     showAuthCodeInput.value = false
     authCodeInput.value = ''
-  } catch {
-    authResultBanner.value = 'error'
-    toastMessage.value = 'Fyers authentication failed. Please try again.'
-    toastType.value = 'error'
+  } catch (err) {
+    if (isFyersNotConfiguredError(err)) {
+      toastMessage.value = FYERS_NOT_CONFIGURED_MESSAGE
+      toastType.value = 'warning'
+    } else {
+      toastMessage.value = 'Fyers authentication failed. Please try again.'
+      toastType.value = 'error'
+    }
     toastVisible.value = true
     setTimeout(() => {
       toastVisible.value = false

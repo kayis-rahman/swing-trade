@@ -345,7 +345,7 @@ public class PaperTradingEngine implements TradingService {
                 persistence.saveOrder(order);
                 Long signalId = signalId(order);
                 if (signalId == null) persistence.savePosition(position);
-                else persistence.savePosition(position, signalId);
+                else persistence.savePosition(position, signalId, calculateCommission(order));
                 savePortfolio();
             }
         }

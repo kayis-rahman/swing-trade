@@ -73,6 +73,11 @@ public interface TradingStatePersistence {
 
     void savePosition(Position position, Long signalId);
 
+    /** Saves a signal-originated position together with its entry commission for trade audit. */
+    default void savePosition(Position position, Long signalId, BigDecimal entryCommission) {
+        savePosition(position, signalId);
+    }
+
     void closePosition(String positionId, Position closedPosition);
 
     /**

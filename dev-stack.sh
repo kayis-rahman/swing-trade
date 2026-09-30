@@ -435,6 +435,13 @@ case "${1:-help}" in
     echo "✓ Prometheus can now scrape stage API"
     echo ""
 
+    # --- Step 12b: Deploy Prometheus alert rules ---
+    echo "📊 Deploying Prometheus alert rules..."
+    ssh dietpi@piworm.local "sudo cp /home/dietpi/swing-trade/infra/monitoring/alerts.yml /etc/prometheus/alerts.yml && sudo systemctl reload prometheus" 2>/dev/null || \
+      ssh dietpi@piworm.local "sudo cp /home/dietpi/swing-trade/infra/monitoring/alerts.yml /etc/prometheus/alerts.yml" 2>/dev/null || \
+      echo "⚠ Could not deploy alert rules — deploy manually"
+    echo ""
+
     # --- Step 13: Verify Prometheus scrape ---
     echo "📊 Checking Prometheus scrape target..."
     sleep 5

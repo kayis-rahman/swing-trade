@@ -20,6 +20,7 @@ public class FyersOrderService {
     private static final Logger logger = LoggerFactory.getLogger(FyersOrderService.class);
     private final FyersAuthService authService;
     private final Supplier<FyersClass> sdkProvider;
+    private volatile boolean missingTokenLogged = false;
 
     public FyersOrderService(FyersAuthService authService) {
         this(authService, FyersClass::getInstance);
@@ -43,7 +44,10 @@ public class FyersOrderService {
                               Double stopLoss, Double takeProfit, String orderTag) {
         String token = authService.getAccessToken();
         if (token == null) {
-            logger.error("Fyers access token is missing.");
+            if (!missingTokenLogged) {
+                logger.warn("Fyers access token is missing. Order placement skipped.");
+                missingTokenLogged = true;
+            }
             return null;
         }
 

@@ -42,6 +42,7 @@ public class FyersAuthService {
     // In-memory token storage (for the current session)
     private final AtomicReference<String> accessTokenRef = new AtomicReference<>();
     private final AtomicReference<String> refreshTokenRef = new AtomicReference<>();
+    private volatile boolean missingAuthLogged = false;
 
 // Resilience4j fields
     private CircuitBreaker fyersAuthCircuitBreaker;
@@ -145,7 +146,10 @@ public class FyersAuthService {
     public void refreshToken() {
         String refreshToken = refreshTokenRef.get();
         if (refreshToken == null || refreshToken.isEmpty()) {
-            logger.error("No refresh token available. Cannot refresh access token. Please re-authenticate.");
+            if (!missingAuthLogged) {
+                logger.warn("No refresh token available. Fyers authentication not configured — data ingestion will be skipped. Configure FYERS_CLIENT_ID, FYERS_SECRET_KEY, and FYERS_PIN to enable.");
+                missingAuthLogged = true;
+            }
             return;
         }
 

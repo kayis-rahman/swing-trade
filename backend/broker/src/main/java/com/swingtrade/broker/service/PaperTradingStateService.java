@@ -12,8 +12,10 @@ import com.swingtrade.data.entity.PositionEntity;
 import com.swingtrade.data.repository.PositionRepository;
 import com.swingtrade.domain.Position;
 import com.swingtrade.domain.PositionStatus;
+import com.swingtrade.domain.Trade;
 import com.swingtrade.broker.util.OptimisticLockRetryHelper;
 import com.swingtrade.domain.service.TradingStatePersistence;
+import com.swingtrade.domain.store.TradeStore;
 import com.swingtrade.strategy.ExitReason;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,15 +52,27 @@ public class PaperTradingStateService implements TradingStatePersistence {
     private final PositionRepository unifiedPositionRepo;
     private final PaperTradingOrderRepository orderRepo;
     private final PaperTradingSnapshotRepository snapshotRepo;
+    private final TradeStore tradeStore;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public PaperTradingStateService(PaperTradingPortfolioRepository portfolioRepo,
                                     PositionRepository unifiedPositionRepo,
                                     PaperTradingOrderRepository orderRepo,
-                                    PaperTradingSnapshotRepository snapshotRepo) {
+                                    PaperTradingSnapshotRepository snapshotRepo,
+                                    TradeStore tradeStore) {
         this.portfolioRepo = portfolioRepo;
         this.unifiedPositionRepo = unifiedPositionRepo;
         this.orderRepo = orderRepo;
         this.snapshotRepo = snapshotRepo;
+        this.tradeStore = tradeStore;
+    }
+
+    /** Compatibility constructor for direct callers that do not need trade-audit persistence. */
+    public PaperTradingStateService(PaperTradingPortfolioRepository portfolioRepo,
+                                    PositionRepository unifiedPositionRepo,
+                                    PaperTradingOrderRepository orderRepo,
+                                    PaperTradingSnapshotRepository snapshotRepo) {
+        this(portfolioRepo, unifiedPositionRepo, orderRepo, snapshotRepo, null);
     }
 
     @Override
@@ -224,9 +238,16 @@ public class PaperTradingStateService implements TradingStatePersistence {
 
     @Override
     public void savePosition(Position position, Long signalId) {
+        savePosition(position, signalId, null);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void savePosition(Position position, Long signalId, BigDecimal entryCommission) {
         try {
             OptimisticLockRetryHelper.execute(() -> {
                 PositionEntity entity = unifiedPositionRepo.findByPositionId(position.positionId()).orElse(null);
+                boolean created = entity == null;
                 if (entity == null) {
                     entity = new PositionEntity(position);
                     entity.setBrokerType(BROKER_TYPE_PAPER);
@@ -242,7 +263,14 @@ public class PaperTradingStateService implements TradingStatePersistence {
                     }
                 }
                 if (signalId != null) entity.setSignalId(signalId);
-                unifiedPositionRepo.save(entity);
+                PositionEntity saved = unifiedPositionRepo.save(entity);
+                if (created && signalId != null && tradeStore != null
+                        && tradeStore.findOpenByPositionId(saved.getId()).isEmpty()) {
+                    tradeStore.save(Trade.open(saved.getId(), saved.getSymbol(), saved.getEntryDate(),
+                        saved.getEntryPrice(), saved.getQuantity(), saved.getEntryReason(),
+                        entryCommission != null ? entryCommission : BigDecimal.ZERO,
+                        position.direction()));
+                }
             }, "PositionEntity");
         } catch (Exception e) {
             throw new RuntimeException("Failed to save position " + position.positionId(), e);

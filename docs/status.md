@@ -590,6 +590,13 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 
 **Note (2026-08-29):** no BUY signal has fired for any of the 14 active stocks in the entire `signals` table history — current market conditions produce mostly SELL/HOLD. This isn't a bug, but it means the BUY-side pipeline (sentiment gating, position entry) has never been exercised end-to-end on live data. See LLM Layer and Pilot Stocks Confirmed sections.
 
+- [ ] Isolated BUY-to-paper-position integration coverage added 2026-09-27: deterministic candles
+  generate a BUY, a mocked positive sentiment result is persisted, the real orchestrator queues a
+  paper order, and the real next-session scheduler fills it from the next candle open. It also
+  asserts the linked open `Trade` audit row and entry commission. The test compiles, but
+  Testcontainers execution is pending because the available Docker context is the remote SSH-based
+  `pi-node` daemon, which Testcontainers cannot use in this environment.
+
 ## Signal Pipeline (SELL/Exit)
 
 `8c2a4aa6` added any-1-of-3 exit confluence SELL/exit signal generation to the live pipeline — this is the newest, highest-stakes code on the critical path (it closes live paper positions). Unit-tested (Mockito) only. The real-DB integration test (`SignalPipelineSellExitIntegrationTest`) can't run here: this repo's `docker context` is pinned to `pi-node` (remote daemon on `piworm.local`, not local desktop — see docker context rule), so TestContainers is negotiating against a remote Docker API rather than a local one, which is what surfaced the version mismatch. Even fixing the version skew wouldn't make TestContainers a reliable check in this setup — it assumes a local daemon for port/network mapping, which a remote pi-node context doesn't give it cleanly. So this isn't a "fix Docker" TODO; manual verification against the real pi-node infra via dev-stack is the actual right-shaped check here, not a workaround for a broken test.

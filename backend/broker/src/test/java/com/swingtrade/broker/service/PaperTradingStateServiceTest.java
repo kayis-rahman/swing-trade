@@ -29,10 +29,12 @@ import com.swingtrade.domain.OrderStatus;
 import com.swingtrade.domain.OrderType;
 import com.swingtrade.domain.Position;
 import com.swingtrade.domain.PositionStatus;
+import com.swingtrade.domain.Trade;
 import com.swingtrade.domain.TradeDirection;
 import com.swingtrade.domain.service.TradingStatePersistence.PersistedState;
 import com.swingtrade.domain.service.TradingStatePersistence.PortfolioState;
 import com.swingtrade.domain.service.TradingStatePersistence.SnapshotState;
+import com.swingtrade.domain.store.TradeStore;
 import com.swingtrade.strategy.ExitReason;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -78,6 +80,9 @@ class PaperTradingStateServiceTest {
 
     @Mock
     private PaperTradingSnapshotRepository snapshotRepo;
+
+    @Mock
+    private TradeStore tradeStore;
 
     private PaperTradingStateService stateService;
 
@@ -150,7 +155,7 @@ class PaperTradingStateServiceTest {
     @BeforeEach
     void setUp() {
         stateService = new PaperTradingStateService(
-                portfolioRepo, unifiedPositionRepo, orderRepo, snapshotRepo);
+                portfolioRepo, unifiedPositionRepo, orderRepo, snapshotRepo, tradeStore);
     }
 
     // ==================== loadState ====================
@@ -384,6 +389,35 @@ class PaperTradingStateServiceTest {
 
             // Then
             verify(unifiedPositionRepo).save(any(PositionEntity.class));
+        }
+
+        @Test
+        void signalPosition_savesOpenTradeWithEntryCommission() {
+            Position position = Position.of(
+                    null, "PAPER", "RELIANCE", new BigDecimal("2500"), LocalDate.now(), 10,
+                    new BigDecimal("2400"), new BigDecimal("2750"), PositionStatus.OPEN,
+                    "BUY signal", new BigDecimal("2500"), "POS_00000002", null, null,
+                    TradeDirection.LONG, new BigDecimal("2500"), BigDecimal.ZERO, BigDecimal.ZERO,
+                    BigDecimal.ZERO, LocalDateTime.now(), null, null, null);
+            when(unifiedPositionRepo.findByPositionId("POS_00000002")).thenReturn(Optional.empty());
+            when(unifiedPositionRepo.save(any(PositionEntity.class))).thenAnswer(invocation -> {
+                PositionEntity entity = invocation.getArgument(0);
+                entity.setId(42L);
+                return entity;
+            });
+            when(tradeStore.findOpenByPositionId(42L)).thenReturn(Optional.empty());
+
+            stateService.savePosition(position, 812L, new BigDecimal("0.50"));
+
+            verify(unifiedPositionRepo).save(argThat(entity -> entity.getSignalId().equals(812L)));
+            verify(tradeStore).save(argThat(trade ->
+                    trade.tradeStatus() == Trade.TradeStatus.OPEN
+                    && trade.positionId().equals(42L)
+                    && "RELIANCE".equals(trade.symbol())
+                    && trade.entryPrice().compareTo(new BigDecimal("2500")) == 0
+                    && trade.quantity() == 10
+                    && trade.direction() == TradeDirection.LONG
+                    && trade.fees().compareTo(new BigDecimal("0.50")) == 0));
         }
 
         @Test

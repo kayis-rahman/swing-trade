@@ -25,6 +25,8 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-bulkhead:2.4.0")
     implementation("io.github.resilience4j:resilience4j-timelimiter:2.4.0")
     implementation("io.github.resilience4j:resilience4j-micrometer:2.4.0")
+    // Reactor operators (circuit breaker / retry) used by the reactive Laya client.
+    implementation("io.github.resilience4j:resilience4j-reactor:2.4.0")
     implementation("commons-codec:commons-codec:1.16.0")
     implementation("org.apache.commons:commons-lang3:3.14.0")
     implementation("org.jsoup:jsoup:1.18.3")

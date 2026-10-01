@@ -11,7 +11,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -44,7 +43,6 @@ public class MlxServerManager implements LlmServerManager {
     private final AppSettingsStore appSettingsStore;
 
     private final String defaultServerUrl;
-    private final String port;
     private final int idleTimeoutSec;
 
     private volatile Process serverProcess;
@@ -58,11 +56,9 @@ public class MlxServerManager implements LlmServerManager {
 
     public MlxServerManager(AppSettingsStore appSettingsStore,
                             LlmProperties llmProperties,
-                            @Value("${mlx.port:8081}") String port,
                             @Value("${mlx.idle-timeout:300}") int idleTimeoutSec) {
         this.appSettingsStore = appSettingsStore;
         this.defaultServerUrl = llmProperties.getProviders().getMlx().getBaseUrl().toString();
-        this.port = port;
         this.idleTimeoutSec = idleTimeoutSec;
     }
 
@@ -75,7 +71,7 @@ public class MlxServerManager implements LlmServerManager {
     @Override
     public void ensureRunning() {
         if (isRunning()) {
-            logger.debug("mlx_lm.server already running on port {}", port);
+            logger.debug("mlx_lm.server already running at {}", configuredEndpoint());
             return;
         }
 
@@ -95,9 +91,9 @@ public class MlxServerManager implements LlmServerManager {
         }
 
         try {
-            logger.info("Starting mlx_lm.server on port {} (model: {})", port, getModelName());
+            logger.info("Starting mlx_lm.server at {} (model: {})", configuredEndpoint(), getModelName());
             startServer();
-            logger.info("mlx_lm.server started successfully on port {}", port);
+            logger.info("mlx_lm.server started successfully at {}", configuredEndpoint());
         } catch (Exception e) {
             logger.error("Failed to start mlx_lm.server: {}", e.getMessage(), e);
             throw new IllegalStateException("mlx_lm.server failed to start: " + e.getMessage(), e);
@@ -165,16 +161,7 @@ public class MlxServerManager implements LlmServerManager {
         }
 
         // Build command
-        List<String> command = new ArrayList<>();
-        command.add("python");
-        command.add("-m");
-        command.add("mlx_lm.server");
-        command.add("--model");
-        command.add(modelName);
-        command.add("--port");
-        command.add(port);
-        command.add("--host");
-        command.add("127.0.0.1");
+        List<String> command = buildStartCommand(modelName);
 
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);
@@ -216,6 +203,11 @@ public class MlxServerManager implements LlmServerManager {
         startIdleMonitor();
     }
 
+    List<String> buildStartCommand(String modelName) {
+        return List.of("python", "-m", "mlx_lm.server", "--model", modelName,
+                "--port", Integer.toString(configuredPort()), "--host", "127.0.0.1");
+    }
+
     private void startIdleMonitor() {
         cancelIdleMonitor();
         ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(() -> {
@@ -254,8 +246,7 @@ public class MlxServerManager implements LlmServerManager {
 
     boolean healthCheck() {
         try {
-            java.net.URI baseUri = java.net.URI.create(appSettingsStore.get("mlx.server.url")
-                    .orElse(defaultServerUrl));
+            java.net.URI baseUri = configuredEndpoint();
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                     .uri(baseUri.resolve("/health"))
@@ -277,14 +268,31 @@ public class MlxServerManager implements LlmServerManager {
 
     private boolean isLocalEndpoint() {
         try {
-            java.net.URI uri = java.net.URI.create(appSettingsStore.get("mlx.server.url")
-                    .orElse(defaultServerUrl));
+            java.net.URI uri = configuredEndpoint();
             String host = uri.getHost();
             return host != null && (host.equalsIgnoreCase("localhost")
                     || host.equals("127.0.0.1") || host.equals("::1"));
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    private java.net.URI configuredEndpoint() {
+        return java.net.URI.create(appSettingsStore.get("mlx.server.url").orElse(defaultServerUrl));
+    }
+
+    private int configuredPort() {
+        java.net.URI endpoint = configuredEndpoint();
+        if (endpoint.getPort() >= 0) {
+            return endpoint.getPort();
+        }
+        if ("http".equalsIgnoreCase(endpoint.getScheme())) {
+            return 80;
+        }
+        if ("https".equalsIgnoreCase(endpoint.getScheme())) {
+            return 443;
+        }
+        throw new IllegalStateException("MLX server URL must specify a port or use HTTP(S)");
     }
 
     private boolean isMlxAvailable() {
@@ -350,7 +358,7 @@ public class MlxServerManager implements LlmServerManager {
     private void stopByPort() {
         try {
             ProcessBuilder pb = new ProcessBuilder("sh", "-c",
-                    String.format("lsof -ti:%s | xargs kill -TERM 2>/dev/null", port));
+                    String.format("lsof -ti:%s | xargs kill -TERM 2>/dev/null", configuredPort()));
             pb.redirectErrorStream(true);
             Process p = pb.start();
             p.waitFor(5, TimeUnit.SECONDS);

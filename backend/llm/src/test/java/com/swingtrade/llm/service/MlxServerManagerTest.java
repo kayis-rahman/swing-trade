@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +42,21 @@ class MlxServerManagerTest {
         }
     }
 
+    @Test
+    void launchCommandUsesTheConfiguredEndpointPort() {
+        AppSettingsStore settings = mock(AppSettingsStore.class);
+        when(settings.get("mlx.server.url"))
+                .thenReturn(Optional.of("http://127.0.0.1:8090/v1"));
+        LlmProperties properties = new LlmProperties();
+        properties.getProviders().getMlx().setBaseUrl(URI.create("http://127.0.0.1:8081/v1"));
+        MlxServerManager manager = new MlxServerManager(settings, properties, 300);
+
+        List<String> command = manager.buildStartCommand("mlx-model");
+        int portOption = command.indexOf("--port");
+
+        assertThat(command.get(portOption + 1)).isEqualTo("8090");
+    }
+
     private HttpServer healthServer(int status) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/health", exchange -> {
@@ -56,7 +72,6 @@ class MlxServerManagerTest {
         properties.getProviders().getMlx().setBaseUrl(URI.create(endpoint));
         AppSettingsStore settings = mock(AppSettingsStore.class);
         when(settings.get("mlx.server.url")).thenReturn(Optional.empty());
-        return new MlxServerManager(settings, properties,
-                String.valueOf(server.getAddress().getPort()), 300);
+        return new MlxServerManager(settings, properties, 300);
     }
 }

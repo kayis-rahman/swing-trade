@@ -36,12 +36,12 @@ Add `MLX("mlx")` to the `Backend` enum after `PI_SSH`. No other changes needed â
 
 Implements `LlmServerManager`. Lightweight process tracker:
 
-- **Start:** Launches `mlx_lm.server --model <model> --port 8081` via `ProcessBuilder`
+- **Start:** Launches `mlx_lm.server` on the port from the configured endpoint URL via `ProcessBuilder`
 - **Health check:** Polls the server root at `http://127.0.0.1:8081/health`; the configured OpenAI-compatible base URL includes `/v1`.
 - **Remote server:** A remote MLX endpoint can be configured for inference, but must be started on the Apple Silicon host; the API process only manages a local MLX process.
 - **PID tracking:** Stores PID in `~/.swingtrade/mlx.pid`
 - **Stop:** Kills process by PID or port
-- **IsRunning:** Checks PID file + port socket + health endpoint
+- **IsRunning:** Checks the configured endpoint's health response
 
 Key differences from `LlamaCppServerManager`:
 - No model path on Pi â€” model name is a simple string (e.g., `Qwen/Qwen2.5-3B-Instruct`)

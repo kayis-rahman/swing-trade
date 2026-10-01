@@ -10,11 +10,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 /**
  * Integration tests for multi-client LLM configuration.
@@ -88,6 +90,20 @@ class LlmConfigMultiClientTest {
         OpenAiChatModel laya = context.getBean("layaChatModel", OpenAiChatModel.class);
         assertThat(laya.getOptions().getBaseUrl()).isEqualTo("https://laya-default.test/v1");
         assertThat(laya.getOptions().getModel()).isEqualTo("laya-model");
+    }
+
+    @Test
+    @DisplayName("mlxChatModel reads the current runtime model when resolved")
+    void mlxChatModelReadsCurrentRuntimeModelWhenResolved() {
+        when(appSettingsStore.get("mlx.model")).thenReturn(java.util.Optional.of("mlx-first"));
+        OpenAiChatModel first = context.getBean("mlxChatModel", OpenAiChatModel.class);
+
+        when(appSettingsStore.get("mlx.model")).thenReturn(java.util.Optional.of("mlx-updated"));
+        OpenAiChatModel updated = context.getBean("mlxChatModel", OpenAiChatModel.class);
+
+        assertThat(first.getOptions().getModel()).isEqualTo("mlx-first");
+        assertThat(updated.getOptions().getModel()).isEqualTo("mlx-updated");
+        assertThat(updated).isNotSameAs(first);
     }
 
     @Test

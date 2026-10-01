@@ -178,7 +178,7 @@ public class MlxServerManager implements LlmServerManager {
         command.add("--port");
         command.add(port);
         command.add("--host");
-        command.add("0.0.0.0");
+        command.add("127.0.0.1");
 
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);

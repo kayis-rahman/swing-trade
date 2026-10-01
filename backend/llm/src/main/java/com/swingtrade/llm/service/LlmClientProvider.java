@@ -9,7 +9,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+
+import java.util.function.Supplier;
 
 /**
  * Provider that routes LLM requests to the correct backend.
@@ -28,7 +31,7 @@ public class LlmClientProvider {
     private final OpenAiChatModel openAiModel;
     private final OpenAiChatModel ollamaModel;
     private final OpenAiChatModel layaModel;
-    private final OpenAiChatModel mlxModel;
+    private final Supplier<OpenAiChatModel> mlxModelSupplier;
     private final PiAgentLlmClient piAgentClient;
     private final String ollamaReasoningEffort;
 
@@ -41,7 +44,8 @@ public class LlmClientProvider {
                              OpenAiChatModel layaModel,
                              OpenAiChatModel mlxModel) {
         this(selector, llamaCppClient, localModel, piSshModel, openAiModel, ollamaModel,
-                layaModel, mlxModel, new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
+                layaModel, () -> mlxModel,
+                new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
     }
 
     /**
@@ -58,9 +62,23 @@ public class LlmClientProvider {
                              @Qualifier("openAiChatModel") OpenAiChatModel openAiModel,
                              @Qualifier("ollamaChatModel") OpenAiChatModel ollamaModel,
                              @Qualifier("layaChatModel") OpenAiChatModel layaModel,
-                             @Qualifier("mlxChatModel") OpenAiChatModel mlxModel,
+                             @Qualifier("mlxChatModel") ObjectProvider<OpenAiChatModel> mlxModelProvider,
                              PiAgentLlmClient piAgentClient,
                              @org.springframework.beans.factory.annotation.Value("${llm.providers.ollama.reasoning-effort:none}") String ollamaReasoningEffort) {
+        this(selector, llamaCppClient, localModel, piSshModel, openAiModel, ollamaModel, layaModel,
+                mlxModelProvider::getObject, piAgentClient, ollamaReasoningEffort);
+    }
+
+    private LlmClientProvider(LlmBackendSelector selector,
+                             LlamaCppClient llamaCppClient,
+                             OpenAiChatModel localModel,
+                             OpenAiChatModel piSshModel,
+                             OpenAiChatModel openAiModel,
+                             OpenAiChatModel ollamaModel,
+                             OpenAiChatModel layaModel,
+                             Supplier<OpenAiChatModel> mlxModelSupplier,
+                             PiAgentLlmClient piAgentClient,
+                             String ollamaReasoningEffort) {
         this.ollamaReasoningEffort = ollamaReasoningEffort;
         this.selector = selector;
         this.llamaCppClient = llamaCppClient;
@@ -69,7 +87,7 @@ public class LlmClientProvider {
         this.openAiModel = openAiModel;
         this.ollamaModel = ollamaModel;
         this.layaModel = layaModel;
-        this.mlxModel = mlxModel;
+        this.mlxModelSupplier = mlxModelSupplier;
         this.piAgentClient = piAgentClient;
     }
 
@@ -92,7 +110,7 @@ public class LlmClientProvider {
             case OPENAI -> openAiModel;
             case OLLAMA -> ollamaModel;
             case LAYA -> layaModel;
-            case MLX -> mlxModel;
+            case MLX -> mlxModelSupplier.get();
             case PI_AGENT -> throw new IllegalStateException("Pi agent should be selected before model routing");
         };
         if (model.getOptions() != null) {

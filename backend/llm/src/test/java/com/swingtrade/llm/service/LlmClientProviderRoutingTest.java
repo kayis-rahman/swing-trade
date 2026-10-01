@@ -8,9 +8,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.beans.factory.ObjectProvider;
 import com.swingtrade.llm.client.LlamaCppClient;
 import com.swingtrade.llm.client.LlmClient;
+import com.swingtrade.llm.client.PiAgentLlmClient;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -125,5 +129,22 @@ class LlmClientProviderRoutingTest {
             // Assert
             assertThat(client).isNotNull();
         }
+    }
+
+    @Test
+    @DisplayName("resolves a fresh MLX model for each request")
+    void resolvesFreshMlxModelForEachRequest() {
+        when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.MLX);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<OpenAiChatModel> mlxModelProvider = mock(ObjectProvider.class);
+        when(mlxModelProvider.getObject()).thenReturn(mlxModel);
+        LlmClientProvider mlxProvider = new LlmClientProvider(selector, mock(LlamaCppClient.class),
+                localModel, piSshModel, openAiModel, ollamaModel, layaModel,
+                mlxModelProvider, mock(PiAgentLlmClient.class), null);
+
+        mlxProvider.getClient();
+        mlxProvider.getClient();
+
+        verify(mlxModelProvider, times(2)).getObject();
     }
 }

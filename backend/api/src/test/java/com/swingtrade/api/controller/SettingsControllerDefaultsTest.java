@@ -228,6 +228,26 @@ class SettingsControllerDefaultsTest {
         verify(piAgentLlmClient).configure("openai-codex", "gpt-5.6-luna");
     }
 
+    @Test
+    void mlxInferenceUrlRejectsUnapprovedOrigin() {
+        when(appSettingsService.get("mlx.server.url", "http://mlx-default.test/v1"))
+            .thenReturn("https://attacker.example/v1");
+
+        URI result = controller.mlxInferenceBaseUrl(URI.create("http://mlx-default.test/v1"));
+
+        assertThat(result).isEqualTo(URI.create("http://mlx-default.test/v1"));
+    }
+
+    @Test
+    void mlxInferenceUrlAllowsConfiguredOrigin() {
+        when(appSettingsService.get("mlx.server.url", "http://mlx-default.test/v1"))
+            .thenReturn("http://mlx-default.test/custom");
+
+        URI result = controller.mlxInferenceBaseUrl(URI.create("http://mlx-default.test/v1"));
+
+        assertThat(result).isEqualTo(URI.create("http://mlx-default.test/custom"));
+    }
+
     @Nested
     @DisplayName("PUT /api/settings/llm")
     class SetLlmSettings {

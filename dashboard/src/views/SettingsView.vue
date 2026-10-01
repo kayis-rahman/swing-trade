@@ -678,7 +678,7 @@
           <div v-show="llmSettings.llmBackend === 'mlx'" class="space-y-4 mb-6">
             <h3 class="text-sm font-medium text-text-secondary">MLX Server (Apple Silicon)</h3>
             <p class="text-xs text-text-muted">
-              mlx_lm.server on Mac. Java starts/stops it via Python on port 8081.
+              Runs on the API host. For a remote Apple Silicon host, start mlx_lm.server there and set its URL.
             </p>
             <div class="flex gap-2">
               <select

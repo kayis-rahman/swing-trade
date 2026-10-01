@@ -44,6 +44,7 @@ public class MlxServerManager implements LlmServerManager {
 
     private final AppSettingsStore appSettingsStore;
 
+    private final String defaultServerUrl;
     private final String port;
     private final int idleTimeoutSec;
 
@@ -57,10 +58,11 @@ public class MlxServerManager implements LlmServerManager {
     });
 
     public MlxServerManager(AppSettingsStore appSettingsStore,
-                            @Value("${mlx.server.url:http://192.168.1.50:8081}") String serverUrl,
+                            @Value("${mlx.server.url:http://127.0.0.1:8081}") String serverUrl,
                             @Value("${mlx.port:8081}") String port,
                             @Value("${mlx.idle-timeout:300}") int idleTimeoutSec) {
         this.appSettingsStore = appSettingsStore;
+        this.defaultServerUrl = serverUrl;
         this.port = port;
         this.idleTimeoutSec = idleTimeoutSec;
     }
@@ -76,6 +78,11 @@ public class MlxServerManager implements LlmServerManager {
         if (isRunning()) {
             logger.debug("mlx_lm.server already running on port {}", port);
             return;
+        }
+
+        if (!isLocalEndpoint()) {
+            throw new IllegalStateException(
+                    "MLX server URL is remote; start mlx_lm.server on that host and use Refresh to check it");
         }
 
         if (!starting.compareAndSet(false, true)) {
@@ -253,7 +260,7 @@ public class MlxServerManager implements LlmServerManager {
     boolean healthCheck() {
         try {
             String url = appSettingsStore.get("mlx.server.url")
-                    .orElse("http://192.168.1.50:8081");
+                    .orElse(defaultServerUrl);
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(url + "/health"))
@@ -271,6 +278,18 @@ public class MlxServerManager implements LlmServerManager {
     private String getModelName() {
         return appSettingsStore.get("mlx.model")
                 .orElse("Qwen/Qwen2.5-3B-Instruct");
+    }
+
+    private boolean isLocalEndpoint() {
+        try {
+            java.net.URI uri = java.net.URI.create(appSettingsStore.get("mlx.server.url")
+                    .orElse(defaultServerUrl));
+            String host = uri.getHost();
+            return host != null && (host.equalsIgnoreCase("localhost")
+                    || host.equals("127.0.0.1") || host.equals("::1"));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private boolean isPortInUse(int port) {

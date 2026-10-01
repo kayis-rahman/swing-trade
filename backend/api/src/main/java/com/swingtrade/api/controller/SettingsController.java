@@ -365,6 +365,20 @@ public class SettingsController {
             && candidate.getFragment() == null;
     }
 
+    URI mlxInferenceBaseUrl(URI configuredBaseUrl) {
+        try {
+            URI runtimeBaseUrl = URI.create(appSettingsService.get(
+                "mlx.server.url", configuredBaseUrl.toString()));
+            if (hasSameOrigin(runtimeBaseUrl, configuredBaseUrl)) {
+                return runtimeBaseUrl;
+            }
+            logger.warn("Ignoring MLX inference URL with unapproved origin");
+        } catch (IllegalArgumentException ignored) {
+            logger.warn("Ignoring invalid MLX inference URL");
+        }
+        return configuredBaseUrl;
+    }
+
     static URI chatCompletionsUri(URI baseUrl) {
         return UriComponentsBuilder.fromUri(baseUrl)
             .pathSegment("chat", "completions")
@@ -608,11 +622,9 @@ public class SettingsController {
 
             // Test actual LLM inference with a temporary client — does NOT affect the active backend.
             LlmProperties.Provider mlxDefaults = llmProperties.getProviders().getMlx();
-            URI baseUrl = URI.create(appSettingsService.get(
-                "mlx.server.url", mlxDefaults.getBaseUrl().toString()));
+            URI baseUrl = mlxInferenceBaseUrl(mlxDefaults.getBaseUrl());
             String model = appSettingsService.get("mlx.model", mlxDefaults.getModel());
-            String apiKey = appSettingsService.get("openai.api_key", "");
-            boolean inferenceOk = testInference(baseUrl, model, apiKey, OLLAMA_TEST_TIMEOUT);
+            boolean inferenceOk = testInference(baseUrl, model, "", OLLAMA_TEST_TIMEOUT);
             result.put("success", inferenceOk);
             result.put("message", inferenceOk
                 ? "MLX connection successful, server started and responded to inference"

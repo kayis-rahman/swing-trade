@@ -19,6 +19,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -50,6 +52,9 @@ public class MlxServerManager implements LlmServerManager {
 
     private volatile Process serverProcess;
     private final AtomicBoolean starting = new AtomicBoolean(false);
+    private final AtomicLong idleCheckTime = new AtomicLong(0);
+    private final AtomicInteger inFlightRequests = new AtomicInteger(0);
+    private final Object activityLock = new Object();
     private final AtomicReference<ScheduledFuture<?>> idleMonitor = new AtomicReference<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "mlx-idle-monitor");
@@ -81,8 +86,12 @@ public class MlxServerManager implements LlmServerManager {
      */
     @Override
     public void ensureRunning() {
+        recordActivity();
         if (isRunning()) {
             logger.debug("mlx_lm.server already running at {}", configuredEndpoint());
+            if (isLocalEndpoint()) {
+                startIdleMonitor();
+            }
             return;
         }
 
@@ -92,13 +101,19 @@ public class MlxServerManager implements LlmServerManager {
         }
 
         if (!starting.compareAndSet(false, true)) {
-            // Another thread is already starting — wait for it
             logger.debug("Another thread is starting mlx_lm.server, waiting...");
-            while (!isRunning()) {
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(STARTUP_TIMEOUT_SECONDS);
+            while (starting.get() && System.nanoTime() < deadline) {
+                if (isRunning()) {
+                    return;
+                }
                 sleepQuietly(500);
             }
-            starting.set(false);
-            return;
+            if (isRunning()) {
+                startIdleMonitor();
+                return;
+            }
+            throw new IllegalStateException("Concurrent mlx_lm.server startup failed or timed out");
         }
 
         try {
@@ -139,7 +154,10 @@ public class MlxServerManager implements LlmServerManager {
      */
     @Override
     public boolean isRunning() {
-        return healthCheck();
+        if (!healthCheck()) {
+            return false;
+        }
+        return !isLocalEndpoint() || hasManagedMlxProcess();
     }
 
     /**
@@ -210,6 +228,7 @@ public class MlxServerManager implements LlmServerManager {
             throw new IllegalStateException("mlx_lm.server failed to become healthy within " + STARTUP_TIMEOUT_SECONDS + "s");
         }
 
+        recordActivity();
         // Start idle monitor
         startIdleMonitor();
     }
@@ -224,10 +243,15 @@ public class MlxServerManager implements LlmServerManager {
         ScheduledFuture<?> future = scheduler.scheduleWithFixedDelay(() -> {
             if (!isRunning()) return;
             try {
-                long idleSeconds = getIdleSeconds();
-                if (idleSeconds >= idleTimeoutSec) {
-                    logger.info("mlx_lm.server idle for {}s >= {}s, auto-stopping", idleSeconds, idleTimeoutSec);
-                    stop();
+                synchronized (activityLock) {
+                    if (inFlightRequests.get() > 0) {
+                        return;
+                    }
+                    long idleSeconds = getIdleSeconds();
+                    if (idleSeconds >= idleTimeoutSec) {
+                        logger.info("mlx_lm.server idle for {}s >= {}s, auto-stopping", idleSeconds, idleTimeoutSec);
+                        stop();
+                    }
                 }
             } catch (Exception e) {
                 logger.debug("Idle monitor check failed: {}", e.getMessage());
@@ -241,14 +265,39 @@ public class MlxServerManager implements LlmServerManager {
         if (f != null) f.cancel(false);
     }
 
-    private long idleCheckTime = 0;
-
     long getIdleSeconds() {
-        return idleCheckTime > 0 ? (System.currentTimeMillis() - idleCheckTime) / 1000 : 0;
+        long lastActivity = idleCheckTime.get();
+        return lastActivity > 0 ? (System.currentTimeMillis() - lastActivity) / 1000 : 0;
     }
 
     void setIdleCheckTime(long time) {
-        idleCheckTime = time;
+        idleCheckTime.set(time);
+    }
+
+    @Override
+    public void beginRequest() {
+        synchronized (activityLock) {
+            inFlightRequests.incrementAndGet();
+            idleCheckTime.set(System.currentTimeMillis());
+        }
+    }
+
+    @Override
+    public void endRequest() {
+        synchronized (activityLock) {
+            inFlightRequests.updateAndGet(count -> Math.max(0, count - 1));
+            idleCheckTime.set(System.currentTimeMillis());
+        }
+    }
+
+    boolean hasInFlightRequests() {
+        return inFlightRequests.get() > 0;
+    }
+
+    private void recordActivity() {
+        synchronized (activityLock) {
+            idleCheckTime.set(System.currentTimeMillis());
+        }
     }
 
     int getIdleTimeoutSec() {
@@ -292,6 +341,20 @@ public class MlxServerManager implements LlmServerManager {
         return java.net.URI.create(appSettingsStore.get("mlx.server.url").orElse(defaultServerUrl));
     }
 
+    private boolean hasManagedMlxProcess() {
+        Process process = serverProcess;
+        if (process != null && process.isAlive()) {
+            return true;
+        }
+        try {
+            String pidText = java.nio.file.Files.readString(pidFile).trim();
+            ProcessHandle processHandle = ProcessHandle.of(Long.parseLong(pidText)).orElse(null);
+            return processHandle != null && processHandle.isAlive() && isMlxProcess(processHandle);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private int configuredPort() {
         java.net.URI endpoint = configuredEndpoint();
         if (endpoint.getPort() >= 0) {
@@ -306,7 +369,7 @@ public class MlxServerManager implements LlmServerManager {
         throw new IllegalStateException("MLX server URL must specify a port or use HTTP(S)");
     }
 
-    private boolean isMlxAvailable() {
+    boolean isMlxAvailable() {
         try {
             ProcessBuilder pb = new ProcessBuilder("python", "-c",
                     "import mlx_lm; print('ok')");

@@ -39,7 +39,8 @@ import static org.mockito.Mockito.when;
     "spring.ai.openai.api-key=test-key",
     "spring.ai.openai.chat.options.model=qwen3-4b",
     "llm.providers.laya.base-url=https://laya-default.test/v1",
-    "llm.providers.laya.model=laya-model"
+    "llm.providers.laya.model=laya-model",
+    "llm.providers.mlx.base-url=http://127.0.0.1:8081/v1"
 })
 class LlmConfigMultiClientTest {
 
@@ -104,6 +105,14 @@ class LlmConfigMultiClientTest {
         assertThat(first.getOptions().getModel()).isEqualTo("mlx-first");
         assertThat(updated.getOptions().getModel()).isEqualTo("mlx-updated");
         assertThat(updated).isNotSameAs(first);
+    }
+
+    @Test
+    @DisplayName("mlxChatModel uses the OpenAI-compatible versioned base URL")
+    void mlxChatModelUsesVersionedBaseUrl() {
+        OpenAiChatModel mlx = context.getBean("mlxChatModel", OpenAiChatModel.class);
+
+        assertThat(mlx.getOptions().getBaseUrl()).isEqualTo("http://127.0.0.1:8081/v1");
     }
 
     @Test

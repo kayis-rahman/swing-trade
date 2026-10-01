@@ -51,7 +51,7 @@ class MlxServerManagerTest {
     }
 
     private MlxServerManager managerFor(HttpServer server) {
-        String endpoint = "http://127.0.0.1:" + server.getAddress().getPort();
+        String endpoint = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
         LlmProperties properties = new LlmProperties();
         properties.getProviders().getMlx().setBaseUrl(URI.create(endpoint));
         AppSettingsStore settings = mock(AppSettingsStore.class);

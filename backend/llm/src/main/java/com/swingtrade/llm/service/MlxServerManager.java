@@ -10,8 +10,6 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -183,29 +181,28 @@ public class MlxServerManager implements LlmServerManager {
         // Write PID file
         writePidFile(serverProcess.pid());
 
-        // Wait for health endpoint
-        long waited = 0;
-        while (waited < STARTUP_TIMEOUT_SECONDS) {
-            if (isPortInUse(Integer.parseInt(port))) {
-                // Give it a moment more for the HTTP layer to be ready
-                sleepQuietly(2000);
-                if (healthCheck()) {
-                    logger.info("mlx_lm.server is healthy after {}s", waited);
-                    break;
-                }
+        long startupStartedAt = System.nanoTime();
+        long startupDeadline = startupStartedAt + TimeUnit.SECONDS.toNanos(STARTUP_TIMEOUT_SECONDS);
+        boolean healthy = false;
+        while (System.nanoTime() < startupDeadline) {
+            if (healthCheck()) {
+                healthy = true;
+                long elapsedSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startupStartedAt);
+                logger.info("mlx_lm.server is healthy after {}s", elapsedSeconds);
+                break;
             }
-            sleepQuietly(1000);
-            waited++;
-
-            // Check if process died
             if (!serverProcess.isAlive()) {
                 int exitCode = serverProcess.exitValue();
                 stopByPid();
                 throw new IllegalStateException("mlx_lm.server exited with code " + exitCode);
             }
+            long remainingMillis = TimeUnit.NANOSECONDS.toMillis(startupDeadline - System.nanoTime());
+            if (remainingMillis > 0) {
+                sleepQuietly(Math.min(1000, remainingMillis));
+            }
         }
 
-        if (!healthCheck()) {
+        if (!healthy) {
             stop();
             throw new IllegalStateException("mlx_lm.server failed to become healthy within " + STARTUP_TIMEOUT_SECONDS + "s");
         }
@@ -252,11 +249,11 @@ public class MlxServerManager implements LlmServerManager {
 
     boolean healthCheck() {
         try {
-            String url = appSettingsStore.get("mlx.server.url")
-                    .orElse(defaultServerUrl);
+            java.net.URI baseUri = java.net.URI.create(appSettingsStore.get("mlx.server.url")
+                    .orElse(defaultServerUrl));
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                    .uri(java.net.URI.create(url + "/health"))
+                    .uri(baseUri.resolve("/health"))
                     .timeout(Duration.ofSeconds(3))
                     .GET()
                     .build();
@@ -281,15 +278,6 @@ public class MlxServerManager implements LlmServerManager {
             return host != null && (host.equalsIgnoreCase("localhost")
                     || host.equals("127.0.0.1") || host.equals("::1"));
         } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    private boolean isPortInUse(int port) {
-        try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress("127.0.0.1", port), 100);
-            return true;
-        } catch (Exception e) {
             return false;
         }
     }

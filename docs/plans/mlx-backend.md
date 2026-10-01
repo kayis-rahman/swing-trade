@@ -37,7 +37,7 @@ Add `MLX("mlx")` to the `Backend` enum after `PI_SSH`. No other changes needed �
 Implements `LlmServerManager`. Lightweight process tracker:
 
 - **Start:** Launches `mlx_lm.server --model <model> --port 8081` via `ProcessBuilder`
-- **Health check:** Polls `http://127.0.0.1:8081/health` by default (mlx_lm.server exposes this)
+- **Health check:** Polls the server root at `http://127.0.0.1:8081/health`; the configured OpenAI-compatible base URL includes `/v1`.
 - **Remote server:** A remote MLX endpoint can be configured for inference, but must be started on the Apple Silicon host; the API process only manages a local MLX process.
 - **PID tracking:** Stores PID in `~/.swingtrade/mlx.pid`
 - **Stop:** Kills process by PID or port
@@ -61,12 +61,12 @@ public OpenAiChatModel mlxChatModel(
         AppSettingsStore appSettingsStore,
         @Value("${spring.ai.openai.api-key:none}") String apiKey) {
     return createChatModel(appSettingsStore, "mlx.server.url",
-            "http://127.0.0.1:8081", "mlx.model", "Qwen/Qwen2.5-3B-Instruct", apiKey);
+            "http://127.0.0.1:8081/v1", "mlx.model", "Qwen/Qwen2.5-3B-Instruct", apiKey);
 }
 ```
 
 Properties to add:
-- `mlx.server.url` — MLX server URL (default: `http://127.0.0.1:8081`)
+- `mlx.server.url` — OpenAI-compatible MLX base URL (default: `http://127.0.0.1:8081/v1`)
 - `mlx.model` — model name (default: `Qwen/Qwen2.5-3B-Instruct`; MLX-compatible Qwen2.5 3B Q4, ~2GB RAM)
 
 ### Step 4: Wire MLX into LlmClientProvider
@@ -130,7 +130,7 @@ Changes:
 Add:
 ```properties
 mlx.model=Qwen/Qwen2.5-3B-Instruct
-mlx.server.url=http://127.0.0.1:8081
+mlx.server.url=http://127.0.0.1:8081/v1
 ```
 
 **File:** `backend/api/src/main/resources/application-local.properties`

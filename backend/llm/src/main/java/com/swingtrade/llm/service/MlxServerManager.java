@@ -47,6 +47,7 @@ public class MlxServerManager implements LlmServerManager {
     private final AppSettingsStore appSettingsStore;
 
     private final String defaultServerUrl;
+    private final String defaultModel;
     private final int idleTimeoutSec;
     private final Path pidFile;
 
@@ -74,6 +75,7 @@ public class MlxServerManager implements LlmServerManager {
                      Path pidFile) {
         this.appSettingsStore = appSettingsStore;
         this.defaultServerUrl = llmProperties.getProviders().getMlx().getBaseUrl().toString();
+        this.defaultModel = llmProperties.getProviders().getMlx().getModel();
         this.idleTimeoutSec = idleTimeoutSec;
         this.pidFile = pidFile;
     }
@@ -321,9 +323,9 @@ public class MlxServerManager implements LlmServerManager {
         }
     }
 
-    private String getModelName() {
+    String getModelName() {
         return appSettingsStore.get("mlx.model")
-                .orElse("Qwen/Qwen2.5-3B-Instruct");
+                .orElse(defaultModel);
     }
 
     private boolean isLocalEndpoint() {

@@ -152,10 +152,14 @@ describe('settings store — individual save updates', () => {
 
     await loadSettings()
     getSettings().discordSettings.enabled = true
+    getSettings().llmSettings.mlxModel = 'configured-mlx-model'
     await expect(saveSettings()).resolves.toBe(true)
 
     expect(apiMocks.saveAllSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ broker: 'upstox' })
+      expect.objectContaining({
+        broker: 'upstox',
+        llm: expect.objectContaining({ 'mlx.model': 'configured-mlx-model' }),
+      })
     )
   })
 

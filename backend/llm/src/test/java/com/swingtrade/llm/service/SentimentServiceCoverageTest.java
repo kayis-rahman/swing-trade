@@ -10,6 +10,7 @@ import com.swingtrade.domain.store.AppSettingsStore;
 import com.swingtrade.domain.store.SentimentStore;
 import com.swingtrade.domain.store.StockStore;
 import com.swingtrade.llm.client.LlmClient;
+import com.swingtrade.llm.config.LlmProperties;
 import com.swingtrade.llm.config.SentimentPromptLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,28 @@ class SentimentServiceCoverageTest {
         assertThat(result.confidence()).isEqualTo(0.3);
         verify(llmClient, never()).generateChatCompletion(anyList(), any(Integer.class), any(Double.class));
         verify(sentimentStore, never()).saveOrUpdate(any());
+    }
+
+    @Test
+    void usesConfiguredMlxModelForAuditModelVersion() {
+        LlmProperties properties = new LlmProperties();
+        properties.getProviders().getMlx().setModel("configured-mlx-model");
+        SentimentService configuredService = new SentimentService(
+                clientProvider, serverManagerProvider, promptLoader, sentimentAnalyzer,
+                newsIngestionService, sentimentStore, stockStore, appSettingsStore,
+                org.mockito.Mockito.mock(LlmMetrics.class),
+                org.mockito.Mockito.mock(SentimentMetrics.class), properties, null, null, 0.75);
+        when(appSettingsStore.get("llamacpp.model")).thenReturn(Optional.empty());
+        when(appSettingsStore.get("mlx.model")).thenReturn(Optional.empty());
+
+        try {
+            assertThat(configuredService.configuredModel("mlx")).isEqualTo("configured-mlx-model");
+
+            when(appSettingsStore.get("mlx.model")).thenReturn(Optional.of("saved-mlx-model"));
+            assertThat(configuredService.configuredModel("mlx")).isEqualTo("saved-mlx-model");
+        } finally {
+            configuredService.shutdown();
+        }
     }
 
     @Test

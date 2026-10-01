@@ -520,11 +520,16 @@ public class SentimentService {
                 OffsetDateTime.now(ZoneOffset.UTC), latencyMs));
     }
 
-    private String configuredModel(String provider) {
+    String configuredModel(String provider) {
         Optional<String> legacySetting = appSettingsStore.get("llamacpp.model");
         if (("pi_ssh".equals(provider) || "local".equals(provider))
                 && legacySetting != null && legacySetting.isPresent() && !legacySetting.get().isBlank()) {
             return legacySetting.get();
+        }
+        Optional<String> mlxSetting = appSettingsStore.get("mlx.model");
+        if ("mlx".equals(provider)
+                && mlxSetting != null && mlxSetting.isPresent() && !mlxSetting.get().isBlank()) {
+            return mlxSetting.get();
         }
         if (llmProperties != null) {
             String configured = switch (provider) {
@@ -532,6 +537,7 @@ public class SentimentService {
                 case "openai" -> llmProperties.getProviders().getOpenai().getModel();
                 case "ollama" -> llmProperties.getProviders().getOllama().getModel();
                 case "pi_agent" -> "pi-agent";
+                case "mlx" -> llmProperties.getProviders().getMlx().getModel();
                 default -> llmProperties.getProviders().getLocal().getModel();
             };
             if (configured != null && !configured.isBlank()) return configured;

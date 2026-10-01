@@ -239,6 +239,20 @@ class SettingsControllerDefaultsTest {
     }
 
     @Test
+    void unifiedSaveRestartsRunningMlxWhenModelChanges() {
+        when(appSettingsService.get("mlx.model", "mlx-default")).thenReturn("old-mlx-model");
+        when(selector.resolve()).thenReturn(com.swingtrade.llm.service.LlmBackendSelector.Backend.MLX);
+        when(mlxServerManager.isRunning()).thenReturn(true);
+
+        controller.saveAllSettings(Map.of("llm", Map.of(
+                "llm.backend", "mlx",
+                "mlx.model", "new-mlx-model")));
+
+        verify(appSettingsService).set("mlx.model", "new-mlx-model");
+        verify(mlxServerManager).restart();
+    }
+
+    @Test
     void mlxInferenceTestUsesConfiguredRemoteEndpoint() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/chat/completions", exchange -> {

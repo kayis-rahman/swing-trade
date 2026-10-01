@@ -717,7 +717,10 @@ public class SettingsController {
             }
         }
         if (body.containsKey("llm") && body.get("llm") instanceof Map<?, ?>) {
-            ((Map<?, ?>) body.get("llm")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
+            Map<String, String> llmSettings = new LinkedHashMap<>();
+            ((Map<?, ?>) body.get("llm")).forEach((key, value) ->
+                llmSettings.put(String.valueOf(key), String.valueOf(value)));
+            setLlmSettings(llmSettings);
         }
         if (body.containsKey("openai") && body.get("openai") instanceof Map<?, ?>) {
             ((Map<?, ?>) body.get("openai")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));

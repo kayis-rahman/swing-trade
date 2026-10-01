@@ -578,14 +578,17 @@ public class SettingsController {
         try {
             logger.info("Stopping MLX server...");
             mlxServerManager.stop();
-            result.put("success", true);
-            result.put("running", false);
-            result.put("message", "MLX server stopped");
+            boolean running = mlxServerManager.isRunning();
+            result.put("success", !running);
+            result.put("running", running);
+            result.put("message", running
+                ? "MLX server remains running"
+                : "MLX server stopped");
             return ResponseEntity.ok(ApiResponse.ok(result));
         } catch (Exception e) {
             logger.warn("MLX stop failed: {}", e.getMessage());
             result.put("success", false);
-            result.put("running", true);
+            result.put("running", mlxServerManager.isRunning());
             result.put("message", "Failed to stop: " + e.getMessage());
             return ResponseEntity.ok(ApiResponse.ok(result));
         }

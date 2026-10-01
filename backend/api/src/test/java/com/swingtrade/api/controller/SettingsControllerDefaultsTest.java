@@ -258,6 +258,17 @@ class SettingsControllerDefaultsTest {
         }
     }
 
+    @Test
+    void mlxStopReportsWhenTheEndpointRemainsRunning() {
+        when(mlxServerManager.isRunning()).thenReturn(true);
+
+        ResponseEntity<ApiResponse<Map<String, Object>>> response = controller.stopMlxServer();
+
+        assertThat(response.getBody().data())
+            .containsEntry("success", false)
+            .containsEntry("running", true);
+    }
+
     @Nested
     @DisplayName("PUT /api/settings/llm")
     class SetLlmSettings {

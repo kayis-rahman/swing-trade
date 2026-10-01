@@ -111,6 +111,11 @@ public class MlxServerManager implements LlmServerManager {
      */
     @Override
     public void stop() {
+        if (!isLocalEndpoint()) {
+            logger.info("Remote mlx_lm.server is manually managed; skipping local stop");
+            return;
+        }
+
         // Stop by PID file first
         stopByPid();
 

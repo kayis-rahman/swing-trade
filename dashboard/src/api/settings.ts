@@ -137,6 +137,7 @@ export async function startMlxServer(): Promise<{
 }> {
   return apiRequest<{ success: boolean; running: boolean; message: string }>('/settings/mlx/start', {
     method: 'POST',
+    timeoutMs: 130_000,
     responseContract: 'envelope',
   })
 }

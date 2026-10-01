@@ -1,6 +1,7 @@
 package com.swingtrade.llm.service;
 
 import com.swingtrade.domain.store.AppSettingsStore;
+import com.swingtrade.llm.config.LlmProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,11 +59,11 @@ public class MlxServerManager implements LlmServerManager {
     });
 
     public MlxServerManager(AppSettingsStore appSettingsStore,
-                            @Value("${mlx.server.url:http://127.0.0.1:8081}") String serverUrl,
+                            LlmProperties llmProperties,
                             @Value("${mlx.port:8081}") String port,
                             @Value("${mlx.idle-timeout:300}") int idleTimeoutSec) {
         this.appSettingsStore = appSettingsStore;
-        this.defaultServerUrl = serverUrl;
+        this.defaultServerUrl = llmProperties.getProviders().getMlx().getBaseUrl().toString();
         this.port = port;
         this.idleTimeoutSec = idleTimeoutSec;
     }
@@ -124,22 +125,10 @@ public class MlxServerManager implements LlmServerManager {
     }
 
     /**
-     * Checks if the server process is running.
-     * Uses three checks: PID file, port socket, health endpoint.
+     * Checks whether the configured MLX endpoint is healthy.
      */
     @Override
     public boolean isRunning() {
-        // Check 1: PID file + process alive
-        if (serverProcess != null && serverProcess.isAlive()) {
-            return true;
-        }
-
-        // Check 2: Port socket (server may have been started externally)
-        if (isPortInUse(Integer.parseInt(port))) {
-            return true;
-        }
-
-        // Check 3: Health endpoint (most reliable)
         return healthCheck();
     }
 

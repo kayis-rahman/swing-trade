@@ -4,9 +4,12 @@ import com.swingtrade.domain.store.AppSettingsStore;
 import com.swingtrade.llm.config.LlmProperties;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,6 +58,27 @@ class MlxServerManagerTest {
         int portOption = command.indexOf("--port");
 
         assertThat(command.get(portOption + 1)).isEqualTo("8090");
+    }
+
+    @Test
+    void stopLeavesUnrelatedProcessFromPidFileRunning(@TempDir Path tempDir) throws Exception {
+        Process unrelatedProcess = new ProcessBuilder("sleep", "30").start();
+        Path pidFile = tempDir.resolve("mlx.pid");
+        Files.writeString(pidFile, Long.toString(unrelatedProcess.pid()));
+        AppSettingsStore settings = mock(AppSettingsStore.class);
+        when(settings.get("mlx.server.url")).thenReturn(Optional.empty());
+        LlmProperties properties = new LlmProperties();
+        properties.getProviders().getMlx().setBaseUrl(URI.create("http://127.0.0.1:8081/v1"));
+        MlxServerManager manager = new MlxServerManager(settings, properties, 300, pidFile);
+
+        try {
+            manager.stop();
+
+            assertThat(unrelatedProcess.isAlive()).isTrue();
+        } finally {
+            unrelatedProcess.destroyForcibly();
+            unrelatedProcess.waitFor();
+        }
     }
 
     private HttpServer healthServer(int status) throws Exception {

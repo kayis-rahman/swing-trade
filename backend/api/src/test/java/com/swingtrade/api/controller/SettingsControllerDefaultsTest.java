@@ -232,6 +232,13 @@ class SettingsControllerDefaultsTest {
     }
 
     @Test
+    void unifiedSavePersistsGpuHubSettings() {
+        controller.saveAllSettings(Map.of("gpuhub", Map.of("gpuhub.api_key", "gpu-secret")));
+
+        verify(appSettingsService).set("gpuhub.api_key", "gpu-secret");
+    }
+
+    @Test
     void mlxInferenceTestUsesConfiguredRemoteEndpoint() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/chat/completions", exchange -> {

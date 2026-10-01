@@ -722,6 +722,9 @@ public class SettingsController {
         if (body.containsKey("openai") && body.get("openai") instanceof Map<?, ?>) {
             ((Map<?, ?>) body.get("openai")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
         }
+        if (body.containsKey("gpuhub") && body.get("gpuhub") instanceof Map<?, ?>) {
+            ((Map<?, ?>) body.get("gpuhub")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
+        }
         if (body.containsKey("discord") && body.get("discord") instanceof Map<?, ?>) {
             ((Map<?, ?>) body.get("discord")).forEach((key, value) -> appSettingsService.set(String.valueOf(key), String.valueOf(value)));
         }

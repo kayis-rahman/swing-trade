@@ -10,12 +10,14 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -38,12 +40,13 @@ public class MlxServerManager implements LlmServerManager {
     private static final String HEALTH_URL = "%s/health";
     private static final int STARTUP_TIMEOUT_SECONDS = 120;
     private static final int IDLE_CHECK_INTERVAL_SEC = 5;
-    private static final String PID_FILE_PATH = System.getProperty("user.home") + "/.swingtrade/mlx.pid";
+    private static final Path DEFAULT_PID_FILE = Path.of(System.getProperty("user.home"), ".swingtrade", "mlx.pid");
 
     private final AppSettingsStore appSettingsStore;
 
     private final String defaultServerUrl;
     private final int idleTimeoutSec;
+    private final Path pidFile;
 
     private volatile Process serverProcess;
     private final AtomicBoolean starting = new AtomicBoolean(false);
@@ -57,9 +60,17 @@ public class MlxServerManager implements LlmServerManager {
     public MlxServerManager(AppSettingsStore appSettingsStore,
                             LlmProperties llmProperties,
                             @Value("${mlx.idle-timeout:300}") int idleTimeoutSec) {
+        this(appSettingsStore, llmProperties, idleTimeoutSec, DEFAULT_PID_FILE);
+    }
+
+    MlxServerManager(AppSettingsStore appSettingsStore,
+                     LlmProperties llmProperties,
+                     int idleTimeoutSec,
+                     Path pidFile) {
         this.appSettingsStore = appSettingsStore;
         this.defaultServerUrl = llmProperties.getProviders().getMlx().getBaseUrl().toString();
         this.idleTimeoutSec = idleTimeoutSec;
+        this.pidFile = pidFile;
     }
 
     /**
@@ -112,13 +123,13 @@ public class MlxServerManager implements LlmServerManager {
             return;
         }
 
-        // Stop by PID file first
+        Process process = serverProcess;
+        if (process != null) {
+            stopProcess(process);
+            serverProcess = null;
+        }
+
         stopByPid();
-
-        // Also stop by port
-        stopByPort();
-
-        serverProcess = null;
         cancelIdleMonitor();
         logger.info("mlx_lm.server stopped");
     }
@@ -177,16 +188,16 @@ public class MlxServerManager implements LlmServerManager {
         long startupDeadline = startupStartedAt + TimeUnit.SECONDS.toNanos(STARTUP_TIMEOUT_SECONDS);
         boolean healthy = false;
         while (System.nanoTime() < startupDeadline) {
+            if (!serverProcess.isAlive()) {
+                int exitCode = serverProcess.exitValue();
+                stopByPid();
+                throw new IllegalStateException("mlx_lm.server exited with code " + exitCode);
+            }
             if (healthCheck()) {
                 healthy = true;
                 long elapsedSeconds = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startupStartedAt);
                 logger.info("mlx_lm.server is healthy after {}s", elapsedSeconds);
                 break;
-            }
-            if (!serverProcess.isAlive()) {
-                int exitCode = serverProcess.exitValue();
-                stopByPid();
-                throw new IllegalStateException("mlx_lm.server exited with code " + exitCode);
             }
             long remainingMillis = TimeUnit.NANOSECONDS.toMillis(startupDeadline - System.nanoTime());
             if (remainingMillis > 0) {
@@ -318,52 +329,66 @@ public class MlxServerManager implements LlmServerManager {
 
     private void writePidFile(long pid) {
         try {
-            File dir = new File(new File(PID_FILE_PATH).getParent());
+            File dir = pidFile.toFile().getParentFile();
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            java.nio.file.Files.writeString(
-                    java.nio.file.Paths.get(PID_FILE_PATH),
-                    String.valueOf(pid));
+            java.nio.file.Files.writeString(pidFile, String.valueOf(pid));
         } catch (Exception e) {
             logger.debug("Failed to write PID file: {}", e.getMessage());
         }
     }
 
     private void stopByPid() {
-        File pidFile = new File(PID_FILE_PATH);
-        if (pidFile.exists()) {
+        if (java.nio.file.Files.exists(pidFile)) {
             try {
-                String pidStr = java.nio.file.Files.readString(pidFile.toPath()).trim();
+                String pidStr = java.nio.file.Files.readString(pidFile).trim();
                 long pid = Long.parseLong(pidStr);
-                // Kill the process group
-                ProcessBuilder pb = new ProcessBuilder("kill", "-TERM", String.valueOf(pid));
-                pb.redirectErrorStream(true);
-                Process p = pb.start();
-                p.waitFor(5, TimeUnit.SECONDS);
-                // Also kill child processes
-                pb = new ProcessBuilder("sh", "-c", String.format(
-                        "pkill -TERM -P %d 2>/dev/null; kill -TERM %d 2>/dev/null", pid, pid));
-                pb.redirectErrorStream(true);
-                p = pb.start();
-                p.waitFor(5, TimeUnit.SECONDS);
-                pidFile.delete();
-                logger.info("Stopped mlx_lm.server by PID {}", pid);
+                ProcessHandle handle = ProcessHandle.of(pid).orElse(null);
+                if (handle != null && handle.isAlive() && isMlxProcess(handle)) {
+                    stopProcess(handle);
+                    logger.info("Stopped mlx_lm.server by PID {}", pid);
+                }
+                java.nio.file.Files.deleteIfExists(pidFile);
             } catch (Exception e) {
                 logger.debug("PID stop failed: {}", e.getMessage());
             }
         }
     }
 
-    private void stopByPort() {
+    private boolean isMlxProcess(ProcessHandle handle) {
+        return handle.info().commandLine().map(command -> command.contains("mlx_lm.server")).orElse(false);
+    }
+
+    private void stopProcess(Process process) {
+        process.destroy();
         try {
-            ProcessBuilder pb = new ProcessBuilder("sh", "-c",
-                    String.format("lsof -ti:%s | xargs kill -TERM 2>/dev/null", configuredPort()));
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            p.waitFor(5, TimeUnit.SECONDS);
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                process.waitFor(5, TimeUnit.SECONDS);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            process.destroyForcibly();
+        }
+    }
+
+    private void stopProcess(ProcessHandle process) {
+        process.destroy();
+        try {
+            process.onExit().get(5, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            process.destroyForcibly();
+            try {
+                process.onExit().get(5, TimeUnit.SECONDS);
+            } catch (Exception forcedStopFailure) {
+                logger.debug("Forced MLX process stop failed: {}", forcedStopFailure.getMessage());
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            process.destroyForcibly();
         } catch (Exception e) {
-            logger.debug("Port stop failed: {}", e.getMessage());
+            logger.debug("MLX process stop failed: {}", e.getMessage());
         }
     }
 

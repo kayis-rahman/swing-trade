@@ -67,6 +67,7 @@ class MlxServerManagerTest {
         List<String> command = manager.buildStartCommand("mlx-model");
         int portOption = command.indexOf("--port");
 
+        assertThat(command.getFirst()).isEqualTo("python3");
         assertThat(command.get(portOption + 1)).isEqualTo("8090");
     }
 

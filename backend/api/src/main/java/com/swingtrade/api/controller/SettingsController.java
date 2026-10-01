@@ -621,17 +621,20 @@ public class SettingsController {
 
             // Test actual LLM inference with a temporary client — does NOT affect the active backend.
             LlmProperties.Provider mlxDefaults = llmProperties.getProviders().getMlx();
-            URI baseUrl = mlxInferenceBaseUrl(mlxDefaults.getBaseUrl());
-            String model = appSettingsService.get("mlx.model", mlxDefaults.getModel());
-            boolean inferenceOk = testInference(baseUrl, model, "", OLLAMA_TEST_TIMEOUT);
+            mlxServerManager.beginRequest();
+            boolean inferenceOk;
+            try {
+                URI baseUrl = mlxInferenceBaseUrl(mlxDefaults.getBaseUrl());
+                String model = appSettingsService.get("mlx.model", mlxDefaults.getModel());
+                inferenceOk = testInference(baseUrl, model, "", OLLAMA_TEST_TIMEOUT);
+            } finally {
+                mlxServerManager.endRequest();
+            }
             result.put("success", inferenceOk);
             result.put("message", inferenceOk
                 ? "MLX connection successful, server started and responded to inference"
                 : "MLX connected and server started, but inference failed");
 
-            if (!inferenceOk) {
-                mlxServerManager.stop();
-            }
             return ResponseEntity.ok(ApiResponse.ok(result));
         } catch (Exception e) {
             logger.warn("MLX test failed: {}", e.getMessage());

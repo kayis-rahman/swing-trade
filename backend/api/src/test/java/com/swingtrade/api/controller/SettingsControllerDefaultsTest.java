@@ -274,6 +274,34 @@ class SettingsControllerDefaultsTest {
             ResponseEntity<ApiResponse<Map<String, Object>>> response = controller.testMlxConnection();
 
             assertThat(response.getBody().data()).containsEntry("success", true);
+            verify(mlxServerManager).beginRequest();
+            verify(mlxServerManager).endRequest();
+            verify(mlxServerManager, never()).stop();
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void mlxInferenceFailureDoesNotStopSharedServer() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            exchange.sendResponseHeaders(500, -1);
+            exchange.close();
+        });
+        server.start();
+        try {
+            String endpoint = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
+            when(appSettingsService.get("mlx.server.url", "http://mlx-default.test/v1"))
+                .thenReturn(endpoint);
+            when(mlxServerManager.isRunning()).thenReturn(true);
+
+            ResponseEntity<ApiResponse<Map<String, Object>>> response = controller.testMlxConnection();
+
+            assertThat(response.getBody().data()).containsEntry("success", false);
+            verify(mlxServerManager).beginRequest();
+            verify(mlxServerManager).endRequest();
+            verify(mlxServerManager, never()).stop();
         } finally {
             server.stop(0);
         }

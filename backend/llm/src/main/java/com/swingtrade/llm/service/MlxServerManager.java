@@ -40,6 +40,7 @@ public class MlxServerManager implements LlmServerManager {
     private static final Logger logger = LoggerFactory.getLogger(MlxServerManager.class);
 
     private static final String HEALTH_URL = "%s/health";
+    private static final String PYTHON_EXECUTABLE = "python3";
     private static final int STARTUP_TIMEOUT_SECONDS = 120;
     private static final int IDLE_CHECK_INTERVAL_SEC = 5;
     private static final Path DEFAULT_PID_FILE = Path.of(System.getProperty("user.home"), ".swingtrade", "mlx.pid");
@@ -238,7 +239,7 @@ public class MlxServerManager implements LlmServerManager {
     }
 
     List<String> buildStartCommand(String modelName) {
-        return List.of("python", "-m", "mlx_lm.server", "--model", modelName,
+        return List.of(PYTHON_EXECUTABLE, "-m", "mlx_lm.server", "--model", modelName,
                 "--port", Integer.toString(configuredPort()), "--host", "127.0.0.1");
     }
 
@@ -430,7 +431,7 @@ public class MlxServerManager implements LlmServerManager {
 
     boolean isMlxAvailable() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("python", "-c",
+            ProcessBuilder pb = new ProcessBuilder(PYTHON_EXECUTABLE, "-c",
                     "import mlx_lm; print('ok')");
             pb.redirectErrorStream(true);
             Process p = pb.start();

@@ -19,8 +19,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import com.sun.net.httpserver.HttpServer;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 
@@ -229,23 +232,30 @@ class SettingsControllerDefaultsTest {
     }
 
     @Test
-    void mlxInferenceUrlRejectsUnapprovedOrigin() {
-        when(appSettingsService.get("mlx.server.url", "http://mlx-default.test/v1"))
-            .thenReturn("https://attacker.example/v1");
+    void mlxInferenceTestUsesConfiguredRemoteEndpoint() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            byte[] response = "{\"choices\":[{\"message\":{\"content\":\"OK\"}}]}"
+                .getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, response.length);
+            try (var body = exchange.getResponseBody()) {
+                body.write(response);
+            }
+        });
+        server.start();
+        try {
+            String endpoint = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
+            when(appSettingsService.get("mlx.server.url", "http://mlx-default.test/v1"))
+                .thenReturn(endpoint);
+            when(appSettingsService.get("mlx.model", "mlx-default")).thenReturn("mlx-default");
+            when(mlxServerManager.isRunning()).thenReturn(true);
 
-        URI result = controller.mlxInferenceBaseUrl(URI.create("http://mlx-default.test/v1"));
+            ResponseEntity<ApiResponse<Map<String, Object>>> response = controller.testMlxConnection();
 
-        assertThat(result).isEqualTo(URI.create("http://mlx-default.test/v1"));
-    }
-
-    @Test
-    void mlxInferenceUrlAllowsConfiguredOrigin() {
-        when(appSettingsService.get("mlx.server.url", "http://mlx-default.test/v1"))
-            .thenReturn("http://mlx-default.test/custom");
-
-        URI result = controller.mlxInferenceBaseUrl(URI.create("http://mlx-default.test/v1"));
-
-        assertThat(result).isEqualTo(URI.create("http://mlx-default.test/custom"));
+            assertThat(response.getBody().data()).containsEntry("success", true);
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Nested

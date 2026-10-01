@@ -367,12 +367,8 @@ public class SettingsController {
 
     URI mlxInferenceBaseUrl(URI configuredBaseUrl) {
         try {
-            URI runtimeBaseUrl = URI.create(appSettingsService.get(
+            return URI.create(appSettingsService.get(
                 "mlx.server.url", configuredBaseUrl.toString()));
-            if (hasSameOrigin(runtimeBaseUrl, configuredBaseUrl)) {
-                return runtimeBaseUrl;
-            }
-            logger.warn("Ignoring MLX inference URL with unapproved origin");
         } catch (IllegalArgumentException ignored) {
             logger.warn("Ignoring invalid MLX inference URL");
         }

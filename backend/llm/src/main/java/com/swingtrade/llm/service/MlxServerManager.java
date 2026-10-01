@@ -149,6 +149,10 @@ public class MlxServerManager implements LlmServerManager {
      */
     @Override
     public void restart() {
+        if (!isLocalEndpoint()) {
+            logger.info("Remote mlx_lm.server is manually managed; skipping local restart");
+            return;
+        }
         logger.info("Restarting mlx_lm.server with updated model");
         stop();
         try {

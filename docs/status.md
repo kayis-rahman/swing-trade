@@ -1,6 +1,23 @@
 # Pre-Pilot Status
 
-Last checked: 2026-09-27 (expanded endpoint/API and dashboard sanity verification)
+Last checked: 2026-10-01 (local end-to-end quality gate)
+
+- [x] Local end-to-end quality gate (`./dev-stack.sh gate`, one command, exit 0/1): runs the
+  backend Gradle suite (2351 tests, 0 failures, 133 pre-existing `@Disabled` skips) and the
+  dashboard Vitest suite, builds the stage-path images from `:api:jar` + `:api:copyRuntimeDeps`
+  and `yarn vite build` output, boots a disposable PostgreSQL 16 + API + nginx dashboard stack in
+  Docker under its own compose project, waits on real readiness
+  (`/actuator/health/readiness` with the datasource in the group), then passes 15 live checks:
+  Flyway migration state and schema presence, actuator and `/api/health`, response-envelope
+  shape, admin-route API-key rejection, a settings write read back out of PostgreSQL (not just
+  the API cache), sentiment defaults on an empty database, dashboard app shell, SPA deep-link
+  fallback, built-asset delivery, and a write round trip through nginx. Verified end to end at
+  258s on the pi-node Docker host, and verified to fail loudly with exit 1 when the stack is
+  absent. Containers, network, volumes, images and scratch directories are removed on every exit
+  path. The restored `backend/gradle/wrapper/gradle-wrapper.jar` makes `./gradlew` — and
+  therefore `dev-stack.sh` and the gate — work on a fresh clone. Method, hermeticity rules and
+  the full list of what the gate cannot prove are in
+  [`docs/infra/local-e2e-gate.md`](infra/local-e2e-gate.md).
 
 - [x] Expanded endpoint/API and dashboard sanity verification: OpenAPI Playwright now exercises
   85/87 GET operations (only live news collection and combined news/LLM inference are excluded)

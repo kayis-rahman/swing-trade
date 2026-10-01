@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Swing Trade - tear down the local E2E gate stack
+# =============================================================================
+# Normally unnecessary: bin/e2e-gate removes its own stack on exit, including
+# on failure. This exists for the two cases where it cannot - the run was killed
+# mid-flight, or the gate was started with --keep-stack.
+#
+# Removes only the 'swing-trade-e2e-gate' compose project: its containers,
+# network, disposable database volume, log volume, images and scratch dir. It
+# never touches the dev or stage stacks.
+#
+# Usage: bin/e2e-gate-down [--purge-images]
+# =============================================================================
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/infra/docker-compose.e2e-gate.yml"
+PROJECT="swing-trade-e2e-gate"
+DOCKER_HOST_TARGET="${E2E_GATE_DOCKER_HOST:-ssh://dietpi@piworm.local}"
+
+PURGE_IMAGES=0
+[ "${1:-}" = "--purge-images" ] && PURGE_IMAGES=1
+
+WORK_DIR="$REPO_ROOT/.e2e-gate"
+mkdir -p "$WORK_DIR/docker-config"
+printf '{"auths":{}}' > "$WORK_DIR/docker-config/config.json"
+docker_env=(env "DOCKER_HOST=$DOCKER_HOST_TARGET" "DOCKER_CONFIG=$WORK_DIR/docker-config")
+
+# The compose file declares API_KEY as required so the gate cannot start a stack
+# without one. Tearing down does not need the real key, and refusing to clean up
+# because a build-time variable is absent would be a trap.
+export E2E_GATE_API_KEY="${E2E_GATE_API_KEY:-teardown-does-not-start-anything}"
+
+# Prefer the CLI plugin, fall back to the standalone binary (dev-stack.sh does
+# the same; the plugin slot can point at an uninstalled Docker Desktop).
+if "${docker_env[@]}" docker compose version >/dev/null 2>&1; then
+  "${docker_env[@]}" docker compose -f "$COMPOSE_FILE" -p "$PROJECT" \
+    down -v --remove-orphans --timeout 20
+  status=$?
+else
+  "${docker_env[@]}" docker-compose -f "$COMPOSE_FILE" -p "$PROJECT" \
+    down -v --remove-orphans --timeout 20
+  status=$?
+fi
+
+if [ "$PURGE_IMAGES" = "1" ]; then
+  "${docker_env[@]}" docker rmi -f swing-trade-api:e2e-gate swing-trade-dashboard:e2e-gate
+fi
+
+rm -rf "$WORK_DIR"
+echo "Gate stack '${PROJECT}' removed (scratch dir and disposable volumes gone)."
+exit $status

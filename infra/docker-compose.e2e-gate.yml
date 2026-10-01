@@ -1,0 +1,126 @@
+# =============================================================================
+# Swing Trade - Local E2E Gate stack
+# =============================================================================
+# The whole running system (PostgreSQL + API + dashboard) in Docker, for the
+# hermetic end-to-end gate driven by `bin/e2e-gate`.
+#
+# Deliberately separate from docker-compose.infra-dev.yml (shared dev database)
+# and docker-compose.infra-stage.yml (long-lived stage deployment):
+#
+#   * its own compose project (`swing-trade-e2e-gate`), so container and volume
+#     names cannot collide with the dev or stage stacks;
+#   * its own throwaway database, dropped with `down -v` at the end of a run;
+#   * high, explicitly-overridable host ports so it cannot steal the ports the
+#     dev and stage stacks publish (5435/8080/3003 and 5436/8081/8082);
+#   * `restart: never` — a crashing container must stay crashed so the gate can
+#     read the reason instead of watching a restart loop mask it.
+#
+# Do not `up` this by hand for day-to-day work; it exists for the gate.
+# =============================================================================
+
+name: swing-trade-e2e-gate
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: swingtrade_e2e
+      POSTGRES_USER: swingtrade_user
+      POSTGRES_PASSWORD: swingtrade_password
+    # Faster startup for a disposable database: no fsync durability we will ever
+    # need, because the data is thrown away at the end of every run. Passed as
+    # server arguments, not PGOPTIONS - PGOPTIONS is also read by psql inside
+    # the container, and a client may not change fsync.
+    command:
+      - postgres
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+    ports:
+      - "${E2E_GATE_PG_PORT:-15437}:5432"
+    volumes:
+      - gate_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      # A real readiness probe, not a sleep: `up -d` returns long before
+      # PostgreSQL accepts connections.
+      test: ["CMD-SHELL", "pg_isready -U swingtrade_user -d swingtrade_e2e"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    networks:
+      - gate
+
+  api:
+    image: swing-trade-api:e2e-gate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${E2E_GATE_API_PORT:-18080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: e2e
+      SERVER_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: swingtrade_e2e
+      DB_USER: swingtrade_user
+      DB_PASSWORD: swingtrade_password
+      LOG_FILE: /var/log/swing-trade/gate.log
+      TZ: Asia/Kolkata
+      # Generated per gate run by bin/e2e-gate. The gate asserts that
+      # /api/admin/** rejects requests without this header.
+      API_KEY_AUTH_ENABLED: "true"
+      API_KEY: ${E2E_GATE_API_KEY:?E2E_GATE_API_KEY must be set by bin/e2e-gate}
+      CORS_ALLOWED_ORIGINS: ${E2E_GATE_CORS_ORIGINS:-http://localhost:18081}
+    volumes:
+      - gate_logs:/var/log/swing-trade
+    healthcheck:
+      # Readiness probe on the application's own readiness state, not on the
+      # process being alive. The gate still polls this itself; the container
+      # health is what makes `depends_on` and `ps` honest.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health/readiness > /dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+    networks:
+      - gate
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1200M
+    mem_limit: 1200m
+    cpus: 1.5
+
+  dashboard:
+    image: swing-trade-dashboard:e2e-gate
+    restart: "no"
+    depends_on:
+      - api
+    ports:
+      - "${E2E_GATE_DASH_PORT:-18081}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ > /dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    networks:
+      - gate
+
+networks:
+  gate:
+    driver: bridge
+    # Compose names it swing-trade-e2e-gate_gate; no external network, so the
+    # gate stack cannot reach the dev or stage containers and vice versa.
+    name: swing-trade-e2e-gate
+
+volumes:
+  gate_pg_data:
+  gate_logs:

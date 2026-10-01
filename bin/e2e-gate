@@ -1,0 +1,697 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Swing Trade - Local End-to-End Quality Gate
+# =============================================================================
+# One command, one exit code. Runs the layers a real merge needs and tears down
+# after itself, including on failure:
+#
+#   0. preflight   - Docker reachable, host ports free, working tree sane
+#   1. unit        - backend Gradle suite + dashboard Vitest suite
+#   2. artifacts   - backend runtime lib/ + dashboard dist/
+#   3. images      - container images for the API and the dashboard
+#   4. boot        - PostgreSQL + API + dashboard in Docker, real readiness
+#   5. checks      - live HTTP/DB assertions against the running system
+#   6. teardown    - containers, volumes, images, scratch dirs (always)
+#
+# A layer that fails stops the run: there is no point asserting endpoints
+# against an API that failed to compile. Checks inside layer 5 all run, so one
+# run shows every broken thing rather than only the first.
+#
+# Exit code: 0 = gate passed, 1 = gate failed, 2 = gate could not start.
+#
+# Usage:
+#   bin/e2e-gate                     # full gate
+#   bin/e2e-gate --skip-unit          # layers 2-5 only (fast inner loop)
+#   bin/e2e-gate --keep-stack         # leave the stack up for inspection
+#   bin/e2e-gate --layer checks       # re-run just one layer against a stack
+#
+# Environment (all optional):
+#   E2E_GATE_DOCKER_HOST   docker daemon (default ssh://dietpi@piworm.local)
+#   E2E_GATE_HOST          host serving the published gate ports
+#   E2E_GATE_API_PORT      default 18080   E2E_GATE_DASH_PORT default 18081
+#   E2E_GATE_PG_PORT       default 15437
+#   E2E_GATE_KEEP          1 = keep stack and images (same as --keep-stack)
+#
+# See docs/infra/local-e2e-gate.md for the method behind these layers.
+# =============================================================================
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKEND_DIR="$REPO_ROOT/backend"
+DASHBOARD_DIR="$REPO_ROOT/dashboard"
+INFRA_DIR="$REPO_ROOT/infra"
+COMPOSE_FILE="$INFRA_DIR/docker-compose.e2e-gate.yml"
+WORK_DIR="$REPO_ROOT/.e2e-gate"
+
+# --- configuration ----------------------------------------------------------
+
+DOCKER_HOST_TARGET="${E2E_GATE_DOCKER_HOST:-ssh://dietpi@piworm.local}"
+API_PORT="${E2E_GATE_API_PORT:-18080}"
+DASH_PORT="${E2E_GATE_DASH_PORT:-18081}"
+PG_PORT="${E2E_GATE_PG_PORT:-15437}"
+
+# When Docker runs on another host, the published ports live on *that* host.
+if [ -z "${E2E_GATE_HOST:-}" ]; then
+  case "$DOCKER_HOST_TARGET" in
+    ssh://*|tcp://*)
+      E2E_GATE_HOST="${DOCKER_HOST_TARGET#*://}"
+      E2E_GATE_HOST="${E2E_GATE_HOST##*@}"   # drop ssh://user@
+      E2E_GATE_HOST="${E2E_GATE_HOST%%/*}"   # drop any path
+      E2E_GATE_HOST="${E2E_GATE_HOST%%:*}"   # drop a port for tcp://
+      ;;
+    *) E2E_GATE_HOST="127.0.0.1" ;;
+  esac
+fi
+API_BASE="${E2E_GATE_API_BASE:-http://${E2E_GATE_HOST}:${API_PORT}}"
+DASH_BASE="${E2E_GATE_DASH_BASE:-http://${E2E_GATE_HOST}:${DASH_PORT}}"
+
+PROJECT="swing-trade-e2e-gate"
+API_IMAGE="swing-trade-api:e2e-gate"
+DASH_IMAGE="swing-trade-dashboard:e2e-gate"
+PG_DB="swingtrade_e2e"
+PG_USER="swingtrade_user"
+
+# Fresh admin key every run: the gate asserts that /api/admin/** rejects
+# requests without it, and a reused key would let a stale one pass by accident.
+GATE_API_KEY="${E2E_GATE_API_KEY:-e2e-gate-$(date +%s)-$$-$(od -An -N4 -N4 /dev/urandom | tr -d ' ')}"
+
+SKIP_UNIT=0
+KEEP_STACK="${E2E_GATE_KEEP:-0}"
+ONLY_LAYER=""
+API_READY_TIMEOUT="${E2E_GATE_API_READY_TIMEOUT:-300}"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --skip-unit) SKIP_UNIT=1 ;;
+    --keep-stack) KEEP_STACK=1 ;;
+    --layer) shift; ONLY_LAYER="${1:-}" ;;
+    -h|--help) sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) printf 'Unknown option: %s (try --help)\n' "$1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+# --- reporting --------------------------------------------------------------
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  C_RED=$'\033[31m'; C_GRN=$'\033[32m'; C_YEL=$'\033[33m'
+  C_BLU=$'\033[34m'; C_BLD=$'\033[1m';  C_OFF=$'\033[0m'
+else
+  C_RED=""; C_GRN=""; C_YEL=""; C_BLU=""; C_BLD=""; C_OFF=""
+fi
+
+START_TS=$(date +%s)
+declare -a LAYER_NAMES=() LAYER_STATES=() LAYER_SECS=() LAYER_DETAIL=()
+declare -a CHECK_NAMES=() CHECK_STATES=() CHECK_DETAIL=()
+STACK_STARTED=0
+PHASE="preflight"
+
+now() { date +%s; }
+elapsed() { echo $(($(now) - $1)); }
+
+banner() {
+  printf '\n%s=== %s%s\n' "$C_BLU$C_BLD" "$*" "$C_OFF"
+}
+info() { printf '    %s\n' "$*"; }
+warn() { printf '    %s! %s%s\n' "$C_YEL" "$*" "$C_OFF"; }
+err()  { printf '    %sx %s%s\n' "$C_RED" "$*" "$C_OFF"; }
+ok()   { printf '    %s+%s %s\n' "$C_GRN" "$C_OFF" "$*"; }
+
+layer_begin() { PHASE="$1"; LAYER_START=$(now); }
+layer_end() { # <state> <detail>
+  LAYER_NAMES+=("$PHASE"); LAYER_STATES+=("$1"); LAYER_DETAIL+=("${2:-}")
+  LAYER_SECS+=("$(elapsed "$LAYER_START")")
+}
+
+# Fail the whole gate. Still tears down, because the trap is on EXIT.
+abort() {
+  err "$*"
+  layer_end "FAILED" "${*}"
+  exit 1
+}
+
+# --- docker plumbing --------------------------------------------------------
+# Commands are scoped with DOCKER_HOST, never `docker context use` (that flips
+# shared machine state for every other shell). See .codex/RULES.md plan E8.
+
+docker_env=()
+
+prepare_docker_env() {
+  # The stock ~/.docker/config.json can name a credsStore binary that no longer
+  # exists on this machine, which makes every pull fail with a confusing
+  # "error getting credentials" error. Copy the config, drop the machine-local
+  # fields, and use the copy for the duration of the run.
+  local src="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+  mkdir -p "$WORK_DIR/docker-config"
+  if [ -f "$src" ] && command -v python3 >/dev/null 2>&1; then
+    python3 - "$src" "$WORK_DIR/docker-config/config.json" <<'PY' 2>/dev/null \
+      || printf '{"auths":{}}' > "$WORK_DIR/docker-config/config.json"
+import json, sys
+cfg = json.load(open(sys.argv[1]))
+for key in ("credsStore", "credHelpers", "currentContext", "plugins", "features", "hooks"):
+    cfg.pop(key, None)
+json.dump(cfg, open(sys.argv[2], "w"))
+PY
+  else
+    printf '{"auths":{}}' > "$WORK_DIR/docker-config/config.json"
+  fi
+  docker_env=(env "DOCKER_HOST=$DOCKER_HOST_TARGET" "DOCKER_CONFIG=$WORK_DIR/docker-config")
+}
+
+d() { "${docker_env[@]}" docker "$@"; }
+
+# Same fallback dev-stack.sh uses: on this machine the Docker CLI's
+# `docker compose` plugin slot points at a Docker Desktop install that is no
+# longer present, while the standalone `docker-compose` binary works.
+docker_compose() {
+  if "${docker_env[@]}" docker compose version >/dev/null 2>&1; then
+    "${docker_env[@]}" docker compose "$@"
+  else
+    "${docker_env[@]}" docker-compose "$@"
+  fi
+}
+
+dc() { docker_compose -f "$COMPOSE_FILE" "$@"; }
+
+psql_q() { # <sql> -> rows on stdout
+  dc exec -T postgres psql -U "$PG_USER" -d "$PG_DB" -tAqc "$1" 2>/dev/null
+}
+
+# Run a noisy command, keep its output unless it fails. A gate people read has
+# to make the *failures* findable, which means not burying them under 200 lines
+# of build progress on the runs that worked.
+run_quiet() { # <label> <cmd...>
+  local label="$1"; shift
+  local log="$WORK_DIR/${label}.log"
+  mkdir -p "$WORK_DIR"
+  if ! "$@" > "$log" 2>&1; then
+    err "${label} failed; last 30 lines of output:"
+    tail -30 "$log" | sed 's/^/      /'
+    return 1
+  fi
+  return 0
+}
+
+# --- layers -----------------------------------------------------------------
+
+layer_preflight() {
+  layer_begin "preflight"
+
+  command -v curl >/dev/null 2>&1 || abort "curl is required"
+  command -v python3 >/dev/null 2>&1 || abort "python3 is required"
+  command -v docker >/dev/null 2>&1 || abort "docker is required"
+
+  prepare_docker_env
+  d version >/dev/null 2>&1 || abort \
+    "Docker daemon unreachable at ${DOCKER_HOST_TARGET}. Set E2E_GATE_DOCKER_HOST (e.g. unix://$HOME/.docker/run/docker.sock) for a local daemon."
+
+  local server
+  server="$(d version --format '{{.Server.Version}}' 2>/dev/null)"
+  ok "docker ${server} reachable at ${DOCKER_HOST_TARGET}"
+
+  [ -f "$COMPOSE_FILE" ] || abort "missing compose file: $COMPOSE_FILE"
+
+  # Host ports must be free. A clash would silently point the gate at whatever
+  # already owns the port - the single nastiest way an end-to-end gate can lie.
+  local p
+  for p in "$API_PORT" "$DASH_PORT" "$PG_PORT"; do
+    if d ps --format '{{.Ports}}' 2>/dev/null | grep -qE "[:.]$p->"; then
+      abort "host port $p is already published by another container. Override E2E_GATE_*_PORT or stop that stack."
+    fi
+  done
+  ok "host ports ${API_PORT}/${DASH_PORT}/${PG_PORT} are free"
+
+  # Anything left over from a previous run would make this run non-hermetic.
+  if d ps -a --filter "label=com.docker.compose.project=${PROJECT}" --format '{{.Names}}' 2>/dev/null | grep -q .; then
+    warn "stale '${PROJECT}' containers found; removing them"
+    dc down -v --remove-orphans --timeout 20 >/dev/null 2>&1 || true
+  fi
+
+  if [ "$SKIP_UNIT" = "1" ]; then
+    warn "unit layers skipped (--skip-unit)"
+  fi
+  layer_end "PASSED" "docker ${server}, ports free"
+}
+
+layer_unit_backend() {
+  layer_begin "unit:backend"
+  ( cd "$BACKEND_DIR" && ./gradlew test --console=plain ) || abort "backend test suite failed"
+  # Skipped tests are reported, never folded into the pass line: a suite that
+  # quietly stops running a class looks identical to one that passes.
+  local counts
+  counts="$(python3 - "$BACKEND_DIR" <<'PY'
+import glob, sys, xml.etree.ElementTree as ET
+t = f = s = 0
+for p in glob.glob(sys.argv[1] + "/*/build/test-results/test/TEST-*.xml"):
+    try:
+        r = ET.parse(p).getroot()
+    except Exception:
+        continue
+    t += int(r.get("tests", 0))
+    f += int(r.get("failures", 0)) + int(r.get("errors", 0))
+    s += int(r.get("skipped", 0))
+print(f"{t} {f} {s}")
+PY
+)"
+  local n_tests n_fail n_skip
+  read -r n_tests n_fail n_skip <<<"$counts"
+  info "tests=${n_tests:-?} failures=${n_fail:-?} skipped-by-design=${n_skip:-?}"
+  layer_end "PASSED" "${n_tests:-?} tests, ${n_skip:-?} skipped"
+}
+
+layer_unit_dashboard() {
+  layer_begin "unit:dashboard"
+  ( cd "$DASHBOARD_DIR" && yarn test:run ) || abort "dashboard test suite failed"
+  layer_end "PASSED" "vitest"
+}
+
+layer_artifacts() {
+  layer_begin "artifacts"
+  run_quiet gradle-artifacts bash -c "cd '$BACKEND_DIR' && ./gradlew :api:jar :api:copyRuntimeDeps --console=plain" \
+    || abort "backend artifact build failed"
+
+  local jar="$BACKEND_DIR/api/build/libs/api-plain.jar"
+  [ -f "$jar" ] || abort "expected thin jar at $jar"
+  local deps
+  deps="$(ls -1 "$BACKEND_DIR/api/build/runtimeDeps"/*.jar 2>/dev/null | wc -l | tr -d ' ')"
+  [ "$deps" -gt 0 ] || abort "no runtime dependency jars were copied"
+  ok "api-plain.jar + ${deps} runtime jars"
+
+  run_quiet dashboard-build bash -c "cd '$DASHBOARD_DIR' && yarn vite build" \
+    || abort "dashboard build failed"
+  [ -f "$DASHBOARD_DIR/dist/index.html" ] || abort "dashboard dist/index.html missing"
+  ok "dist/index.html"
+
+  layer_end "PASSED" "api lib + dashboard dist"
+}
+
+layer_images() {
+  layer_begin "images"
+
+  # Assemble throwaway build contexts so the images are built from exactly the
+  # artifacts produced above, with the project's own Dockerfiles.
+  local api_ctx="$WORK_DIR/context/api" dash_ctx="$WORK_DIR/context/dashboard"
+  rm -rf "$WORK_DIR/context"
+  mkdir -p "$api_ctx/lib" "$dash_ctx"
+
+  cp "$INFRA_DIR/Dockerfile" "$api_ctx/Dockerfile"
+  cp "$BACKEND_DIR/api/build/libs/api-plain.jar" "$api_ctx/lib/"
+  cp "$BACKEND_DIR"/api/build/runtimeDeps/*.jar "$api_ctx/lib/"
+
+  cp "$INFRA_DIR/dashboard/Dockerfile" "$dash_ctx/Dockerfile"
+  cp "$INFRA_DIR/nginx/e2e-gate-nginx/default.conf" "$dash_ctx/nginx.conf"
+  cp -R "$DASHBOARD_DIR/dist" "$dash_ctx/dist"
+
+  run_quiet image-api d build --quiet --target runtime-stage -t "$API_IMAGE" "$api_ctx" \
+    || abort "API image build failed"
+  ok "$API_IMAGE"
+
+  run_quiet image-dashboard d build --quiet -t "$DASH_IMAGE" "$dash_ctx" \
+    || abort "dashboard image build failed"
+  ok "$DASH_IMAGE"
+
+  layer_end "PASSED" "2 images"
+}
+
+layer_boot() {
+  layer_begin "boot"
+
+  export E2E_GATE_API_KEY="$GATE_API_KEY"
+  export E2E_GATE_API_PORT="$API_PORT" E2E_GATE_DASH_PORT="$DASH_PORT" E2E_GATE_PG_PORT="$PG_PORT"
+  export E2E_GATE_CORS_ORIGINS="$DASH_BASE"
+
+  # `up -d` returns as soon as containers are created, not ready. Readiness is
+  # established by the polling below, not by this call.
+  # Mark the stack as ours *before* the call: a partially-applied `up` (say,
+  # postgres healthy but the API image missing) still creates containers, and
+  # teardown must clean those up too.
+  STACK_STARTED=1
+  run_quiet compose-up dc up -d || abort "compose up failed"
+  ok "containers started"
+
+  # Real readiness, not a sleep: PostgreSQL must accept connections and the API
+  # must report UP *with a live datasource* before anything is asserted.
+  local waited=0
+  while [ "$waited" -lt "$API_READY_TIMEOUT" ]; do
+    local status
+    status="$(curl -sf --max-time 5 "${API_BASE}/actuator/health/readiness" 2>/dev/null \
+             | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("status",""))
+except Exception: print("")' 2>/dev/null)"
+    if [ "$status" = "UP" ]; then
+      ok "API ready after ${waited}s (readiness=UP)"
+      break
+    fi
+    if [ "$(dc ps -a --format '{{.Names}}' 2>/dev/null | grep -c '^swing-trade-e2e-gate-api-1$')" = "1" ] \
+       && [ "$(d inspect -f '{{.State.Status}}' swing-trade-e2e-gate-api-1 2>/dev/null)" = "exited" ]; then
+      err "API container exited during startup; last 40 log lines:"
+      dc logs --tail=40 api | sed 's/^/      /'
+      abort "API container exited during startup"
+    fi
+    sleep 3; waited=$((waited + 3))
+    [ $((waited % 30)) -eq 0 ] && info "still waiting for API readiness (${waited}s/${API_READY_TIMEOUT}s)"
+  done
+  [ "$waited" -lt "$API_READY_TIMEOUT" ] || abort "API did not become ready within ${API_READY_TIMEOUT}s"
+
+  local dash_ok=0 t=0
+  while [ "$t" -lt 60 ]; do
+    if curl -sf --max-time 5 "$DASH_BASE/" -o /dev/null; then dash_ok=1; break; fi
+    sleep 2; t=$((t + 2))
+  done
+  [ "$dash_ok" = "1" ] || abort "dashboard did not serve within 120s"
+  ok "dashboard serving"
+
+  run_quiet compose-ps dc ps || true
+  layer_end "PASSED" "3 containers healthy"
+}
+
+# --- checks -----------------------------------------------------------------
+
+CHECK_FAILURES=0
+
+run_check() { # <name> <fn>
+  local name="$1" fn="$2" out rc
+  out="$("$fn" 2>&1)"; rc=$?
+  CHECK_NAMES+=("$name")
+  if [ $rc -eq 0 ]; then
+    CHECK_STATES+=("PASS"); CHECK_DETAIL+=("$out")
+    printf '    %s+%s %-46s %s%s\n' "$C_GRN" "$C_OFF" "$name" "$C_OFF" "$out"
+  else
+    CHECK_STATES+=("FAIL"); CHECK_DETAIL+=("$out")
+    CHECK_FAILURES=$((CHECK_FAILURES + 1))
+    printf '    %sx %-46s %s%s\n' "$C_RED" "$name" "$C_OFF" "$out"
+  fi
+  return 0
+}
+
+http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$@"; }
+http_body() { curl -sf --max-time 20 "$@" 2>&1; }
+
+# jget <path> - read a value out of a JSON document on stdin. The path is
+# '|'-separated so that keys containing dots (settings keys like "openai.model")
+# survive. Prints an empty string for anything missing, never raises.
+jget() { python3 -c 'import json,sys
+try: d=json.load(sys.stdin)
+except Exception: print(""); sys.exit(0)
+for k in sys.argv[1].split("|"):
+    if isinstance(d, list):
+        try: d=d[int(k)]
+        except Exception: print(""); sys.exit(0)
+    elif isinstance(d, dict) and k in d: d=d[k]
+    else: print(""); sys.exit(0)
+print(d if not isinstance(d,(dict,list)) else json.dumps(d))' "$1"; }
+
+check_postgres_reachable() {
+  local r; r="$(psql_q 'select 1')"
+  [ "$r" = "1" ] || { echo "pg_isready/psql did not return 1 (got '${r}')"; return 1; }
+  echo "select 1 -> 1 on ${PG_DB}"
+}
+
+check_flyway_migrated() {
+  local v ok_count total
+  v="$(psql_q 'select version from flyway_schema_history where success = true order by installed_rank desc limit 1')"
+  total="$(psql_q 'select count(*) from flyway_schema_history')"
+  ok_count="$(psql_q 'select count(*) from flyway_schema_history where success = false')"
+  [ -n "$v" ] || { echo "flyway_schema_history is empty or missing - migrations did not run"; return 1; }
+  [ "$ok_count" = "0" ] || { echo "${ok_count} failed migrations recorded"; return 1; }
+  echo "${total} migrations applied, latest V${v}"
+}
+
+check_schema_present() {
+  # ddl-auto=validate already proved entity/schema agreement at boot; this
+  # proves the migrations produced a populated, non-trivial schema.
+  local tables app_settings
+  tables="$(psql_q "select count(*) from information_schema.tables where table_schema='public'")"
+  app_settings="$(psql_q "select count(*) from information_schema.tables where table_schema='public' and table_name='app_settings'")"
+  [ "$app_settings" = "1" ] || { echo "app_settings table missing"; return 1; }
+  [ "${tables:-0}" -ge 10 ] || { echo "only ${tables} tables in public schema"; return 1; }
+  echo "${tables} tables in public schema"
+}
+
+check_api_liveness() {
+  local s; s="$(http_body "$API_BASE/actuator/health" | jget status)"
+  [ "$s" = "UP" ] || { echo "actuator/health status=${s:-<unreachable>}"; return 1; }
+  echo "status=UP"
+}
+
+check_api_db_component() {
+  local s; s="$(http_body "$API_BASE/actuator/health" | jget 'components|db|status')"
+  [ "$s" = "UP" ] || { echo "components.db.status=${s:-<missing>}"; return 1; }
+  echo "components.db=UP"
+}
+
+check_api_health_endpoint() {
+  local code body
+  code="$(http_code "$API_BASE/api/health")"
+  body="$(http_body "$API_BASE/api/health")"
+  [ "$code" = "200" ] || { echo "GET /api/health -> HTTP ${code}"; return 1; }
+  echo "$body" | grep -q '"api"' || { echo "GET /api/health has no 'api' component: ${body:0:160}"; return 1; }
+  echo "GET /api/health -> 200 with components"
+}
+
+check_response_envelope() {
+  local body
+  body="$(http_body "$API_BASE/api/settings")"
+  echo "$body" | grep -q '"success":true' || { echo "GET /api/settings is not a success envelope: ${body:0:160}"; return 1; }
+  local broker; broker="$(echo "$body" | jget 'data|selectedBroker')"
+  [ -n "$broker" ] || { echo "GET /api/settings has no data.selectedBroker: ${body:0:160}"; return 1; }
+  echo "GET /api/settings -> selectedBroker=${broker}"
+}
+
+check_admin_requires_key() {
+  local denied granted
+  denied="$(http_code "$API_BASE/api/admin/kill-switch/status")"
+  granted="$(http_code -H "X-API-Key: ${GATE_API_KEY}" "$API_BASE/api/admin/kill-switch/status")"
+  [ "$denied" = "401" ] || { echo "admin route without key returned ${denied}, expected 401"; return 1; }
+  [ "$granted" != "401" ] || { echo "admin route with the gate key was rejected"; return 1; }
+  echo "no key -> 401, with key -> ${granted}"
+}
+
+check_settings_business_flow() {
+  # A real write through the API, read back through the API, and confirmed in
+  # PostgreSQL. The DB read is the part that matters: /api/settings reads from
+  # an in-memory cache, so an API-only round trip could pass with nothing
+  # persisted at all.
+  local model before row
+  model="gate-model-$(date +%s)"
+  before="$(http_body "$API_BASE/api/settings/llm" | jget 'data|openai.model')"
+  [ -n "$before" ] || { echo "GET /api/settings/llm did not return data['openai.model']"; return 1; }
+
+  local code
+  code="$(http_code -X PUT -H 'Content-Type: application/json' \
+    -d "{\"openai.model\":\"${model}\"}" "$API_BASE/api/settings/llm")"
+  [ "$code" = "200" ] || { echo "PUT /api/settings/llm -> HTTP ${code}"; return 1; }
+
+  local after; after="$(http_body "$API_BASE/api/settings/llm" | jget 'data|openai.model')"
+  [ "$after" = "$model" ] || { echo "read-back is '${after}', expected '${model}'"; return 1; }
+
+  row="$(psql_q "select value from app_settings where key = 'openai.model'")"
+  [ "$row" = "$model" ] || { echo "app_settings row is '${row}', expected '${model}' - the API never persisted it"; return 1; }
+
+  # Put it back so the disposable database ends the run as it started.
+  http_code -X PUT -H 'Content-Type: application/json' \
+    -d "{\"openai.model\":\"${before}\"}" "$API_BASE/api/settings/llm" >/dev/null
+  echo "openai.model round-tripped API -> Postgres (${before} -> ${model} -> restored)"
+}
+
+check_settings_via_dashboard() {
+  # Same write through nginx, not around it. Proves the dashboard image's
+  # reverse proxy is wired to this stack's API.
+  local model code after
+  model="gate-dash-model-$(date +%s)"
+  code="$(http_code -X PUT -H 'Content-Type: application/json' \
+    -d "{\"openai.model\":\"${model}\"}" "$DASH_BASE/api/settings/llm")"
+  [ "$code" = "200" ] || { echo "PUT ${DASH_BASE}/api/settings/llm -> HTTP ${code}"; return 1; }
+  after="$(http_body "$DASH_BASE/api/settings/llm" | jget 'data|openai.model')"
+  [ "$after" = "$model" ] || { echo "dashboard proxy read-back is '${after}'"; return 1; }
+  echo "write+read through nginx -> ${after}"
+}
+
+check_sentiment_path() {
+  local code body score symbol
+  code="$(http_code "$API_BASE/api/sentiment/TCS/latest")"
+  [ "$code" = "200" ] || { echo "GET /api/sentiment/TCS/latest -> HTTP ${code}"; return 1; }
+  body="$(http_body "$API_BASE/api/sentiment/TCS/latest")"
+  symbol="$(echo "$body" | jget 'data|symbol')"
+  score="$(echo "$body" | jget 'data|score')"
+  [ "$symbol" = "TCS" ] || { echo "data.symbol='${symbol}', expected TCS"; return 1; }
+  [ "$score" = "NEUTRAL" ] || { echo "data.score='${score}', expected NEUTRAL on an empty database"; return 1; }
+
+  local total; total="$(http_body "$API_BASE/api/sentiment/accuracy" | jget 'data|total')"
+  [ "$total" = "0" ] || { echo "sentiment accuracy total=${total}, expected 0 on an empty database"; return 1; }
+  echo "sentiment default + accuracy endpoints behave on empty DB"
+}
+
+check_dashboard_serves_app() {
+  local code body
+  code="$(http_code "$DASH_BASE/")"
+  [ "$code" = "200" ] || { echo "GET / -> HTTP ${code}"; return 1; }
+  body="$(http_body "$DASH_BASE/")"
+  echo "$body" | grep -q '<div id="app"' || { echo "GET / did not return the Vue app shell"; return 1; }
+  echo "GET / -> 200, Vue app shell"
+}
+
+check_dashboard_spa_fallback() {
+  local code body
+  code="$(http_code "$DASH_BASE/settings")"
+  [ "$code" = "200" ] || { echo "GET /settings (deep link) -> HTTP ${code}"; return 1; }
+  body="$(http_body "$DASH_BASE/settings")"
+  echo "$body" | grep -q '<div id="app"' || { echo "deep link did not fall back to index.html"; return 1; }
+  echo "GET /settings -> 200 via SPA fallback"
+}
+
+check_dashboard_assets_load() {
+  local asset
+  asset="$(http_body "$DASH_BASE/" | grep -o '/assets/index-[A-Za-z0-9_-]*\.js' | head -1)"
+  [ -n "$asset" ] || { echo "no built JS bundle referenced by index.html"; return 1; }
+  local code
+  code="$(http_code "$DASH_BASE${asset}")"
+  [ "$code" = "200" ] || { echo "GET ${asset} -> HTTP ${code}"; return 1; }
+  echo "GET ${asset} -> 200"
+}
+
+check_dashboard_health_proxy() {
+  local s; s="$(http_body "$DASH_BASE/api/actuator/health" | jget status)"
+  [ "$s" = "UP" ] || { echo "GET /api/actuator/health through nginx -> status=${s:-<unreachable>}"; return 1; }
+  echo "GET /api/actuator/health through nginx -> UP"
+}
+
+layer_checks() {
+  layer_begin "checks"
+  printf '    %s\n' "asserting against ${API_BASE} and ${DASH_BASE}"
+
+  run_check "postgres.reachable"            check_postgres_reachable
+  run_check "postgres.flyway_migrated"       check_flyway_migrated
+  run_check "postgres.schema_present"        check_schema_present
+  run_check "api.actuator_health"            check_api_liveness
+  run_check "api.datasource_healthy"         check_api_db_component
+  run_check "api.health_endpoint"            check_api_health_endpoint
+  run_check "api.response_envelope"          check_response_envelope
+  run_check "api.admin_requires_key"         check_admin_requires_key
+  run_check "flow.settings_persists_to_db"   check_settings_business_flow
+  run_check "flow.sentiment_defaults"        check_sentiment_path
+  run_check "dashboard.serves_app"           check_dashboard_serves_app
+  run_check "dashboard.spa_fallback"         check_dashboard_spa_fallback
+  run_check "dashboard.assets_load"          check_dashboard_assets_load
+  run_check "dashboard.proxies_api_write"    check_settings_via_dashboard
+  run_check "dashboard.proxies_health"       check_dashboard_health_proxy
+
+  if [ "$CHECK_FAILURES" -gt 0 ]; then
+    layer_end "FAILED" "${CHECK_FAILURES}/${#CHECK_NAMES[@]} checks failed"
+    return 1
+  fi
+  layer_end "PASSED" "${#CHECK_NAMES[@]}/${#CHECK_NAMES[@]} checks"
+  return 0
+}
+
+# --- teardown ---------------------------------------------------------------
+
+teardown() {
+  local rc=$?
+  [ "$STACK_STARTED" = "1" ] || { rm -rf "$WORK_DIR"; return $rc; }
+
+  banner "teardown"
+  if [ "$KEEP_STACK" = "1" ]; then
+    warn "--keep-stack: leaving the '${PROJECT}' stack up (${API_BASE}, ${DASH_BASE})"
+    info "admin API key for this run: ${GATE_API_KEY}"
+    info "re-run the checks against it:  E2E_GATE_API_KEY=${GATE_API_KEY} bin/e2e-gate --layer checks"
+    info "remove it with: bin/e2e-gate-down"
+    return $rc
+  fi
+
+  if [ "${rc:-0}" -ne 0 ] || [ "$CHECK_FAILURES" -gt 0 ]; then
+    info "capturing container logs before teardown"
+    dc logs --no-color --tail=120 > "$REPO_ROOT/.e2e-gate-logs.txt" 2>&1 || true
+    printf '    logs saved to %s\n' "$REPO_ROOT/.e2e-gate-logs.txt"
+  fi
+
+  # --volumes removes the disposable database too: a run must not be able to
+  # pass on state a previous run left behind.
+  if dc down -v --remove-orphans --timeout 20 >/dev/null 2>&1; then
+    ok "removed containers, network and volumes of project '${PROJECT}'"
+  else
+    warn "compose down reported an error; containers may remain"
+    d ps -a --filter "label=com.docker.compose.project=${PROJECT}" --format '{{.Names}}' 2>/dev/null | sed 's/^/      /'
+  fi
+  d rmi -f "$API_IMAGE" "$DASH_IMAGE" >/dev/null 2>&1 && ok "removed ${API_IMAGE} and ${DASH_IMAGE}"
+  rm -rf "$WORK_DIR"
+  ok "removed scratch dir ${WORK_DIR#$REPO_ROOT/}"
+  return $rc
+}
+
+# --- summary ----------------------------------------------------------------
+
+summary() {
+  local total_pass=0 total_fail=0 total_skip=0 i
+  banner "summary"
+  for i in "${!LAYER_NAMES[@]}"; do
+    case "${LAYER_STATES[$i]}" in
+      PASSED) total_pass=$((total_pass + 1))
+             printf '    %s[PASS]%s %-26s %3ss  %s\n' "$C_GRN" "$C_OFF" "${LAYER_NAMES[$i]}" "${LAYER_SECS[$i]}" "${LAYER_DETAIL[$i]}" ;;
+      SKIPPED) total_skip=$((total_skip + 1))
+             printf '    %s[SKIP]%s %-26s %3ss  %s\n' "$C_YEL" "$C_OFF" "${LAYER_NAMES[$i]}" "${LAYER_SECS[$i]}" "${LAYER_DETAIL[$i]}" ;;
+      *)      total_fail=$((total_fail + 1))
+             printf '    %s[FAIL]%s %-26s %3ss  %s\n' "$C_RED" "$C_OFF" "${LAYER_NAMES[$i]}" "${LAYER_SECS[$i]}" "${LAYER_DETAIL[$i]}" ;;
+    esac
+  done
+  if [ "${#CHECK_NAMES[@]}" -gt 0 ]; then
+    printf '\n'
+    for i in "${!CHECK_NAMES[@]}"; do
+      case "${CHECK_STATES[$i]}" in
+        PASS) printf '      %s+%s %s\n' "$C_GRN" "$C_OFF" "${CHECK_NAMES[$i]}" ;;
+        *)    printf '      %sx%s %s\n            -> %s\n' "$C_RED" "$C_OFF" "${CHECK_NAMES[$i]}" "${CHECK_DETAIL[$i]}" ;;
+      esac
+    done
+  fi
+  printf '\n    total %ss\n' "$(elapsed "$START_TS")"
+  if [ "$total_fail" -eq 0 ] && [ "$CHECK_FAILURES" -eq 0 ]; then
+    printf '\n%sGATE PASSED%s  %s/%s layers passed, %s checks passed, %s skipped\n' \
+      "$C_GRN$C_BLD" "$C_OFF" "$total_pass" "$((total_pass + total_fail))" \
+      "${#CHECK_NAMES[@]}" "$total_skip"
+    return 0
+  fi
+  printf '\n%sGATE FAILED%s  %s layer(s) failed, %s check(s) failed\n' "$C_RED$C_BLD" "$C_OFF" "$total_fail" "$CHECK_FAILURES"
+  return 1
+}
+
+# --- main -------------------------------------------------------------------
+
+trap teardown EXIT
+
+banner "Swing Trade local E2E gate"
+info "repo        ${REPO_ROOT}"
+info "docker      ${DOCKER_HOST_TARGET}"
+info "api         ${API_BASE}"
+info "dashboard   ${DASH_BASE}"
+
+if [ -n "$ONLY_LAYER" ]; then
+  case "$ONLY_LAYER" in
+    checks)
+      prepare_docker_env
+      # The running stack was started with the key from the run that started it.
+      # Reuse the caller's E2E_GATE_API_KEY when re-running against a kept stack.
+      export E2E_GATE_API_KEY="${E2E_GATE_API_KEY:-$GATE_API_KEY}"
+      layer_checks
+      ;;
+    *) abort "--layer accepts only 'checks'" ;;
+  esac
+  summary
+  exit $?
+fi
+
+layer_preflight
+if [ "$SKIP_UNIT" != "1" ]; then
+  layer_unit_backend
+  layer_unit_dashboard
+else
+  layer_begin "unit:backend"; layer_end "SKIPPED" "--skip-unit"
+  layer_begin "unit:dashboard"; layer_end "SKIPPED" "--skip-unit"
+fi
+layer_artifacts
+layer_images
+layer_boot
+layer_checks || true
+
+summary
+exit $?

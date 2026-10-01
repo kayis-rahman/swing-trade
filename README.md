@@ -19,7 +19,8 @@ swing-trade/
 │   └── tests/              # Vitest unit + Playwright E2E tests
 ├── infra/                  # Docker, env files, monitoring, nginx
 ├── docs/                   # Project documentation
-└── dev-stack.sh            # Dev stack orchestration (see also bin/swingdev)
+├── dev-stack.sh            # Dev stack orchestration (see also bin/swingdev)
+└── bin/e2e-gate            # Local end-to-end quality gate (tests + Docker + live checks)
 ```
 
 ### Module Dependencies
@@ -112,6 +113,20 @@ API: http://localhost:8080
 **Risk management**: 2x ATR stop loss, 2.5x risk-reward target, configurable position sizing.
 
 ## Testing
+
+### Quality gate (whole system, in Docker)
+
+```bash
+./dev-stack.sh gate     # or: bin/e2e-gate
+```
+
+Runs the backend and frontend suites, builds the deployment images, boots a
+disposable PostgreSQL + API + dashboard stack, asserts against it over HTTP and
+SQL (including a settings write verified in the database), then tears the whole
+thing down. Exits 0 on pass, 1 on fail. Method and known gaps:
+[`docs/infra/local-e2e-gate.md`](docs/infra/local-e2e-gate.md).
+
+### Individual checks
 
 ```bash
 # Backend — all modules (unit tests)

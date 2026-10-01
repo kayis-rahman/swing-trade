@@ -4,6 +4,9 @@
 # Package files
 *.jar
 !libs/fyersjavasdk-1.9.0.jar
+# The Gradle wrapper jar must be committed: without it ./gradlew does not run
+# at all, which breaks dev-stack.sh and bin/e2e-gate on a fresh clone.
+!backend/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 *.nar
@@ -89,6 +92,10 @@ yarn-error.log*
 # Backend runtime artifacts
 backend/logs/
 backend/api/data/fyers-tokens.json
+
+# Local E2E gate scratch space (see bin/e2e-gate)
+/.e2e-gate/
+/.e2e-gate-logs.txt
 
 # Dashboard build output
 dashboard/dist/

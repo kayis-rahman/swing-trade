@@ -6,6 +6,8 @@
 
 - `docs/status.md` — verified project state and remaining pilot risks
 - `docs/infra/` — local, stage, and monitoring operations
+- `docs/infra/local-e2e-gate.md` — the local end-to-end quality gate: layers, hermeticity, and what it cannot prove
+- `docs/infra/stage-validation-runbook.md` — read-only checks against the deployed stage stack
 - `docs/api-references/` — external API behavior and limitations
 - `docs/backtesting.md` — backtest rules and assumptions
 - `docs/issues/` — scoped product/engineering work items

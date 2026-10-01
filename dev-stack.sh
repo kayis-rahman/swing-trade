@@ -588,8 +588,24 @@ case "${1:-help}" in
     esac
     ;;
 
+  gate)
+    # The local end-to-end quality gate: unit suites, container builds, a
+    # disposable Docker stack, live HTTP/DB assertions, teardown. See
+    # docs/infra/local-e2e-gate.md.
+    exec "$PROJECT_ROOT/bin/e2e-gate" "${@:2}"
+    ;;
+
+  gate-down)
+    exec "$PROJECT_ROOT/bin/e2e-gate-down" "${@:2}"
+    ;;
+
   *)
-    echo "Usage: $0 {start|stage|stage-down|stage-logs|stage-restart|stop|infra|status|logs|live-logs|logs-json|stage-monitoring|frontend|frontend-logs|run}"
+    echo "Usage: $0 {start|gate|gate-down|stage|stage-down|stage-logs|stage-restart|stop|infra|status|logs|live-logs|logs-json|stage-monitoring|frontend|frontend-logs|run}"
+    echo ""
+    echo "Quality gate:"
+    echo "  gate            - Run the full local end-to-end gate (tests, images,"
+    echo "                    disposable Docker stack, live assertions, teardown)"
+    echo "  gate-down       - Remove a gate stack left behind by an interrupted run"
     echo ""
     echo "Commands:"
     echo "  start            - Start dev infra on pi-node + Spring Boot + Vue locally"
@@ -616,6 +632,8 @@ case "${1:-help}" in
     echo ""
     echo "Examples:"
     echo "  $0 start"
+    echo "  $0 gate"
+    echo "  $0 gate-down"
     echo "  $0 stage"
     echo "  $0 stage-down"
     echo "  $0 stage-logs --tail=100"

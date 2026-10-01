@@ -56,6 +56,8 @@ public class MlxServerManager implements LlmServerManager {
     private final AtomicLong idleCheckTime = new AtomicLong(0);
     private final AtomicInteger inFlightRequests = new AtomicInteger(0);
     private final Object activityLock = new Object();
+    private boolean restartPending;
+    private boolean restartInProgress;
     private final AtomicReference<ScheduledFuture<?>> idleMonitor = new AtomicReference<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "mlx-idle-monitor");
@@ -172,15 +174,15 @@ public class MlxServerManager implements LlmServerManager {
             logger.info("Remote mlx_lm.server is manually managed; skipping local restart");
             return;
         }
-        logger.info("Restarting mlx_lm.server with updated model");
-        stop();
-        try {
-            startServer();
-            logger.info("mlx_lm.server restarted successfully");
-        } catch (Exception e) {
-            logger.error("Failed to restart mlx_lm.server: {}", e.getMessage(), e);
-            throw new IllegalStateException("mlx_lm.server restart failed: " + e.getMessage(), e);
+
+        synchronized (activityLock) {
+            if (inFlightRequests.get() > 0 || restartInProgress) {
+                restartPending = true;
+                return;
+            }
+            restartInProgress = true;
         }
+        runRestart(true);
     }
 
     private void startServer() throws Exception {
@@ -279,6 +281,14 @@ public class MlxServerManager implements LlmServerManager {
     @Override
     public void beginRequest() {
         synchronized (activityLock) {
+            while (restartPending || restartInProgress) {
+                try {
+                    activityLock.wait();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Interrupted while waiting for MLX model restart", e);
+                }
+            }
             inFlightRequests.incrementAndGet();
             idleCheckTime.set(System.currentTimeMillis());
         }
@@ -286,9 +296,18 @@ public class MlxServerManager implements LlmServerManager {
 
     @Override
     public void endRequest() {
+        boolean runPendingRestart = false;
         synchronized (activityLock) {
             inFlightRequests.updateAndGet(count -> Math.max(0, count - 1));
             idleCheckTime.set(System.currentTimeMillis());
+            if (inFlightRequests.get() == 0 && restartPending && !restartInProgress) {
+                restartPending = false;
+                restartInProgress = true;
+                runPendingRestart = true;
+            }
+        }
+        if (runPendingRestart) {
+            scheduler.execute(() -> runRestart(false));
         }
     }
 
@@ -299,6 +318,44 @@ public class MlxServerManager implements LlmServerManager {
     private void recordActivity() {
         synchronized (activityLock) {
             idleCheckTime.set(System.currentTimeMillis());
+        }
+    }
+
+    void restartServerProcess() throws Exception {
+        stop();
+        startServer();
+    }
+
+    private void runRestart(boolean propagateFailure) {
+        IllegalStateException failure = null;
+        try {
+            logger.info("Restarting mlx_lm.server with updated model");
+            restartServerProcess();
+            logger.info("mlx_lm.server restarted successfully");
+        } catch (Exception e) {
+            logger.error("Failed to restart mlx_lm.server: {}", e.getMessage(), e);
+            failure = new IllegalStateException("mlx_lm.server restart failed: " + e.getMessage(), e);
+        } finally {
+            finishRestart();
+        }
+        if (failure != null && propagateFailure) {
+            throw failure;
+        }
+    }
+
+    private void finishRestart() {
+        boolean runAgain = false;
+        synchronized (activityLock) {
+            if (restartPending && inFlightRequests.get() == 0) {
+                restartPending = false;
+                runAgain = true;
+            } else {
+                restartInProgress = false;
+                activityLock.notifyAll();
+            }
+        }
+        if (runAgain) {
+            scheduler.execute(() -> runRestart(false));
         }
     }
 

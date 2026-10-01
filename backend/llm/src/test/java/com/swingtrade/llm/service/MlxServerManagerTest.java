@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -146,6 +147,33 @@ class MlxServerManagerTest {
         manager.endRequest();
         assertThat(manager.hasInFlightRequests()).isFalse();
         assertThat(manager.getIdleSeconds()).isLessThan(manager.getIdleTimeoutSec());
+    }
+
+    @Test
+    void defersRestartUntilInFlightRequestsFinish() throws Exception {
+        AppSettingsStore settings = mock(AppSettingsStore.class);
+        when(settings.get("mlx.server.url")).thenReturn(Optional.empty());
+        LlmProperties properties = new LlmProperties();
+        properties.getProviders().getMlx().setBaseUrl(URI.create("http://127.0.0.1:8081/v1"));
+        CountDownLatch restartStarted = new CountDownLatch(1);
+        AtomicInteger restartCount = new AtomicInteger();
+        MlxServerManager manager = new MlxServerManager(settings, properties, 300) {
+            @Override
+            void restartServerProcess() {
+                restartCount.incrementAndGet();
+                restartStarted.countDown();
+            }
+        };
+
+        manager.beginRequest();
+        manager.restart();
+        assertThat(restartCount.get()).isZero();
+        assertThat(manager.hasInFlightRequests()).isTrue();
+
+        manager.endRequest();
+
+        assertThat(restartStarted.await(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(restartCount.get()).isEqualTo(1);
     }
 
     private HttpServer healthServer(int status) throws Exception {

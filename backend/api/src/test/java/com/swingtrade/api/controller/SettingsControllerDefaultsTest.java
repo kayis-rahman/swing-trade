@@ -9,6 +9,7 @@ import com.swingtrade.llm.client.PiAgentLlmClient;
 import com.swingtrade.llm.service.LlamaCppServerManager;
 import com.swingtrade.llm.service.LlmBackendSelector;
 import com.swingtrade.llm.service.LlmClientProvider;
+import com.swingtrade.llm.service.MlxServerManager;
 import com.swingtrade.llm.service.PiLlamaServerManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +51,8 @@ class SettingsControllerDefaultsTest {
     private LlamaCppServerManager localServerManager;
     @Mock
     private PiLlamaServerManager piServerManager;
+    @Mock
+    private MlxServerManager mlxServerManager;
 
     private SettingsController controller;
 
@@ -67,7 +70,8 @@ class SettingsControllerDefaultsTest {
             llmClientProvider,
             piAgentLlmClient,
             localServerManager,
-            piServerManager
+            piServerManager,
+            mlxServerManager
         );
     }
 
@@ -109,6 +113,8 @@ class SettingsControllerDefaultsTest {
             "http://pi-default.test/v1", "pi-default");
         configureProvider(properties.getProviders().getLaya(),
             "http://laya-default.test/v1", "laya-default");
+        configureProvider(properties.getProviders().getMlx(),
+            "http://mlx-default.test/v1", "mlx-default");
         properties.getLlamaCpp().setModel("/models/default.gguf");
         properties.getPdf().setBaseUrl(URI.create("http://pdf-default.test/v1"));
         properties.getPdf().setModel("pdf-default");
@@ -180,6 +186,8 @@ class SettingsControllerDefaultsTest {
                 "http://pi-default.test/v1", "pi-default");
             configureProvider(props.getProviders().getLaya(),
                 "http://laya-default.test/v1", "laya-default");
+            configureProvider(props.getProviders().getMlx(),
+                "http://mlx-default.test/v1", "mlx-default");
             props.getLlamaCpp().setModel("/models/default.gguf");
             props.getPdf().setModel("pdf-default");
             // Intentionally do NOT set PDF baseUrl — it will stay null
@@ -193,7 +201,8 @@ class SettingsControllerDefaultsTest {
                 llmClientProvider,
                 null,
                 localServerManager,
-                piServerManager
+                piServerManager,
+                mlxServerManager
             );
 
             Map<String, String> settings = testController.getLlmSettings().getBody().data();

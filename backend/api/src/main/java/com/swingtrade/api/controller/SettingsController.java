@@ -390,6 +390,7 @@ public class SettingsController {
             LlmServerManager manager = switch (selector.resolve()) {
                 case LOCAL -> localServerManager;
                 case PI_SSH -> piServerManager;
+                case MLX -> mlxServerManager;
                 case OPENAI, OLLAMA, LAYA, PI_AGENT -> null;
             };
             if (manager != null) {

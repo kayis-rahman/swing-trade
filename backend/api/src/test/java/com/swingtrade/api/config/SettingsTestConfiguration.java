@@ -8,6 +8,7 @@ import com.swingtrade.llm.config.LlmProperties;
 import com.swingtrade.llm.service.LlamaCppServerManager;
 import com.swingtrade.llm.service.LlmBackendSelector;
 import com.swingtrade.llm.service.LlmClientProvider;
+import com.swingtrade.llm.service.MlxServerManager;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -51,5 +52,10 @@ public class SettingsTestConfiguration {
     @Bean
     public com.swingtrade.llm.service.PiLlamaServerManager piServerManager() {
         return org.mockito.Mockito.mock(com.swingtrade.llm.service.PiLlamaServerManager.class);
+    }
+
+    @Bean
+    public MlxServerManager mlxServerManager() {
+        return org.mockito.Mockito.mock(MlxServerManager.class);
     }
 }

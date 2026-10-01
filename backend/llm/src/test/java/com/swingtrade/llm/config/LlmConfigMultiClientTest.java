@@ -91,9 +91,9 @@ class LlmConfigMultiClientTest {
     }
 
     @Test
-    @DisplayName("should have exactly five ChatModel beans")
-    void shouldHaveExactlyFiveChatModelBeans() {
+    @DisplayName("should have exactly six ChatModel beans")
+    void shouldHaveExactlySixChatModelBeans() {
         Map<String, OpenAiChatModel> beans = context.getBeansOfType(OpenAiChatModel.class);
-        assertThat(beans).hasSize(5);
+        assertThat(beans).hasSize(6);
     }
 }

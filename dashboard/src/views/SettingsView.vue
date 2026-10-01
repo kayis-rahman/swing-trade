@@ -1658,10 +1658,10 @@ const testOllamaConnection = async () => {
 
 const refreshMlxStatus = async () => {
   try {
-    const res = await apiGetMlxServerStatus()
-    if (res.success && res.data) {
-      mlxServerRunning.value = res.data.running ?? false
-      mlxServerStatusMsg.value = res.data.message ?? ''
+    const status = confirmed(await apiGetMlxServerStatus())
+    if (status) {
+      mlxServerRunning.value = status.running ?? false
+      mlxServerStatusMsg.value = status.message ?? ''
     }
   } catch {
     // ignore
@@ -1671,19 +1671,22 @@ const refreshMlxStatus = async () => {
 const handleMlxStart = async () => {
   mlxLoading.value = true
   try {
-    const res = await apiStartMlxServer()
-    if (res.success && res.data) {
-      mlxServerRunning.value = res.data.running ?? false
-      mlxServerStatusMsg.value = res.data.message ?? ''
-      toastMessage.value = res.data.message ?? ''
-      toastType.value = res.data.success ? 'success' : 'error'
+    const result = confirmed(await apiStartMlxServer())
+    if (result) {
+      mlxServerRunning.value = result.running ?? false
+      mlxServerStatusMsg.value = result.message ?? ''
+      toastMessage.value = result.message ?? ''
+      toastType.value = result.success ? 'success' : 'error'
       toastVisible.value = true
       setTimeout(() => {
         toastVisible.value = false
       }, 4000)
     }
   } catch (err: unknown) {
-    toastMessage.value = err instanceof Error ? err.message : 'Failed to start MLX server'
+    toastMessage.value = formatAppError(err, {
+      title: 'MLX server could not start',
+      operation: 'mutation',
+    }).message
     toastType.value = 'error'
     toastVisible.value = true
     setTimeout(() => {
@@ -1697,19 +1700,22 @@ const handleMlxStart = async () => {
 const handleMlxStop = async () => {
   mlxLoading.value = true
   try {
-    const res = await apiStopMlxServer()
-    if (res.success && res.data) {
-      mlxServerRunning.value = res.data.running ?? false
-      mlxServerStatusMsg.value = res.data.message ?? ''
-      toastMessage.value = res.data.message ?? ''
-      toastType.value = res.data.success ? 'success' : 'error'
+    const result = confirmed(await apiStopMlxServer())
+    if (result) {
+      mlxServerRunning.value = result.running ?? false
+      mlxServerStatusMsg.value = result.message ?? ''
+      toastMessage.value = result.message ?? ''
+      toastType.value = result.success ? 'success' : 'error'
       toastVisible.value = true
       setTimeout(() => {
         toastVisible.value = false
       }, 4000)
     }
   } catch (err: unknown) {
-    toastMessage.value = err instanceof Error ? err.message : 'Failed to stop MLX server'
+    toastMessage.value = formatAppError(err, {
+      title: 'MLX server could not stop',
+      operation: 'mutation',
+    }).message
     toastType.value = 'error'
     toastVisible.value = true
     setTimeout(() => {
@@ -1725,11 +1731,11 @@ const testMlxConnection = async () => {
   mlxTestResult.value = ''
   mlxTestSuccess.value = false
   try {
-    const res = await apiTestMlxConnection()
-    if (res.success && res.data) {
-      mlxTestResult.value = res.data.message ?? (res.data.success ? 'Connected!' : 'Failed to start')
-      mlxTestSuccess.value = res.data.success
-      if (res.data.success) {
+    const result = confirmed(await apiTestMlxConnection())
+    if (result) {
+      mlxTestResult.value = result.message ?? (result.success ? 'Connected!' : 'Failed to start')
+      mlxTestSuccess.value = result.success
+      if (result.success) {
         toastMessage.value = 'MLX connection successful — server started and responded to inference'
         toastType.value = 'success'
         toastVisible.value = true
@@ -1746,7 +1752,7 @@ const testMlxConnection = async () => {
         }, 4000)
       }
     } else {
-      mlxTestResult.value = res.error ?? 'Test failed'
+      mlxTestResult.value = 'Test failed'
       mlxTestSuccess.value = false
       toastMessage.value = mlxTestResult.value
       toastType.value = 'error'
@@ -1756,7 +1762,10 @@ const testMlxConnection = async () => {
       }, 4000)
     }
   } catch (err: unknown) {
-    mlxTestResult.value = err instanceof Error ? err.message : 'Network error'
+    mlxTestResult.value = formatAppError(err, {
+      title: 'MLX connection test failed',
+      operation: 'mutation',
+    }).message
     mlxTestSuccess.value = false
     toastMessage.value = mlxTestResult.value
     toastType.value = 'error'

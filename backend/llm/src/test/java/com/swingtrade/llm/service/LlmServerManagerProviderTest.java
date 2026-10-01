@@ -47,6 +47,7 @@ class LlmServerManagerProviderTest {
     private static LlmServerManagerProvider provider(AppSettingsStore settings,
                                                        LlamaCppServerManager local,
                                                        PiLlamaServerManager pi) {
-        return new LlmServerManagerProvider(new LlmBackendSelector(settings, "local"), local, pi);
+        return new LlmServerManagerProvider(new LlmBackendSelector(settings, "local"), local, pi,
+            mock(MlxServerManager.class));
     }
 }

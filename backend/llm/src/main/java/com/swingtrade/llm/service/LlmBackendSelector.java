@@ -51,6 +51,10 @@ public class LlmBackendSelector {
                 return backend;
             }
         }
+        // gpuhub is an alias for openai — uses openai.base_url
+        if ("gpuhub".equals(key)) {
+            return Backend.OPENAI;
+        }
         return Backend.LOCAL;
     }
 }

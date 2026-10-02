@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Provider that returns the correct LlmServerManager based on the selected backend.
- * Returns null for OPENAI backend (no server to manage).
+ * Returns null for OPENAI, OLLAMA, or LAYA (no server to manage).
  */
 @Component
 public class LlmServerManagerProvider {
@@ -23,14 +23,14 @@ public class LlmServerManagerProvider {
 
     /**
      * Returns the LlmServerManager for the currently selected backend.
-     * Returns null for OPENAI (no server to manage).
+     * Returns null for OPENAI, OLLAMA, or LAYA (no server to manage).
      */
     public LlmServerManager getManager() {
         var backend = selector.resolve();
         return switch (backend) {
             case LOCAL -> localServerManager;
             case PI_SSH -> piServerManager;
-            case OPENAI, OLLAMA -> null;
+            case OPENAI, OLLAMA, LAYA, PI_AGENT -> null;
         };
     }
 }

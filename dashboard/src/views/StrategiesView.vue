@@ -314,7 +314,7 @@ const championWarning = computed<string>(() => {
     return 'No CHAMPION strategy is set. Live decisions have no champion until one is promoted.'
   }
   if (count > 1) {
-    return `${count} champions are set. Only one variant should be CHAMPION; extras are silently downgraded.`
+    return `${count} champions are set. Only one current variant may be CHAMPION; the API rejects additional promotions.`
   }
   return ''
 })

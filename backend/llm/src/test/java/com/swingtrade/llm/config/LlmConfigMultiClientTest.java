@@ -35,7 +35,9 @@ import static org.assertj.core.api.Assertions.assertThat;
     "llm.backend=local",
     "spring.ai.openai.base-url=",
     "spring.ai.openai.api-key=test-key",
-    "spring.ai.openai.chat.options.model=qwen3-4b"
+    "spring.ai.openai.chat.options.model=qwen3-4b",
+    "llm.providers.laya.base-url=https://laya-default.test/v1",
+    "llm.providers.laya.model=laya-model"
 })
 class LlmConfigMultiClientTest {
 
@@ -74,9 +76,24 @@ class LlmConfigMultiClientTest {
     }
 
     @Test
-    @DisplayName("should have exactly four ChatModel beans")
-    void shouldHaveExactlyFourChatModelBeans() {
+    @DisplayName("should create layaChatModel bean")
+    void shouldCreateLayaChatModelBean() {
+        OpenAiChatModel laya = context.getBean("layaChatModel", OpenAiChatModel.class);
+        assertThat(laya).isNotNull();
+    }
+
+    @Test
+    @DisplayName("layaChatModel is wired with the configured endpoint and model")
+    void layaChatModelIsWiredWithConfiguredEndpointAndModel() {
+        OpenAiChatModel laya = context.getBean("layaChatModel", OpenAiChatModel.class);
+        assertThat(laya.getOptions().getBaseUrl()).isEqualTo("https://laya-default.test/v1");
+        assertThat(laya.getOptions().getModel()).isEqualTo("laya-model");
+    }
+
+    @Test
+    @DisplayName("should have exactly five ChatModel beans")
+    void shouldHaveExactlyFiveChatModelBeans() {
         Map<String, OpenAiChatModel> beans = context.getBeansOfType(OpenAiChatModel.class);
-        assertThat(beans).hasSize(4);
+        assertThat(beans).hasSize(5);
     }
 }

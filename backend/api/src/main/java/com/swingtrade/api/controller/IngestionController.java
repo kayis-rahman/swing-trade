@@ -71,7 +71,7 @@ public class IngestionController {
     @PostMapping("/ingestion/backfill")
     public ResponseEntity<ApiResponse<Map<String, Object>>> backfillStock(
             @RequestParam String symbol,
-            @RequestParam(defaultValue = "3") int years) {
+            @RequestParam(defaultValue = "5") int years) {
 
         logger.info("Manual backfill requested for {} ({} years)", symbol, years);
 
@@ -103,7 +103,7 @@ public class IngestionController {
      * Backfill all watchlist stocks.
      */
     @PostMapping("/ingestion/backfill-all")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> backfillAll(@RequestParam(defaultValue = "3") int years) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> backfillAll(@RequestParam(defaultValue = "5") int years) {
         logger.info("Manual backfill-all requested ({} years)", years);
 
         try {

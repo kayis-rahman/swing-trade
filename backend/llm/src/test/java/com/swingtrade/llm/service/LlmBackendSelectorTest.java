@@ -29,4 +29,14 @@ class LlmBackendSelectorTest {
         assertThat(LlmBackendSelector.fromKey("gpuhub")).isEqualTo(LlmBackendSelector.Backend.OPENAI);
         assertThat(LlmBackendSelector.fromKey("unknown")).isEqualTo(LlmBackendSelector.Backend.LOCAL);
     }
+
+    @Test
+    void resolvesLayaBackend() {
+        AppSettingsStore settings = mock(AppSettingsStore.class);
+        when(settings.get("llm.backend")).thenReturn(Optional.of("laya"));
+
+        assertThat(new LlmBackendSelector(settings, "local").resolve())
+            .isEqualTo(LlmBackendSelector.Backend.LAYA);
+        assertThat(LlmBackendSelector.fromKey("laya")).isEqualTo(LlmBackendSelector.Backend.LAYA);
+    }
 }

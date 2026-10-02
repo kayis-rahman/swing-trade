@@ -43,6 +43,9 @@ public class EodIngestionScheduler implements ApplicationRunner {
     @Value("${benchmark.backfill.years:10}")
     private int benchmarkBackfillYears = 10;
 
+    @Value("${benchmark.backfill.on-startup:true}")
+    boolean benchmarkBackfillOnStartup = true;
+
     public EodIngestionScheduler(DataIngestionService dataIngestionService, WatchlistRepository watchlistRepository, NseHolidayService holidayService) {
         this.dataIngestionService = dataIngestionService;
         this.watchlistRepository = watchlistRepository;
@@ -58,6 +61,10 @@ public class EodIngestionScheduler implements ApplicationRunner {
      */
     @Override
     public void run(ApplicationArguments args) {
+        if (!benchmarkBackfillOnStartup) {
+            logger.info("Startup NIFTY50 benchmark backfill disabled");
+            return;
+        }
         ensureNiftyBenchmarkHistory();
     }
 

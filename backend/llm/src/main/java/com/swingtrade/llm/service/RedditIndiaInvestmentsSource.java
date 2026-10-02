@@ -40,16 +40,18 @@ public class RedditIndiaInvestmentsSource implements NewsSource {
     private final String clientSecret;
     private final String username;
     private final String password;
+    private final boolean enabled;
     private final int maxArticles;
     private final AtomicReference<String> accessToken = new AtomicReference<>();
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
     public RedditIndiaInvestmentsSource(
-            @Value("${reddit.client.id:}") String clientId,
-            @Value("${reddit.client.secret:}") String clientSecret,
-            @Value("${reddit.username:}") String username,
-            @Value("${reddit.password:}") String password,
+            @Value("${news.reddit.client-id:}") String clientId,
+            @Value("${news.reddit.client-secret:}") String clientSecret,
+            @Value("${news.reddit.username:}") String username,
+            @Value("${news.reddit.password:}") String password,
+            @Value("${news.source.reddit.enabled:true}") boolean enabled,
             @Value("${news.source.reddit.max-articles:15}") int maxArticles,
             ObjectMapper objectMapper) {
 
@@ -57,12 +59,18 @@ public class RedditIndiaInvestmentsSource implements NewsSource {
         this.clientSecret = clientSecret;
         this.username = username;
         this.password = password;
+        this.enabled = enabled;
         this.maxArticles = maxArticles;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
+
+        if (!enabled) {
+            log.info("Reddit source disabled by configuration");
+            return;
+        }
 
         // Try password grant first (first-party apps), then client-credentials (standard bots)
         if (!clientId.isBlank() && !clientSecret.isBlank()) {
@@ -94,6 +102,7 @@ public class RedditIndiaInvestmentsSource implements NewsSource {
 
     @Override
     public List<NewsArticle> fetch(String symbol) {
+        if (!enabled) return List.of();
         String query = symbol + " India stock";
         String url = SEARCH_URL + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&limit=25";
 

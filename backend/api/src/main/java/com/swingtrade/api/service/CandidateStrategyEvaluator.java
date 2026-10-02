@@ -6,7 +6,9 @@ import com.swingtrade.strategy.BacktestConfig;
 import com.swingtrade.strategy.BacktestEngine;
 import com.swingtrade.strategy.BacktestResult;
 import com.swingtrade.strategy.ResolvedStrategy;
+import com.swingtrade.strategy.SignalResult;
 import com.swingtrade.strategy.StrategyResolver;
+import com.swingtrade.strategy.TradingStrategy;
 import com.swingtrade.strategy.WalkForwardEvaluation;
 import org.springframework.stereotype.Service;
 
@@ -19,19 +21,26 @@ public class CandidateStrategyEvaluator {
     private final ActiveVariantService variants;
     private final StrategyResolver resolver;
     private final BacktestEngine backtestEngine;
+    private final com.swingtrade.strategy.PriceActionSignalEngine signalEngine;
 
     public CandidateStrategyEvaluator(ActiveVariantService variants, StrategyResolver resolver,
-                                      BacktestEngine backtestEngine) {
+                                      BacktestEngine backtestEngine,
+                                      com.swingtrade.strategy.PriceActionSignalEngine signalEngine) {
         this.variants = variants;
         this.resolver = resolver;
         this.backtestEngine = backtestEngine;
+        this.signalEngine = signalEngine;
     }
 
     public List<Outcome> evaluate(String symbol, List<OhlcvCandle> candles) {
         return variants.active().stream().map(config -> {
             ResolvedStrategy resolved = resolver.resolve(config);
             if (!(resolved instanceof ResolvedStrategy.Signal signal)) {
-                return new Outcome(config.variantId(), "SKIPPED", null, "Strategy is not a live signal strategy");
+                if (resolved instanceof ResolvedStrategy.Legacy legacy) {
+                    return evaluateLegacy(symbol, candles, config.variantId(), legacy.strategy());
+                }
+                return new Outcome(config.variantId(), "SKIPPED", null,
+                    unresolvedReason(resolved));
             }
             return LiveSignalEvaluator.evaluateEntry(symbol, candles, signal)
                 .map(entry -> new Outcome(config.variantId(), entry.decision().type().name(),
@@ -46,9 +55,13 @@ public class CandidateStrategyEvaluator {
                                                  int oosDays, int oosFolds) {
         return variants.active().stream().map(candidate -> {
             ResolvedStrategy resolved = resolver.resolve(candidate);
+            if (resolved instanceof ResolvedStrategy.Legacy legacy) {
+                return evaluateLegacyWithPerformance(symbol, candidate.variantId(), legacy.strategy(),
+                    exchange, config, oosDays, oosFolds);
+            }
             if (!(resolved instanceof ResolvedStrategy.Signal signal)) {
                 return new Outcome(candidate.variantId(), "SKIPPED", null,
-                    "Strategy is not a live signal strategy", null, null, "SKIPPED");
+                    unresolvedReason(resolved), null, null, "SKIPPED");
             }
             var live = LiveSignalEvaluator.evaluateEntry(symbol, candles, signal);
             if (live.isEmpty()) {
@@ -69,6 +82,38 @@ public class CandidateStrategyEvaluator {
                     null, null, "ERROR");
             }
         }).toList();
+    }
+
+    private Outcome evaluateLegacy(String symbol, List<OhlcvCandle> candles, String variantId,
+                                   TradingStrategy strategy) {
+        try {
+            SignalResult signal = signalEngine.analyze(symbol, candles, strategy);
+            return new Outcome(variantId, signal.type().name(), null, signal.reasoning());
+        } catch (IllegalStateException e) {
+            return new Outcome(variantId, "SKIPPED", null,
+                "Live evaluation unavailable: " + e.getMessage());
+        }
+    }
+
+    private Outcome evaluateLegacyWithPerformance(String symbol, String variantId, TradingStrategy strategy,
+                                                   String exchange, BacktestConfig config, int oosDays,
+                                                   int oosFolds) {
+        try {
+            SignalResult signal = signalEngine.generateSignal(symbol, strategy);
+            BacktestResult backtest = backtestEngine.runBacktest(symbol, exchange, config, strategy);
+            WalkForwardEvaluation walkForward = backtestEngine.runWalkForward(symbol, exchange, config,
+                strategy, oosDays, oosFolds);
+            return new Outcome(variantId, signal.type().name(), null, signal.reasoning(), backtest,
+                walkForward, "EVALUATED");
+        } catch (IllegalStateException e) {
+            return new Outcome(variantId, "HOLD", null,
+                "Performance unavailable: " + e.getMessage(), null, null, "ERROR");
+        }
+    }
+
+    private String unresolvedReason(ResolvedStrategy resolved) {
+        return resolved instanceof ResolvedStrategy.Unresolved unresolved
+            ? unresolved.reason() : "Strategy could not be resolved";
     }
 
     public record Outcome(String variantId, String signalType, BigDecimal score, String detail,

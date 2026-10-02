@@ -30,9 +30,14 @@ public class BseAnnouncementsSource implements NewsSource {
     private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     private final int maxArticles;
+    private final boolean enabled;
 
-    public BseAnnouncementsSource(@Value("${news.source.bse.max-articles:10}") int maxArticles) {
+    public BseAnnouncementsSource(
+            @Value("${news.source.bse.max-articles:10}") int maxArticles,
+            @Value("${news.source.bse.enabled:true}") boolean enabled) {
         this.maxArticles = maxArticles;
+        this.enabled = enabled;
+        if (!enabled) log.info("BSE announcements source disabled by configuration");
     }
 
     @Override
@@ -42,6 +47,7 @@ public class BseAnnouncementsSource implements NewsSource {
 
     @Override
     public List<NewsArticle> fetch(String symbol) {
+        if (!enabled) return List.of();
         List<StructuredFiling> filings = fetchFilings(symbol);
         return filings.stream()
                 .map(f -> NewsArticle.builder()
@@ -59,6 +65,7 @@ public class BseAnnouncementsSource implements NewsSource {
 
     @Override
     public List<StructuredFiling> fetchFilings(String symbol) {
+        if (!enabled) return List.of();
         List<StructuredFiling> filings = new ArrayList<>();
 
         try {

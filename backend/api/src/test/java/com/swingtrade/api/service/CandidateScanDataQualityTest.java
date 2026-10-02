@@ -119,11 +119,32 @@ class CandidateScanDataQualityTest {
         verify(backtest, never()).runBacktest(any(), any(), any());
     }
 
+    @Test
+    void countsTransientProviderFailureWithoutDoubleCountingCompletedSymbol() {
+        UUID runId = UUID.randomUUID();
+        CandidateScanRunEntity run = runningRun(runId);
+        when(runs.findByRunId(runId)).thenReturn(Optional.of(run));
+        when(eligibility.findById("TRANSIENT")).thenReturn(Optional.empty());
+        when(candles.countBySymbol("TRANSIENT")).thenReturn(0L);
+        when(ingestion.backfillStockDataWithOutcome("TRANSIENT", 3))
+            .thenReturn(new DataIngestionService.BackfillOutcome(
+                "TRANSIENT_SOURCE_FAILURE", 0, 0, 0, "Yahoo Finance returned HTTP 400"));
+        when(candles.findAllBySymbolOrderByDateDesc("TRANSIENT")).thenReturn(List.of());
+        when(results.save(any(CandidateScanResultEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(invokeScan(runId, "TRANSIENT")).isFalse();
+
+        assertThat(run.getFailedSymbols()).isEqualTo(1);
+        assertThat(run.getCompletedSymbols()).isZero();
+        verify(results).save(any(CandidateScanResultEntity.class));
+    }
+
     private boolean invokeScan(UUID runId, String symbol) {
         try {
-            Method method = CandidateScanService.class.getDeclaredMethod("scanSymbol", UUID.class, String.class);
+            Method method = CandidateScanService.class.getDeclaredMethod(
+                "scanSymbol", UUID.class, String.class, boolean.class);
             method.setAccessible(true);
-            return (boolean) method.invoke(service, runId, symbol);
+            return (boolean) method.invoke(service, runId, symbol, true);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             if (cause instanceof RuntimeException runtime) throw runtime;

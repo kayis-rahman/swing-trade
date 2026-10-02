@@ -44,6 +44,8 @@ export function matrixCellKind(cell: JobStageStrategyResult | undefined): Matrix
   if (!cell) return 'none'
   if (cell.outcome === 'ERROR') return 'error'
   if (cell.outcome === 'SKIPPED') return 'skipped'
+  if (cell.signal === true) return 'signal'
+  if (cell.signal === false) return 'no-signal'
   const signal = (cell.signal ?? '').toUpperCase()
   return NO_SIGNAL.has(signal) ? 'no-signal' : 'signal'
 }

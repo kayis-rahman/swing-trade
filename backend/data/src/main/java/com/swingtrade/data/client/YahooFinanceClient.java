@@ -171,17 +171,20 @@ public class YahooFinanceClient implements MarketDataClient {
                 .onErrorResume(io.github.resilience4j.circuitbreaker.CallNotPermittedException.class,
                         e -> {
                             logger.warn("Circuit breaker open for yahoo");
-                            return Mono.empty();
+                            return Mono.error(new YahooDataUnavailableException(
+                                    "Yahoo circuit breaker is open", e));
                         })
                 .onErrorResume(java.util.concurrent.TimeoutException.class,
                         e -> {
                             logger.warn("Time limit exceeded for yahoo");
-                            return Mono.empty();
+                            return Mono.error(new YahooDataUnavailableException(
+                                    "Yahoo request timed out", e));
                         })
                 .onErrorResume(io.github.resilience4j.bulkhead.BulkheadFullException.class,
                         e -> {
                             logger.warn("Bulkhead full for yahoo");
-                            return Mono.empty();
+                            return Mono.error(new YahooDataUnavailableException(
+                                    "Yahoo request bulkhead is full", e));
                         })
                 .block();
     }

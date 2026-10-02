@@ -82,6 +82,7 @@ export {
   testPiConnection,
   testOpenAiConnection,
   testOllamaConnection,
+  testPiAgentConnection,
   startPiServer,
   stopPiServer,
   getPiServerStatus,

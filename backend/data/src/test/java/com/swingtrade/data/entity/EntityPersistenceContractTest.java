@@ -118,12 +118,13 @@ class EntityPersistenceContractTest {
         CandidateScanRunEntity run = new CandidateScanRunEntity();
         UUID runId = UUID.randomUUID();
         UUID jobId = UUID.randomUUID();
-        run.setRunId(runId); run.setStatus("COMPLETED"); run.setTotalSymbols(10);
+        run.setRunId(runId); run.setStatus("COMPLETED"); run.setScanScope("WATCHLIST"); run.setTotalSymbols(10);
         run.setCompletedSymbols(9); run.setFailedSymbols(1); run.setQualifiedSymbols(4);
         run.setStartedAt(TIME); run.setCompletedAt(TIME.plusMinutes(3)); run.setErrorMessage("one failed");
         run.setOrchestrationStatus("COMPLETED"); run.setOrchestrationJobRunId(jobId);
         run.setOrchestrationError(null);
         assertThat(run.getRunId()).isEqualTo(runId); assertThat(run.getStatus()).isEqualTo("COMPLETED");
+        assertThat(run.getScanScope()).isEqualTo("WATCHLIST");
         assertThat(run.getTotalSymbols()).isEqualTo(10); assertThat(run.getCompletedSymbols()).isEqualTo(9);
         assertThat(run.getFailedSymbols()).isEqualTo(1); assertThat(run.getQualifiedSymbols()).isEqualTo(4);
         assertThat(run.getStartedAt()).isEqualTo(TIME); assertThat(run.getCompletedAt()).isEqualTo(TIME.plusMinutes(3));

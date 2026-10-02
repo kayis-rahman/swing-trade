@@ -222,8 +222,9 @@ class DataIngestionServiceTest {
     @Test
     void incrementalBackfillDoesNotCallProviderWhenRangeAlreadyCurrent() {
         LocalDate date = LocalDate.of(2026, 6, 10);
+        OhlcvCandleEntity earliest = candle("RELIANCE", LocalDate.of(2026, 1, 1));
         OhlcvCandleEntity stored = candle("RELIANCE", date);
-        when(candleRepository.findEarliestBySymbol("RELIANCE")).thenReturn(Optional.of(stored));
+        when(candleRepository.findEarliestBySymbol("RELIANCE")).thenReturn(Optional.of(earliest));
         when(candleRepository.findLatestBySymbol("RELIANCE")).thenReturn(Optional.of(stored));
 
         DataIngestionService.BackfillOutcome outcome = dataIngestionService.processIncrementalStockData(
@@ -231,6 +232,39 @@ class DataIngestionServiceTest {
 
         verify(mockClient, Mockito.never()).fetchCandles(anyString(), any(LocalDate.class), any(LocalDate.class));
         assert outcome.sourceOutcome().equals("ALREADY_CURRENT");
+    }
+
+    @Test
+    void incrementalBackfillRepairsMissingHistoricalHeadBeforeUsingLatestTail() {
+        LocalDate requestedFrom = LocalDate.of(2026, 1, 1);
+        LocalDate latest = LocalDate.of(2026, 6, 10);
+        when(candleRepository.findEarliestBySymbol("RELIANCE"))
+            .thenReturn(Optional.of(candle("RELIANCE", LocalDate.of(2026, 6, 1))));
+        when(candleRepository.findLatestBySymbol("RELIANCE"))
+            .thenReturn(Optional.of(candle("RELIANCE", latest)));
+        when(mockClient.fetchCandles("RELIANCE", requestedFrom, requestedFrom.plusDays(29)))
+            .thenReturn(List.of());
+
+        dataIngestionService.processIncrementalStockData("RELIANCE", requestedFrom, latest);
+
+        verify(mockClient).fetchCandles("RELIANCE", requestedFrom, requestedFrom.plusDays(29));
+    }
+
+    @Test
+    void incrementalBackfillStopsAfterFirstTransientProviderFailure() {
+        LocalDate from = LocalDate.of(2021, 1, 1);
+        LocalDate to = LocalDate.of(2021, 3, 31);
+        when(candleRepository.findEarliestBySymbol("RELIANCE")).thenReturn(Optional.empty());
+        when(candleRepository.findLatestBySymbol("RELIANCE")).thenReturn(Optional.empty());
+        when(mockClient.fetchCandles("RELIANCE", from, from.plusDays(29)))
+            .thenThrow(new IllegalStateException("provider circuit is open"));
+
+        DataIngestionService.BackfillOutcome outcome =
+            dataIngestionService.processIncrementalStockData("RELIANCE", from, to);
+
+        assert outcome.sourceOutcome().equals("TRANSIENT_SOURCE_FAILURE");
+        verify(mockClient).fetchCandles("RELIANCE", from, from.plusDays(29));
+        verify(mockClient, Mockito.never()).fetchCandles("RELIANCE", from.plusDays(30), from.plusDays(59));
     }
 
     @Test

@@ -58,6 +58,8 @@ services:
         limits:
           cpus: "1.5"
           memory: 1G
+    mem_limit: 1g
+    cpus: 1.5
 
   dashboard:
     image: swing-trade-dashboard:stage

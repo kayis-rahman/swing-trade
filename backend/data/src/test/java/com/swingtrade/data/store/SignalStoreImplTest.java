@@ -31,6 +31,7 @@ class SignalStoreImplTest {
         when(repository.findBySymbolAndDate("TCS", DATE)).thenReturn(List.of(entity));
         when(repository.findStrategiesBySymbolAndDate("TCS", DATE)).thenReturn(List.of("PRICE_ACTION"));
         when(repository.findByDateRangeAndSignalType(any(), any(), any(), any())).thenReturn(List.of(entity));
+        when(repository.findBySignalType(any(), any())).thenReturn(List.of(entity));
         when(repository.findUnprocessedBuySignalsSince(any())).thenReturn(List.of(entity));
         when(repository.findLatestBySymbol(any(), any())).thenReturn(List.of(entity));
         when(repository.findLatestBySymbolAndStrategy(any(), any(), any())).thenReturn(List.of(entity));
@@ -49,6 +50,7 @@ class SignalStoreImplTest {
         assertThat(store.findBySymbolAndDate("TCS", DATE)).containsExactly(signal);
         assertThat(store.findStrategiesBySymbolAndDate("TCS", DATE)).containsExactly("PRICE_ACTION");
         assertThat(store.findByType(Signal.SignalType.BUY)).containsExactly(signal);
+        verify(repository).findBySignalType(org.mockito.ArgumentMatchers.eq("BUY"), any());
         assertThat(store.findUnprocessed()).containsExactly(signal);
         assertThat(store.findLatestBySymbol("TCS")).contains(signal);
         assertThat(store.findLatestBySymbolAndStrategy("TCS", "PRICE_ACTION")).contains(signal);

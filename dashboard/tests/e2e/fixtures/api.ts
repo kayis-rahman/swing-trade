@@ -17,12 +17,16 @@ export async function fulfillJson(route: Route, body: unknown, status = 200): Pr
 export async function mockDashboardApi(page: Page, responder?: ApiResponder): Promise<void> {
   await page.route(/^https?:\/\/[^/]+\/api(?:\/|$)/, async (route) => {
     const url = new URL(route.request().url())
-    const path = `${url.pathname.replace(/^\/api/, '')}${url.search}`
+    const path = url.pathname.replace(/^\/api/, '')
 
     if ((await responder?.(route, path)) === true) return
 
     if (path === '/health') {
       await fulfillJson(route, { status: 'UP', components: {} })
+      return
+    }
+    if (path === '/signals/latest' || path === '/paper-portfolios') {
+      await fulfillJson(route, [])
       return
     }
     if (path === '/positions' || path.startsWith('/positions/closed')) {

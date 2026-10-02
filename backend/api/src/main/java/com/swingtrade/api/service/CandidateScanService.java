@@ -107,7 +107,7 @@ public class CandidateScanService {
                                 PriceActionSignalEngine signalEngine,
                                 BacktestEngine backtestEngine,
                                 CandidateStrategyEvaluator candidateStrategyEvaluator,
-                                @Value("${candidate-scan.backfill-years:3}") int backfillYears,
+                                @Value("${candidate-scan.backfill-years:5}") int backfillYears,
                                 @Value("${candidate-scan.delay-ms:1000}") long delayMs,
                                 @Value("${candidate-scan.max-concurrent:3}") int maxConcurrent) {
         this.symbolRepository = symbolRepository;
@@ -161,8 +161,8 @@ public class CandidateScanService {
     }
 
     @Transactional
-    /** Manual scans use the active dashboard watchlist and hand qualified candidates to the orchestrator. */
-    public CandidateScanRunEntity start() { return start(true, true); }
+    /** Manual scans discover candidates across the NSE symbol master. */
+    public CandidateScanRunEntity start() { return start(false, false); }
 
     /** Scheduled scans persist a handoff request for their qualified candidates. */
     @Transactional
@@ -193,6 +193,7 @@ public class CandidateScanService {
         run.setRunId(UUID.randomUUID());
         run.setStatus("RUNNING");
         run.setTotalSymbols(symbols.size());
+        run.setScanScope(watchlistOnly ? "WATCHLIST" : "NSE_BROAD");
         run.setStartedAt(LocalDateTime.now(MARKET_ZONE));
         run.setOrchestrationStatus(scheduled ? "PENDING" : "NOT_REQUIRED");
         runRepository.save(run);
@@ -202,7 +203,7 @@ public class CandidateScanService {
         logHistory.put(run.getRunId(), new ConcurrentLinkedDeque<>());
         publish(run.getRunId(), "RUN_STARTED", null, "INFO",
             "Scanning " + symbols.size() + " NSE symbols with up to " + maxConcurrent + " workers.");
-        Runnable scanTask = () -> execute(run.getRunId(), symbols);
+        Runnable scanTask = () -> execute(run.getRunId(), symbols, scheduled);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
@@ -449,16 +450,16 @@ public class CandidateScanService {
         return true;
     }
 
-    private void execute(UUID runId, List<String> symbols) {
+    private void execute(UUID runId, List<String> symbols, boolean scheduled) {
         List<CompletableFuture<Void>> futures = symbols.stream()
-            .map(symbol -> CompletableFuture.runAsync(() -> processSymbol(runId, symbol), executor))
+            .map(symbol -> CompletableFuture.runAsync(() -> processSymbol(runId, symbol, scheduled), executor))
             .toList();
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).whenComplete((ignored, error) -> {
             finalizeRun(runId, error);
         });
     }
 
-    private void processSymbol(UUID runId, String symbol) {
+    private void processSymbol(UUID runId, String symbol, boolean scheduled) {
         if (isCancelled(runId)) return;
         boolean acquired = false;
         try {
@@ -467,7 +468,7 @@ public class CandidateScanService {
             awaitIfPaused(runId);
             if (isCancelled(runId)) return;
             publish(runId, "SYMBOL_STARTED", symbol, "INFO", "Processing " + symbol + ".");
-            boolean qualified = scanSymbol(runId, symbol);
+            boolean qualified = scanSymbol(runId, symbol, scheduled);
             increment(runId, false, qualified);
             publish(runId, "SYMBOL_COMPLETED", symbol, qualified ? "SUCCESS" : "INFO",
                 qualified ? symbol + " qualified and was activated." : symbol + " did not pass the gate.");
@@ -506,7 +507,7 @@ public class CandidateScanService {
         completeStreams(runId);
     }
 
-    private boolean scanSymbol(UUID runId, String symbol) {
+    private boolean scanSymbol(UUID runId, String symbol, boolean scheduled) {
         int backfillYears = configuredBackfillYears();
         int candles = (int) candleStore.countBySymbol(symbol);
         boolean fetched = false;
@@ -515,7 +516,7 @@ public class CandidateScanService {
             : eligibilityRepository.findById(symbol).orElse(null);
         publish(runId, "STAGE_STARTED", symbol, "INFO", "Data: checking OHLCV history.");
         LocalDate today = LocalDate.now(MARKET_ZONE);
-        if (candles < MIN_CANDLES && eligibility != null && eligibility.getRetryAfter() != null
+        if (scheduled && candles < MIN_CANDLES && eligibility != null && eligibility.getRetryAfter() != null
             && today.isBefore(eligibility.getRetryAfter())) {
             return saveInsufficientResult(runId, symbol, candles, eligibility, "History retry scheduled");
         }
@@ -551,6 +552,7 @@ public class CandidateScanService {
                 result.setReason("Market-data source failed; history will be retried on the next scan");
                 result.setErrorMessage(outcome.errorMessage());
                 resultRepository.save(result);
+                incrementFailedOnly(runId);
                 return false;
             }
             result.setDataStatus("INSUFFICIENT");
@@ -570,8 +572,11 @@ public class CandidateScanService {
         // Keeps compatibility with lightweight callers that provide the pre-performance evaluator
         // contract (notably isolated data-quality tests). Spring production always supplies the
         // non-null performance-aware result.
-        if (strategyOutcomes == null || strategyOutcomes.isEmpty()) {
+        if (candidateStrategyEvaluator != null && (strategyOutcomes == null || strategyOutcomes.isEmpty())) {
             strategyOutcomes = candidateStrategyEvaluator.evaluate(symbol, availableCandles);
+        }
+        if (strategyOutcomes == null) {
+            strategyOutcomes = List.of();
         }
         int strategyBuys = (int) strategyOutcomes.stream().filter(CandidateStrategyEvaluator.Outcome::buy).count();
         int evaluatedStrategies = (int) strategyOutcomes.stream().filter(o -> !"SKIPPED".equals(o.signalType())).count();
@@ -779,6 +784,13 @@ public class CandidateScanService {
         run.setCompletedSymbols(run.getCompletedSymbols() + 1);
         if (failed) run.setFailedSymbols(run.getFailedSymbols() + 1);
         if (qualified) run.setQualifiedSymbols(run.getQualifiedSymbols() + 1);
+        runRepository.save(run);
+    }
+
+    private synchronized void incrementFailedOnly(UUID runId) {
+        CandidateScanRunEntity run = getRun(runId);
+        if (run == null || !isActiveStatus(run.getStatus())) return;
+        run.setFailedSymbols(run.getFailedSymbols() + 1);
         runRepository.save(run);
     }
 

@@ -21,10 +21,6 @@ scrape_configs:
     static_configs:
       - targets: ['grafana:3000']
 
-  - job_name: caddy
-    static_configs:
-      - targets: ['caddy:9187']
-
   - job_name: swing-trade-stage
     metrics_path: /actuator/prometheus
     static_configs:
@@ -32,13 +28,3 @@ scrape_configs:
         labels:
           application: swing-trade-stage
           module: api
-
-  - job_name: vllm
-    metrics_path: /metrics
-    scheme: https
-    scrape_interval: 5m
-    static_configs:
-      - targets: ['u425-b06e-bde186b5.singapore-b.gpuhub.com']
-        labels:
-          instance: gpuhub-vllm
-    tls_config:

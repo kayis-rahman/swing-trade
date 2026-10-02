@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import type { Component } from 'vue'
+import { getSettings } from '../stores/settings'
 
 function createRouterMock() {
   return createRouter({
@@ -104,6 +105,30 @@ describe('SettingsView — LLM Section', () => {
     await wrapper.find('[aria-label="AI/LLM"]').trigger('click')
     expect(wrapper.text()).toContain('OpenAI-compatible LLM')
     expect(wrapper.text()).toContain('Test')
+    wrapper.unmount()
+  })
+
+  it('exposes Laya as a selectable backend with its own endpoint and model fields', async () => {
+    const SettingsView = (await import('./SettingsView.vue')).default
+    const wrapper = mountSettings(SettingsView)
+    await wrapper.find('[aria-label="AI/LLM"]').trigger('click')
+
+    // Laya is one of the backend options (local, pi_ssh, openai, ollama, laya).
+    const backendOptions = wrapper.findAll('.llm-backend-option')
+    expect(backendOptions).toHaveLength(6)
+
+    // Selecting Laya wires the store backend to 'laya'.
+    await backendOptions[4]?.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(getSettings().llmSettings.llmBackend).toBe('laya')
+    expect(wrapper.find('.broker-option-check').exists()).toBe(true)
+
+    // The Laya section exposes its own endpoint and model inputs, distinct from
+    // the other backends.
+    const placeholders = wrapper.findAll('input').map((input) => input.attributes('placeholder'))
+    expect(placeholders).toContain('https://laya.example/v1')
+    expect(placeholders).toContain('Ornith-1.5-35B-A3B-AWQ')
+
     wrapper.unmount()
   })
 

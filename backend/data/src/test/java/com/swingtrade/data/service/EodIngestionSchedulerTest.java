@@ -4,6 +4,7 @@ import com.swingtrade.data.entity.WatchlistEntity;
 import com.swingtrade.data.repository.WatchlistRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.DefaultApplicationArguments;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -50,6 +51,19 @@ class EodIngestionSchedulerTest {
         scheduler.ensureNiftyBenchmarkHistory();
 
         verify(dataIngestionService).backfillStockData(eq(EodIngestionScheduler.NIFTY_50_SYMBOL), eq(10));
+    }
+
+    @Test
+    void skipsStartupBackfillWhenDisabled() throws Exception {
+        EodIngestionScheduler scheduler = new EodIngestionScheduler(
+                dataIngestionService, watchlistRepository, holidayService);
+        scheduler.benchmarkBackfillOnStartup = false;
+
+        scheduler.run(new DefaultApplicationArguments(new String[0]));
+
+        verify(dataIngestionService, never()).getExistingDataWindow(EodIngestionScheduler.NIFTY_50_SYMBOL);
+        verify(dataIngestionService, never()).backfillStockData(
+                eq(EodIngestionScheduler.NIFTY_50_SYMBOL), org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test

@@ -66,6 +66,7 @@ public class LlmProperties {
         private final Provider piSsh = new Provider();
         private final Provider openai = new Provider();
         private final Provider ollama = new Provider();
+        private final Provider laya = new Provider();
 
         public Provider getLocal() {
             return local;
@@ -81,6 +82,10 @@ public class LlmProperties {
 
         public Provider getOllama() {
             return ollama;
+        }
+
+        public Provider getLaya() {
+            return laya;
         }
     }
 

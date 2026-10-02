@@ -7,8 +7,8 @@ test.describe('deployed stage dashboard smoke', () => {
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.goto(`${dashboardUrl}/`)
-    await expect(page).toHaveTitle(/SwingTrade/i)
-    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+    await expect(page).toHaveTitle(/Swing\s*Trade/i)
+    await expect(page.getByRole('heading', { name: 'Portfolio at a glance' })).toBeVisible()
 
     for (const route of ['/data', '/signals', '/positions']) {
       await page.goto(`${dashboardUrl}${route}`)

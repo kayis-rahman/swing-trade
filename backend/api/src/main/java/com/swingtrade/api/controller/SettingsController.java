@@ -5,6 +5,7 @@ import com.swingtrade.broker.service.DiscordNotificationService;
 import com.swingtrade.data.service.AppSettingsService;
 import com.swingtrade.data.service.MarketDataClientProvider;
 import com.swingtrade.llm.client.LlmClient;
+import com.swingtrade.llm.client.PiAgentLlmClient;
 import com.swingtrade.llm.config.LlmProperties;
 import com.swingtrade.llm.service.LlamaCppServerManager;
 import com.swingtrade.llm.service.LlmBackendSelector;
@@ -12,6 +13,7 @@ import com.swingtrade.llm.service.LlmClientProvider;
 import com.swingtrade.llm.service.LlmServerManager;
 import com.swingtrade.llm.service.PiLlamaServerManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.Nullable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
+import jakarta.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +65,7 @@ public class SettingsController {
     private final DiscordNotificationService discordNotificationService;
     private final LlmBackendSelector selector;
     private final LlmClientProvider llmClientProvider;
+    private final PiAgentLlmClient piAgentClient;
     private final LlamaCppServerManager localServerManager;
     private final PiLlamaServerManager piServerManager;
 
@@ -72,6 +76,7 @@ public class SettingsController {
                               DiscordNotificationService discordNotificationService,
                               LlmBackendSelector selector,
                               LlmClientProvider llmClientProvider,
+                              @Nullable PiAgentLlmClient piAgentClient,
                               LlamaCppServerManager localServerManager,
                               PiLlamaServerManager piServerManager) {
         this.marketDataClientProvider = marketDataClientProvider;
@@ -80,8 +85,14 @@ public class SettingsController {
         this.discordNotificationService = discordNotificationService;
         this.selector = selector;
         this.llmClientProvider = llmClientProvider;
+        this.piAgentClient = piAgentClient;
         this.localServerManager = localServerManager;
         this.piServerManager = piServerManager;
+    }
+
+    @PostConstruct
+    void loadPiAgentSettings() {
+        configurePiAgentFromSettings();
     }
 
     @GetMapping("/settings")
@@ -122,6 +133,14 @@ public class SettingsController {
             "ollama.model", llmProperties.getProviders().getOllama().getModel()));
         settings.put("llamacpp.model", appSettingsService.get(
             "llamacpp.model", llmProperties.getLlamaCpp().getModel()));
+        settings.put("laya.base_url", appSettingsService.get(
+            "laya.base_url", llmProperties.getProviders().getLaya().getBaseUrl().toString()));
+        settings.put("laya.model", appSettingsService.get(
+            "laya.model", llmProperties.getProviders().getLaya().getModel()));
+        settings.put("pi-agent.provider", appSettingsService.get(
+            "pi-agent.provider", "openai-codex"));
+        settings.put("pi-agent.model", appSettingsService.get(
+            "pi-agent.model", "gpt-5.6-luna"));
         settings.put("llm.pdf.base_url", appSettingsService.get(
             "llm.pdf.base_url",
             llmProperties.getPdf().getBaseUrl() != null ? llmProperties.getPdf().getBaseUrl().toString() : ""));
@@ -140,6 +159,7 @@ public class SettingsController {
         String oldLlamaCppModel = appSettingsService.get(
             "llamacpp.model", llmProperties.getLlamaCpp().getModel());
         body.forEach((key, value) -> appSettingsService.set(key, value));
+        configurePiAgentFromSettings();
 
         // Handle server restart when backend or model changes
         String newBackend = body.getOrDefault("llm.backend", oldBackend);
@@ -153,7 +173,7 @@ public class SettingsController {
                 LlmServerManager manager = switch (backend) {
                     case LOCAL -> localServerManager;
                     case PI_SSH -> piServerManager;
-                    case OPENAI, OLLAMA -> null; // no server to manage
+                    case OPENAI, OLLAMA, LAYA, PI_AGENT -> null; // no server to manage
                 };
                 if (manager != null && manager.isRunning()) {
                     manager.restart();
@@ -163,6 +183,14 @@ public class SettingsController {
             }
         }
         return ResponseEntity.ok(ApiResponse.ok(safeSettingsResponse(body)));
+    }
+
+    private void configurePiAgentFromSettings() {
+        if (piAgentClient != null) {
+            piAgentClient.configure(
+                appSettingsService.get("pi-agent.provider", "openai-codex"),
+                appSettingsService.get("pi-agent.model", "gpt-5.6-luna"));
+        }
     }
 
     @GetMapping("/settings/gpuhub")
@@ -349,7 +377,7 @@ public class SettingsController {
             LlmServerManager manager = switch (selector.resolve()) {
                 case LOCAL -> localServerManager;
                 case PI_SSH -> piServerManager;
-                case OPENAI, OLLAMA -> null;
+                case OPENAI, OLLAMA, LAYA, PI_AGENT -> null;
             };
             if (manager != null) {
                 manager.ensureRunning();
@@ -396,6 +424,31 @@ public class SettingsController {
             result.put("message", "Connection failed");
             return ResponseEntity.ok(ApiResponse.ok(result));
         }
+    }
+
+    @PostMapping("/settings/test/pi-agent")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> testPiAgentConnection() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            if (piAgentClient == null) {
+                throw new IllegalStateException("Pi agent client is not configured");
+            }
+            var messages = List.of(
+                Map.of("role", "system", "content", "Respond with a single word."),
+                Map.of("role", "user", "content", "Respond with a single word.")
+            );
+            String response = piAgentClient
+                .generateChatCompletion(messages, 16, 0.0)
+                .block(Duration.ofSeconds(190));
+            boolean ok = response != null && !response.isBlank();
+            result.put("success", ok);
+            result.put("message", ok ? "Pi agent responded successfully" : "Pi agent returned an empty response");
+        } catch (Exception e) {
+            logger.warn("Pi agent test failed: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "Pi agent unavailable: " + e.getMessage());
+        }
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     // -----------------------------------------------------------------------

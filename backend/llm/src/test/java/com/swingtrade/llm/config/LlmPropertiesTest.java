@@ -26,6 +26,8 @@ class LlmPropertiesTest {
             "llm.providers.openai.model=openai-model",
             "llm.providers.ollama.base-url=http://ollama.test/v1",
             "llm.providers.ollama.model=ollama-model",
+            "llm.providers.laya.base-url=http://laya.test/v1",
+            "llm.providers.laya.model=laya-model",
             "llm.llama-cpp.model=/models/local.gguf",
             "llm.pdf.base-url=http://pdf.test/v1",
             "llm.pdf.model=pdf-model"
@@ -63,6 +65,9 @@ class LlmPropertiesTest {
                 assertThat(properties.getProviders().getOllama().getBaseUrl())
                     .isEqualTo(URI.create("http://ollama.test/v1"));
                 assertThat(properties.getProviders().getOllama().getModel()).isEqualTo("ollama-model");
+                assertThat(properties.getProviders().getLaya().getBaseUrl())
+                    .isEqualTo(URI.create("http://laya.test/v1"));
+                assertThat(properties.getProviders().getLaya().getModel()).isEqualTo("laya-model");
                 assertThat(properties.getLlamaCpp().getModel()).isEqualTo("/models/local.gguf");
                 assertThat(properties.getPdf().getBaseUrl()).isEqualTo(URI.create("http://pdf.test/v1"));
                 assertThat(properties.getPdf().getModel()).isEqualTo("pdf-model");

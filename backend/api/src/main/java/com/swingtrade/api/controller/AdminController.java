@@ -22,6 +22,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 // Only used by the commented-out Upstox pull-historical endpoint below.
 // import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -72,7 +73,7 @@ public class AdminController {
     @GetMapping("/symbols/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSymbolMasterStatus() {
         try {
-            Map<String, Object> data = new ConcurrentHashMap<>();
+            Map<String, Object> data = new LinkedHashMap<>();
             data.put("count", symbolMasterService.count());
             return ResponseEntity.ok(ApiResponse.ok(data));
         } catch (Exception e) {
@@ -103,7 +104,7 @@ public class AdminController {
                 logger.info("Kill switch DISABLED by admin request");
             }
 
-            Map<String, Object> data = new ConcurrentHashMap<>();
+            Map<String, Object> data = new LinkedHashMap<>();
             data.put("active", killSwitchService.isActive());
             data.put("enabledAt", killSwitchService.getEnabledAt());
             data.put("reason", request.getReason());
@@ -149,7 +150,7 @@ public class AdminController {
 
         try {
             killSwitchService.toggle(enable);
-            Map<String, Object> data = new ConcurrentHashMap<>();
+            Map<String, Object> data = new LinkedHashMap<>();
             data.put("active", killSwitchService.isActive());
             data.put("enabledAt", killSwitchService.getEnabledAt());
             data.put("reason", killSwitchService.getReason());

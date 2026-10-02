@@ -21,8 +21,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminControllerDataQualityTest {
 
     private final DataIngestionService ingestionService = mock(DataIngestionService.class);
+    private final KillSwitchService killSwitchService = mock(KillSwitchService.class);
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new AdminController(
-            mock(KillSwitchService.class), ingestionService, WebClient.builder(),
+            killSwitchService, ingestionService, WebClient.builder(),
             mock(FyersSymbolRepository.class))).build();
 
     @Test
@@ -46,5 +47,16 @@ class AdminControllerDataQualityTest {
                         .contentType(APPLICATION_JSON)
                         .content("{\"symbol\":\"TCS\",\"fromDate\":\"2026-02-01\",\"toDate\":\"2026-01-31\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void allowsDisablingKillSwitchWhenNullableStateIsCleared() throws Exception {
+        when(killSwitchService.isActive()).thenReturn(false);
+
+        mockMvc.perform(post("/api/admin/kill-switch/toggle")
+                        .param("enable", "false"))
+                .andExpect(status().isOk());
+
+        verify(killSwitchService).toggle(false);
     }
 }

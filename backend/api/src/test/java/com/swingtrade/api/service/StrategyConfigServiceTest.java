@@ -73,11 +73,39 @@ class StrategyConfigServiceTest {
     }
 
     @Test
+    void deleteRetiresVariantAsOffInANewVersion() {
+        StrategyConfig current = config("AUDIT", 2, StrategyConfig.Mode.OFF, true);
+        StrategyConfig saved = config("AUDIT", 3, StrategyConfig.Mode.OFF, true);
+        when(store.findCurrentByVariantId("AUDIT")).thenReturn(Optional.of(current));
+        when(store.save(any(StrategyConfig.class))).thenReturn(saved);
+
+        var response = service.delete("AUDIT");
+
+        assertThat(response.version()).isEqualTo(3);
+        assertThat(response.mode()).isEqualTo(StrategyConfig.Mode.OFF);
+        verify(clearCurrentQuery).executeUpdate();
+    }
+
+    @Test
     void rejectsSecondChampion() {
         StrategyConfig champion = config("OTHER", 1, StrategyConfig.Mode.CHAMPION, true);
         when(repository.findAll()).thenReturn(List.of(StrategyConfigEntity.fromDomain(champion)));
 
         assertThatThrownBy(() -> service.create(request("BREAKOUT", null, StrategyConfig.Mode.CHAMPION)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("one current CHAMPION");
+    }
+
+    @Test
+    void rejectsPromotingAnotherCurrentVariantWhenChampionAlreadyExists() {
+        StrategyConfig champion = config("BREAKOUT", 1, StrategyConfig.Mode.CHAMPION, true);
+        StrategyConfig shadow = config("PULLBACK", 1, StrategyConfig.Mode.SHADOW, true);
+        when(repository.findAll()).thenReturn(List.of(
+            StrategyConfigEntity.fromDomain(champion), StrategyConfigEntity.fromDomain(shadow)));
+        when(store.findCurrentByVariantId("PULLBACK")).thenReturn(Optional.of(shadow));
+
+        assertThatThrownBy(() -> service.changeMode("PULLBACK",
+            new StrategyModeRequest(StrategyConfig.Mode.CHAMPION, null)))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("one current CHAMPION");
     }

@@ -25,6 +25,9 @@ public class CandidateScanRunEntity {
     private String status;
     @Column(name = "total_symbols", nullable = false)
     private int totalSymbols;
+    /** Explicit provenance for the symbol universe; null is retained for legacy rows. */
+    @Column(name = "scan_scope", length = 16)
+    private String scanScope;
     @Column(name = "completed_symbols", nullable = false)
     private int completedSymbols;
     @Column(name = "failed_symbols", nullable = false)
@@ -49,6 +52,8 @@ public class CandidateScanRunEntity {
     public void setStatus(String status) { this.status = status; }
     public int getTotalSymbols() { return totalSymbols; }
     public void setTotalSymbols(int value) { this.totalSymbols = value; }
+    public String getScanScope() { return scanScope; }
+    public void setScanScope(String value) { this.scanScope = value; }
     public int getCompletedSymbols() { return completedSymbols; }
     public void setCompletedSymbols(int value) { this.completedSymbols = value; }
     public int getFailedSymbols() { return failedSymbols; }

@@ -76,7 +76,7 @@ describe('settings store — LLM configuration', () => {
     })
   })
 
-  it.each(['local', 'pi_ssh', 'openai', 'ollama'] as const)(
+  it.each(['local', 'pi_ssh', 'openai', 'ollama', 'laya'] as const)(
     'preserves the supported backend value %s',
     async (backend) => {
       apiMocks.getLlmSettings.mockResolvedValue({
@@ -90,6 +90,35 @@ describe('settings store — LLM configuration', () => {
       expect(getSettings().llmSettings.llmBackend).toBe(backend)
     }
   )
+
+  it('loads and saves the Laya endpoint and model fields', async () => {
+    apiMocks.getLlmSettings.mockResolvedValue({
+      success: true,
+      data: {
+        'llm.backend': 'laya',
+        'laya.base_url': 'https://laya.example/v1',
+        'laya.model': 'Ornith-1.5-35B-A3B-AWQ',
+      },
+    })
+
+    const { getSettings, loadSettings, saveLlmSettings } = await import('./settings')
+    await loadSettings()
+
+    expect(getSettings().llmSettings.llmBackend).toBe('laya')
+    expect(getSettings().llmSettings.layaBaseUrl).toBe('https://laya.example/v1')
+    expect(getSettings().llmSettings.layaModel).toBe('Ornith-1.5-35B-A3B-AWQ')
+
+    await saveLlmSettings()
+
+    const payload = apiMocks.setLlmSettings.mock.calls[0][0]
+    expect(payload).toEqual(
+      expect.objectContaining({
+        'llm.backend': 'laya',
+        'laya.base_url': 'https://laya.example/v1',
+        'laya.model': 'Ornith-1.5-35B-A3B-AWQ',
+      })
+    )
+  })
 
   it('omits blank secrets and clears entered secrets after a successful save', async () => {
     const { getSettings, saveLlmSettings } = await import('./settings')

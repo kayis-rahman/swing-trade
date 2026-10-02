@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Configuration class for LLM module.
- * Provides four OpenAiChatModel beans (local, pi_ssh, openai, ollama),
+ * Provides five OpenAiChatModel beans (local, pi_ssh, openai, ollama, laya),
  * a default ChatClient/SpringAiLlmClient, and a news executor.
  * Reads base URLs from AppSettingsStore (DB) so the settings UI controls endpoints.
  *
@@ -151,6 +151,18 @@ public class LlmConfig {
             @Value("${spring.ai.openai.api-key:none}") String apiKey) {
         return createChatModel(appSettingsStore, "openai.base_url", "openai.model",
                 properties.getProviders().getOpenai(), ApiKeySetting.OPENAI, apiKey);
+    }
+
+    @Bean
+    public OpenAiChatModel layaChatModel(
+            AppSettingsStore appSettingsStore,
+            LlmProperties properties,
+            @Value("${spring.ai.openai.api-key:none}") String apiKey) {
+        // Laya is an OpenAI-compatible remote backend: its endpoint and model are
+        // discoverable and editable from the dashboard (laya.base_url / laya.model)
+        // with the same tight OpenAI defaults as the OpenAI backend.
+        return createChatModel(appSettingsStore, "laya.base_url", "laya.model",
+                properties.getProviders().getLaya(), ApiKeySetting.OPENAI, apiKey);
     }
 
     @Bean

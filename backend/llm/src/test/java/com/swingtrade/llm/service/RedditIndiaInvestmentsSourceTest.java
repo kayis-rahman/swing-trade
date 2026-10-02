@@ -30,7 +30,7 @@ class RedditIndiaInvestmentsSourceTest {
 
         try (MockedStatic<HttpClient> http = mockStatic(HttpClient.class)) {
             http.when(HttpClient::newBuilder).thenReturn(builder);
-            var source = new RedditIndiaInvestmentsSource("", "", "", "", 10, new ObjectMapper());
+            var source = new RedditIndiaInvestmentsSource("", "", "", "", true, 10, new ObjectMapper());
 
             List<com.swingtrade.domain.NewsArticle> articles = source.fetch("TCS");
             assertThat(articles).singleElement().satisfies(article -> {

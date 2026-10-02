@@ -1,15 +1,63 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { fulfillJson } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
 
+async function mockSettingsApi(page: Page) {
+  const responses: Record<string, unknown> = {
+    '/settings': { success: true, data: { selectedBroker: 'fyers' } },
+    '/settings/llm': { success: true, data: { 'llm.backend': 'local' } },
+    '/settings/discord': { success: true, data: {} },
+    '/settings/trading': { success: true, data: {} },
+    '/settings/scanning': { success: true, data: {} },
+    '/settings/pi/status': { success: true, data: { running: false, message: 'Stopped' } },
+    '/fyers/status': { success: true, data: { connected: false, clientId: null } },
+    '/health': { status: 'UP', components: { api: { status: 'UP' }, db: { status: 'UP' } } },
+    '/health/full': {
+      status: 'UP',
+      components: { api: { status: 'UP' }, db: { status: 'UP' } },
+    },
+  }
+
+  await page.route(/^https?:\/\/[^/]+\/api(?:\/|$)/, async (route) => {
+    const { pathname } = new URL(route.request().url())
+    const path = pathname.replace(/^\/api/, '')
+    const method = route.request().method()
+
+    if (method === 'POST' && path === '/settings/save') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: {} }),
+      })
+      return
+    }
+    if (method !== 'GET') {
+      await route.fulfill({ status: 405, body: 'Unexpected settings test mutation' })
+      return
+    }
+
+    const body = responses[path] ?? { success: true, data: [] }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    })
+  })
+}
+
 test.describe('Settings View', () => {
+  test.beforeEach(async ({ page }) => mockSettingsApi(page))
+
   test('page header renders', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
 
     await expect(page.locator('h1', { hasText: 'Settings' })).toBeVisible()
     await expect(
-      page.locator('p', { hasText: /Broker connections and trading configuration/ })
+      page.locator('p', {
+        hasText: 'Configure how Swing Trade connects, thinks, trades, and reports back to you.',
+      })
     ).toBeVisible()
   })
 
@@ -30,29 +78,35 @@ test.describe('Settings View', () => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
 
-    await expect(page.locator('h2', { hasText: 'Broker Connection' })).toBeVisible()
-    await expect(page.locator('h2', { hasText: 'LLM & Intelligence' })).toBeVisible()
-    await expect(page.locator('h2', { hasText: 'Trading Configuration' })).toBeVisible()
-    await expect(page.locator('h2', { hasText: 'System Health' })).toBeVisible()
+    const sections = [
+      ['Broker', 'Broker Connection'],
+      ['AI/LLM', 'LLM & Intelligence'],
+      ['Trading', 'Trading Configuration'],
+      ['Health', 'System Health'],
+    ] as const
+    for (const [tab, heading] of sections) {
+      await page.getByRole('tab', { name: tab }).click()
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible()
+    }
   })
 
   test('broker selection buttons render', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
 
-    await expect(page.getByRole('button', { name: 'Fyers' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Upstox' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Yahoo Finance' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'None (Read Only)' })).toBeVisible()
+    await expect(page.locator('.broker-option')).toHaveCount(4)
+    for (const broker of ['Fyers', 'Upstox', 'Yahoo Finance', 'None (Read Only)']) {
+      await expect(page.locator('.broker-option').filter({ hasText: broker })).toBeVisible()
+    }
   })
 
   test('broker selection highlights active broker', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
 
-    // Fyers is the default broker
-    const fyersBtn = page.getByRole('button', { name: 'Fyers' })
-    await expect(fyersBtn).toHaveClass(/bg-brand-subtle/)
+    const activeOptions = page.locator('.broker-option.bg-brand-subtle')
+    await expect(activeOptions).toHaveCount(1)
+    await expect(activeOptions).toContainText(/Fyers|Upstox|Yahoo Finance|None \(Read Only\)/)
   })
 
   test('broker selection switches displayed content', async ({ page }) => {
@@ -68,18 +122,19 @@ test.describe('Settings View', () => {
     }
 
     // Click Upstox — should show placeholder
-    await page.getByRole('button', { name: 'Upstox' }).click()
+    await page.locator('.broker-option').filter({ hasText: 'Upstox' }).click()
     await expect(page.locator('text=Upstox integration coming soon')).toBeVisible()
 
     // Click Yahoo Finance — should show status
-    await page.getByRole('button', { name: 'Yahoo Finance' }).click()
-    await expect(page.locator('text=No API Key')).toBeVisible()
+    const yahoo = page.locator('.broker-option').filter({ hasText: 'Yahoo Finance' })
+    await yahoo.click()
+    await expect(yahoo).toHaveClass(/bg-brand-subtle/)
 
     // Click None
-    await page.getByRole('button', { name: 'None (Read Only)' }).click()
+    await page.locator('.broker-option').filter({ hasText: 'None (Read Only)' }).click()
 
     // Switch back to Fyers
-    await page.getByRole('button', { name: 'Fyers' }).click()
+    await page.locator('.broker-option').filter({ hasText: 'Fyers' }).click()
   })
 
   test('Fyers connection status indicator renders', async ({ page }) => {
@@ -98,28 +153,25 @@ test.describe('Settings View', () => {
     expect(hasConnected || hasDisconnected).toBe(true)
   })
 
-  test('Fyers connect button is visible when disconnected', async ({ page }) => {
+  test('Fyers controls reflect the current connection status', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.locator('.broker-option').filter({ hasText: 'Fyers' }).click()
 
-    const connectBtn = page.locator('button:has-text("Connect Fyers Account")')
-    const visible = await connectBtn.isVisible().catch(() => false)
-
-    if (visible) {
-      await expect(connectBtn).toBeDisabled(false)
-    }
+    const connectionControl = page
+      .getByRole('button', { name: 'Connect Fyers Account' })
+      .or(page.getByRole('button', { name: 'Disconnect' }))
+    const unavailable = page.getByText('Status unavailable')
+    await expect(connectionControl.or(unavailable)).toBeVisible()
   })
 
-  test('Fyers disconnect button is visible when connected', async ({ page }) => {
+  test('Fyers controls match its disconnected status', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.locator('.broker-option').filter({ hasText: 'Fyers' }).click()
 
-    const disconnectBtn = page.locator('button:has-text("Disconnect")')
-    const visible = await disconnectBtn.isVisible().catch(() => false)
-
-    if (visible) {
-      await expect(disconnectBtn).toBeEnabled()
-    }
+    await expect(page.getByText('Disconnected', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Connect Fyers Account' })).toBeEnabled()
   })
 
   test('Fyers auth code input appears with connect button', async ({ page }) => {
@@ -141,27 +193,23 @@ test.describe('Settings View', () => {
     }
   })
 
-  test('vLLM configuration section renders', async ({ page }) => {
+  test('Local llama.cpp backend reveals its configuration', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
+    await page.locator('.llm-backend-option').filter({ hasText: 'Local' }).click()
 
-    await expect(page.locator('h3', { hasText: 'vLLM Endpoint' })).toBeVisible()
-
-    // Find the vLLM section and check for inputs within it
-    const vllmSection = page.locator('h3', { hasText: 'vLLM Endpoint' }).locator('..')
-    const inputs = vllmSection.locator('input')
-    const inputCount = await inputs.count()
-    expect(inputCount).toBeGreaterThanOrEqual(2)
-
-    // Test button should be visible (scoped to vLLM section)
-    const testBtns = vllmSection.locator('button:has-text("Test")')
-    const testCount = await testBtns.count()
-    expect(testCount).toBeGreaterThanOrEqual(1)
+    await expect(page.getByRole('heading', { name: 'Local LLM (llama.cpp)' })).toBeVisible()
+    await expect(page.getByPlaceholder('http://localhost:8080/v1')).toBeVisible()
+    await expect(
+      page.getByPlaceholder('Path to the GGUF model configured on the server').first()
+    ).toBeVisible()
   })
 
   test('PDF Extraction section renders', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
 
     await expect(page.locator('h3', { hasText: 'PDF Extraction (Pi 5)' })).toBeVisible()
 
@@ -175,12 +223,14 @@ test.describe('Settings View', () => {
   test('Discord notification settings render', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
 
     await expect(page.locator('h3', { hasText: 'Discord Notifications' })).toBeVisible()
 
     // Toggle switch
     const toggle = page.locator('input[type="checkbox"].sr-only')
-    await expect(toggle).toBeVisible()
+    await expect(toggle).toBeAttached()
+    await expect(page.locator('label').filter({ has: toggle }).first()).toBeVisible()
 
     // Webhook URL input
     const webhookInput = page.locator('input[placeholder*="webhook"]')
@@ -199,6 +249,7 @@ test.describe('Settings View', () => {
   test('Trading Configuration section renders', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'Trading' }).click()
 
     // Mode select
     const modeSelect = page.locator('select')
@@ -229,6 +280,7 @@ test.describe('Settings View', () => {
   test('Trading Configuration inputs accept numeric values', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'Trading' }).click()
 
     // Find all number inputs in the Trading Configuration section
     const tradingSection = page.locator('text=Trading Configuration').locator('..')
@@ -252,50 +304,54 @@ test.describe('Settings View', () => {
     await expect(saveBtn).toBeEnabled()
   })
 
-  test('Save button shows loading state', async ({ page }) => {
+  test('saving submits settings and shows loading then success', async ({ page }) => {
+    let releaseSave!: () => void
+    const saveGate = new Promise<void>((resolve) => {
+      releaseSave = resolve
+    })
+    let submittedSettings: unknown
+    await page.route('**/api/settings/save', async (route) => {
+      submittedSettings = route.request().postDataJSON()
+      await saveGate
+      await fulfillJson(route, { success: true, data: {} })
+    })
+
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
 
     const saveBtn = page.locator('button:has-text("Save All Settings")')
     await expect(saveBtn).toBeVisible()
-
-    // Click save and verify it changes to "Saving..."
     await saveBtn.click()
+    await expect(page.getByRole('button', { name: 'Saving...' })).toBeVisible()
+    await expect
+      .poll(() => submittedSettings)
+      .toMatchObject({
+        broker: 'fyers',
+        llm: {
+          'llm.backend': 'local',
+          'pi-agent.provider': 'openai-codex',
+          'pi-agent.model': 'gpt-5.6-luna',
+        },
+        trading: {
+          'trading.mode': 'paper',
+          'trading.max_position_size': '10',
+          'trading.allocation_per_position': '100000',
+        },
+        scanning: { 'candidate-scan.max-concurrent': '3' },
+      })
 
-    // Should show "Saving..." briefly
-    const savingState = await page
-      .locator('button:has-text("Saving...")')
-      .isVisible()
-      .catch(() => false)
-    if (savingState) {
-      await expect(page.locator('button:has-text("Saving...")')).toBeVisible()
-    }
-  })
-
-  test('Save button shows success state', async ({ page }) => {
-    await page.goto(`${DASHBOARD}/settings`)
-    await page.waitForLoadState('networkidle')
-
-    const saveBtn = page.locator('button:has-text("Save All Settings")')
-    await saveBtn.click()
-
-    // Should briefly show "Saved!" with success styling
-    const savedState = await page
-      .locator('button:has-text("Saved!")')
-      .isVisible()
-      .catch(() => false)
-    if (savedState) {
-      await expect(page.locator('button:has-text("Saved!")')).toBeVisible()
-    }
+    releaseSave()
+    await expect(page.getByRole('button', { name: 'Saved!' })).toBeVisible()
   })
 
   test('System Health section renders with component statuses', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'Health' }).click()
 
     // Health section should have component rows
-    const healthRows = page.locator('.card-panel').last()
-    await expect(healthRows).toBeVisible()
+    const healthRows = page.locator('.settings-health-row')
+    await expect(healthRows.first()).toBeVisible()
 
     // Should have status badges with rounded-full
     const statusBadges = page.locator('span.rounded-full.px-2\\.5')
@@ -312,9 +368,10 @@ test.describe('Settings View', () => {
   test('Health status badges show color-coded states', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'Health' }).click()
 
     // Health badges should have status colors
-    const healthSection = page.locator('.card-panel').last()
+    const healthSection = page.locator('.health-card')
     const healthText = (await healthSection.textContent()) || ''
 
     // Should contain status indicators (UP/DOWN/DEGRADED or similar)
@@ -327,37 +384,19 @@ test.describe('Settings View', () => {
   })
 
   test('Auth error banner renders', async ({ page }) => {
-    await page.goto(`${DASHBOARD}/settings`)
-    await page.waitForLoadState('networkidle')
-
-    // Navigate with auth=error param to show banner
     await page.goto(`${DASHBOARD}/settings?auth=error`)
     await page.waitForLoadState('networkidle')
 
-    const errorBanner = page.locator('text=Fyers authentication failed')
-    const errorVisible = await errorBanner.isVisible().catch(() => false)
-
-    if (errorVisible) {
-      // Banner should have a dismiss button
-      await expect(page.locator('button').filter({ hasText: /×/ })).toBeVisible()
-    }
+    await expect(page.getByText('Fyers authentication failed. Please try again.')).toBeVisible()
+    await expect(page.locator('button').filter({ hasText: '×' })).toBeVisible()
   })
 
   test('Auth success banner renders', async ({ page }) => {
-    await page.goto(`${DASHBOARD}/settings`)
-    await page.waitForLoadState('networkidle')
-
-    // Navigate with auth=success param to show banner
     await page.goto(`${DASHBOARD}/settings?auth=success`)
     await page.waitForLoadState('networkidle')
 
-    const successBanner = page.locator('text=Fyers connected successfully')
-    const successVisible = await successBanner.isVisible().catch(() => false)
-
-    if (successVisible) {
-      // Banner should have a dismiss button
-      await expect(page.locator('button').filter({ hasText: /×/ })).toBeVisible()
-    }
+    await expect(page.getByText('Fyers connected successfully!')).toBeVisible()
+    await expect(page.locator('button').filter({ hasText: '×' })).toBeVisible()
   })
 
   test('no JavaScript errors on page load', async ({ page }) => {
@@ -386,6 +425,7 @@ test.describe('Settings View', () => {
   test('LLM section has model name helper text', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
 
     // "Model name" helper text should appear next to model inputs
     const modelNameHelpers = await page.locator('text=Model name').count()
@@ -396,12 +436,14 @@ test.describe('Settings View', () => {
   test('Discord toggle is clickable', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
 
     const toggle = page.locator('input[type="checkbox"].sr-only').first()
-    await expect(toggle).toBeVisible()
+    await expect(toggle).toBeAttached()
 
     // Click the visible toggle label (peer-checked changes styling)
     const toggleLabel = page.locator('label').filter({ has: toggle }).first()
+    await expect(toggleLabel).toBeVisible()
     await toggleLabel.click()
 
     // Toggle should change state
@@ -412,15 +454,55 @@ test.describe('Settings View', () => {
   test('Discord enabled label is visible', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
 
     await expect(page.locator('text=Enable Discord')).toBeVisible()
+  })
+
+  test('Discord test saves its settings and never contacts the external webhook in E2E', async ({
+    page,
+  }) => {
+    let savedDiscordSettings: unknown
+    let webhookTestRequests = 0
+    await page.route('**/api/settings/discord', async (route) => {
+      if (route.request().method() !== 'PUT') return route.fallback()
+      savedDiscordSettings = route.request().postDataJSON()
+      await fulfillJson(route, { success: true, data: {} })
+    })
+    await page.route('**/api/settings/test/discord', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      webhookTestRequests++
+      await fulfillJson(route, { success: true, data: { success: true } })
+    })
+
+    await page.goto(`${DASHBOARD}/settings`)
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'AI/LLM' }).click()
+    await page
+      .getByPlaceholder('https://discord.com/api/webhooks/...')
+      .fill('https://example.invalid/test')
+    const toggle = page.locator('input[type="checkbox"].sr-only').first()
+    await page.locator('label').filter({ has: toggle }).first().click()
+    await expect(toggle).toBeChecked()
+    const discordSection = page.locator('h3', { hasText: 'Discord Notifications' }).locator('..')
+    await discordSection.getByRole('button', { name: 'Test', exact: true }).click()
+
+    await expect
+      .poll(() => savedDiscordSettings)
+      .toEqual({
+        'discord.webhook.url': 'https://example.invalid/test',
+        'discord.webhook.enabled': 'true',
+      })
+    await expect.poll(() => webhookTestRequests).toBe(1)
+    await expect(page.getByText('Discord webhook test successful!')).toBeVisible()
   })
 
   test('Trading mode select has correct options', async ({ page }) => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
+    await page.getByRole('tab', { name: 'Trading' }).click()
 
-    const modeSelect = page.locator('select').first()
+    const modeSelect = page.getByRole('combobox', { name: 'Trading mode' })
     await expect(modeSelect).toBeVisible()
 
     const options = await modeSelect.locator('option').all()
@@ -435,10 +517,6 @@ test.describe('Settings View', () => {
     await page.goto(`${DASHBOARD}/settings`)
     await page.waitForLoadState('networkidle')
 
-    const cardPanels = page.locator('.card-panel')
-    const count = await cardPanels.count()
-
-    // Should have at least: Broker Connection, LLM & Intelligence, Trading Configuration, System Health
-    expect(count).toBeGreaterThanOrEqual(4)
+    await expect(page.locator('.broker-card, .llm-card, .trading-card')).toHaveCount(3)
   })
 })

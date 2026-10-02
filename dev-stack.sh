@@ -34,9 +34,14 @@ docker_compose() {
 
 # Run compose against pi-node WITHOUT flipping the global Docker context.
 # Never switch the global context (docker context "use") here: it mutates shared state for every other
-# shell/tool on this machine (plan E8). DOCKER_CONTEXT is scoped to the command.
+# shell/tool on this machine (plan E8). DOCKER_CONTEXT is scoped to the command. When local DNS cannot
+# resolve piworm.local, callers can provide PI_NODE_DOCKER_HOST=ssh://dietpi@192.168.0.100.
 pi_compose() {
-    DOCKER_CONTEXT=pi-node docker_compose "$@"
+    if [[ -n "${PI_NODE_DOCKER_HOST:-}" ]]; then
+        DOCKER_HOST="$PI_NODE_DOCKER_HOST" docker_compose "$@"
+    else
+        DOCKER_CONTEXT=pi-node docker_compose "$@"
+    fi
 }
 
 echo "=========================================="
@@ -302,6 +307,11 @@ case "${1:-help}" in
       echo "  Resolve manually in that directory (branch content is managed outside this script), then retry."
       exit 1
     fi
+    if ! (cd "$WORKTREE_DIR" && test -z "$(git status --porcelain)"); then
+      echo "✗ Stage worktree is dirty; refusing to deploy uncommitted or generated files."
+      (cd "$WORKTREE_DIR" && git status --short)
+      exit 1
+    fi
     echo ""
 
     # --- Step 3: Switch to Java 21 for Gradle build ---
@@ -370,7 +380,8 @@ case "${1:-help}" in
 
     # --- Step 8: Build + start stage stack on pi-node ---
     echo "🐳 Building images on pi-node (packaging only, no compilation)..."
-    ssh dietpi@piworm.local "cd $STAGE_PATH && DOCKER_BUILDKIT=1 docker compose --env-file .env.stage -f docker-compose.infra-stage.yml build"
+    BUILD_COMMIT=$(cd "$WORKTREE_DIR" && git rev-parse HEAD)
+    ssh dietpi@piworm.local "cd $STAGE_PATH && DOCKER_BUILDKIT=1 docker compose --env-file .env.stage -f docker-compose.infra-stage.yml build --build-arg BUILD_COMMIT=$BUILD_COMMIT"
     echo "✓ Images built"
     IMAGE_SIZE=$(ssh dietpi@piworm.local "docker image inspect swing-trade-api:stage --format='{{.Size}}'" 2>/dev/null | awk '{printf "%.0f", $1/1024/1024}')
     DASH_SIZE=$(ssh dietpi@piworm.local "docker image inspect swing-trade-dashboard:stage --format='{{.Size}}'" 2>/dev/null | awk '{printf "%.0f", $1/1024/1024}')
@@ -422,6 +433,13 @@ case "${1:-help}" in
     echo "📊 Connecting pi-prometheus to stage network..."
     ssh dietpi@piworm.local "docker network connect swing-trade_swingtrade-network pi-prometheus" 2>/dev/null || true
     echo "✓ Prometheus can now scrape stage API"
+    echo ""
+
+    # --- Step 12b: Deploy Prometheus alert rules ---
+    echo "📊 Deploying Prometheus alert rules..."
+    ssh dietpi@piworm.local "sudo cp /home/dietpi/swing-trade/infra/monitoring/alerts.yml /etc/prometheus/alerts.yml && sudo systemctl reload prometheus" 2>/dev/null || \
+      ssh dietpi@piworm.local "sudo cp /home/dietpi/swing-trade/infra/monitoring/alerts.yml /etc/prometheus/alerts.yml" 2>/dev/null || \
+      echo "⚠ Could not deploy alert rules — deploy manually"
     echo ""
 
     # --- Step 13: Verify Prometheus scrape ---
@@ -611,5 +629,8 @@ case "${1:-help}" in
     echo "  $0 frontend start"
     echo "  $0 frontend stop"
     echo "  $0 frontend-logs"
+    echo ""
+    echo "If piworm.local is not resolvable, set:"
+    echo "  PI_NODE_DOCKER_HOST=ssh://dietpi@192.168.0.100 $0 status"
     ;;
 esac

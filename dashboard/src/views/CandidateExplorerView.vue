@@ -9,7 +9,7 @@
           Candidate Explorer
         </h1>
         <p class="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-          Scan the NSE universe for strategy-consensus BUY signals with a profitable backtest.
+          Scan the NSE symbol master for strategy-consensus BUY signals with a profitable backtest.
           Candidates need agreement from at least two active strategies before they join the pilot
           wishlist.
         </p>
@@ -71,6 +71,10 @@
             step="1"
             class="h-10 rounded-lg border border-border-subtle bg-bg-surface/60 px-3 text-text-primary outline-none focus:border-brand"
           />
+          <span class="text-xs leading-5 text-text-muted">
+            Strategy performance is persisted per variant for attribution; this table currently
+            shows signal, variant, and score while qualification still uses the common gates below.
+          </span>
         </label>
         <label class="flex flex-col gap-1.5 text-sm">
           <span class="font-medium text-text-secondary">Min win rate (%)</span>
@@ -210,7 +214,7 @@
         </div>
         <div class="flex items-center gap-2 text-xs text-text-muted">
           <span class="rounded-full bg-brand/10 px-2.5 py-1 font-semibold text-brand"
-            >≥2 strategy BUYs + performance gates</span
+            >≥2 strategy BUYs + common performance gates</span
           >
           <span v-if="run">Updated {{ updatedAt }}</span>
         </div>
@@ -385,8 +389,9 @@
     </section>
 
     <p class="mt-4 text-xs leading-5 text-text-muted">
-      Candidate scans never invoke paper trading. Qualified symbols are automatically added to the
-      wishlist; scheduled scans then hand off to orchestration only when qualifiers exist.
+      Candidate scans never invoke paper trading. Manual scans use the NSE symbol master; qualified
+      symbols are automatically added to the wishlist, and scheduled scans hand off to orchestration
+      only when qualifiers exist.
     </p>
   </div>
 </template>
@@ -484,13 +489,23 @@ const metrics = computed(() => [
   {
     label: 'Universe',
     value: run.value ? run.value.totalSymbols : '—',
-    detail: 'NSE symbols',
+    detail:
+      run.value?.scanScope === 'WATCHLIST'
+        ? 'active watchlist symbols'
+        : run.value?.scanScope === 'NSE_BROAD'
+          ? 'NSE symbol master'
+          : 'scope unavailable for legacy run',
     tone: 'text-text-primary',
   },
   {
-    label: 'Completed',
+    label: 'Processed',
     value: run.value ? `${run.value.completedSymbols}/${run.value.totalSymbols}` : '—',
-    detail: 'processed',
+    detail:
+      run.value?.status === 'CANCELLED'
+        ? 'stopped before the universe finished'
+        : run.value?.status === 'COMPLETED'
+          ? 'universe scan finished'
+          : 'symbols processed so far',
     tone: 'text-text-primary',
   },
   {
@@ -508,7 +523,10 @@ const metrics = computed(() => [
   {
     label: 'Status',
     value: run.value?.status ?? 'READY',
-    detail: 'no trades run',
+    detail:
+      run.value?.orchestrationStatus === 'STARTED'
+        ? 'candidate handoff started'
+        : 'screening only; no trades run',
     tone: 'text-text-primary',
   },
 ])

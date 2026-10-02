@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -124,5 +125,24 @@ class GlobalExceptionHandlerTest {
         assertEquals(400, response.getBody().getStatus());
         assertEquals("VALIDATION_ERROR", response.getBody().getCode());
         assertEquals("Price is required and must be greater than zero", response.getBody().getMessage());
+    }
+
+    @Test
+    void testHandleUnreadableMessageReturnsBadRequest() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+        WebRequest request = mock(WebRequest.class);
+        when(request.getDescription(false)).thenReturn("uri=/api/positions");
+
+        HttpMessageNotReadableException ex = mock(HttpMessageNotReadableException.class);
+        when(ex.getMessage()).thenReturn("Cannot deserialize enum value");
+
+        ResponseEntity<ErrorResponse> response = handler.handleUnreadableMessage(ex, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("VALIDATION_ERROR", response.getBody().getCode());
+        assertEquals("Request body is invalid or unreadable", response.getBody().getMessage());
+        assertEquals("/api/positions", response.getBody().getPath());
     }
 }

@@ -1,6 +1,176 @@
 # Pre-Pilot Status
 
-Last checked: 2026-09-17 (holiday-calendar verification)
+Last checked: 2026-09-27 (expanded endpoint/API and dashboard sanity verification)
+
+- [x] Expanded endpoint/API and dashboard sanity verification: OpenAPI Playwright now exercises
+  85/87 GET operations (only live news collection and combined news/LLM inference are excluded)
+  and all 65 write-route CORS preflights. All 5 disposable-DB Playwright audit tests pass, including
+  watchlist/holiday CRUD, strategy create/update/version/mode/delete, settings round-trips,
+  paper-position open/close, kill switch, broker selection, empty signal deletion, empty-universe
+  scan/signal generation (including SSE completion), tokenless Fyers logout, sentiment evaluation
+  with no pending records, plus validation/no-op probes. The disposable audit database was dropped
+  after the test. The full dashboard Playwright suite passed 136 tests with its 5 disposable-DB
+  tests skipped by design; those 5 were run separately and passed. A strategy-config persistence
+  defect (missing
+  `lock_version` migration) was fixed with V73. Startup benchmark backfill now has a default-on
+  opt-out used by isolated audit instances; its unit test and existing ingestion behavior tests
+  pass. Full `./bin/verify-changes` and `git diff --check` passed. Successful external-auth,
+  provider, GPUHub, long-running scan/backfill, LLM inference, and job/trade orchestration paths
+  are still not claimed as live-verified; the two excluded GETs perform outbound provider/model
+  work. Shared DevStack database schema is at V73.
+
+- [x] Endpoint/UI sanity audit baseline completed 2026-09-27: the codified OpenAPI
+  Playwright audit exercised 82 safe GET operations and all 65 write-operation
+  preflights with no unexpected 5xx/429 responses. A disposable-database mutation suite
+  passed CRUD/state transitions, settings round-trips, kill-switch enable/disable, and
+  32 validation/no-op write cases; the temporary database was removed afterward. The
+  nullable kill-switch response bug was fixed with a regression test. The selected live
+  browser suite passed 93/93 across routing, orchestrator/multi-strategy, positions,
+  settings, and signals. `./bin/verify-changes` passed all backend modules, 59 Vitest
+  files/356 tests, formatting, typecheck, lint, and production build. External auth,
+  real provider calls, long-running scans/backfills, LLM inference, and trading/order
+  execution remain intentionally excluded from successful live mutation testing.
+
+- [x] Runtime/dashboard sanity pass completed 2026-09-27: all dashboard routes, symbol detail,
+  and not-found rendered in Playwright with no page or console errors; 82 of 87 documented API
+  GET routes were exercised (broker login/callback, unbounded SSE, fresh news, and combined
+  news/LLM inference excluded). Fixed
+  `/api/signals/type/{type}` using an unbounded date range rejected by PostgreSQL; live rebuilt
+  API now returns 200. Persisted Pi Agent provider/model settings are applied at startup and
+  after settings updates; the Pi Agent Settings save payload was validated through Playwright
+  interception without persisting a test change. Focused LLM/API tests passed.
+  `./bin/verify-changes` passed: backend suites, dashboard typecheck, 356 tests, lint, and
+  production build. One behavior-neutral
+  redundant branch was removed from data ingestion.
+
+- [x] Runtime audit follow-up completed 2026-09-27: Playwright exercised watchlist create,
+  deactivate, re-add/reactivate, and remove against the local dashboard and dev API; all
+  mutation requests returned 200 with no browser errors, and generated test rows were removed
+  from the dev database. This exposed and fixed CORS rejecting PATCH, overlong ticker input
+  reaching the database as a 500, and inactive symbols being rejected as duplicates instead
+  of reactivated. A missing 2026/2027 NSE calendar-coverage seed was repaired with migration
+  V72; reconciliation now completes as a dry run and accurately reports missing candles.
+  The 12 targeted Playwright E2E tests passed. Trading/order, broker-auth, scan/backfill,
+  settings persistence, external-news/LLM, and other destructive or externally stateful
+  operations were not invoked against the shared dev database/provider; those remain outside
+  this live mutation pass.
+
+- [ ] Endpoint/UI audit continuation 2026-09-27: live OpenAPI lists 152 operations (87 GET,
+  65 write operations). Playwright exercised 82 GET routes; after correcting current run IDs,
+  80 returned 200, promotion eligibility correctly returned 400 without a CHAMPION, and the
+  valid-but-absent backtest report correctly returned 404. Five external/stateful GET routes
+  were excluded. All 65 write-operation CORS preflights passed. Safe live writes verified:
+  watchlist create/deactivate/reactivate/remove and holiday create/delete; all temporary rows
+  were removed. Strategy-config create/version/mode/retire exposed a transaction bug in retire;
+  `@Transactional` and a regression test fixed it, and the rebuilt live API now retires correctly.
+  Playwright also verified read-only INFY data quality, reconcile's `apply=false` guard, and
+  completed-scan pause/resume/cancel behavior without changing the completed run. All 18
+  dashboard routes rendered cleanly. A 61-test live/mocked browser batch produced 44 passes,
+  14 failures, and 3 data-dependent skips; repeated 429s came from the 100-request/minute API
+  budget under parallel E2E load, while two assertions were stale (ambiguous `.grid` selector
+  and old title copy). Those assertions are corrected. After the rate window reset, all five
+  previously failing multi-strategy live tests passed; focused settings-save/controls tests
+  passed 4/4 with save persistence intercepted, and positions-view tests passed 8/8 in a
+  separate batch. The following positions batch again encountered 429s, so the full browser
+  suite has not yet had a clean end-to-end run. Removed an unused private candidate-scan wrapper
+  and updated reflection-based tests to call the explicit scan mode; this reduces dead code
+  without changing scan behavior. `./bin/verify-changes` passed backend tests, dashboard
+  formatting/typecheck, 356 tests, lint, and production build. Trading/order, broker-auth,
+  scan-start, backfill, settings persistence, and external provider mutations remain excluded,
+  so full endpoint/functionality coverage is not yet complete. Local API currently reaches the
+  Pi dev database through a temporary SSH tunnel on port 15435; keep that tunnel running while
+  this API process is in use.
+
+- [x] Browser audit continuation 2026-09-27: Settings E2E passed 29/29 with read fixtures and
+  settings-save interception; this isolated the OAuth callback banner regression. Removing the
+  route-fullPath remount key from the runtime error boundary preserves callback feedback while
+  its route reset key still updates; browser success/error banner checks and the boundary unit
+  test pass. Safe functional-edge and multi-strategy Playwright suites passed 9/9 with mocked
+  APIs. Local dev-stack API, dashboard, and Pi PostgreSQL are UP. Final `./bin/verify-changes`
+  passed backend tests, dashboard formatting/typecheck, 356 unit tests, lint, and production
+  build. `git diff --check` is clean. This is not an all-functionality sign-off: order/trading,
+  broker-auth, scan-start/backfill, settings persistence, external-provider, and destructive
+  mutations remain untested against shared systems; earlier coverage of the 82 read endpoints
+  and live-safe writes is recorded above.
+
+- [x] Playwright endpoint-sweep follow-up 2026-09-27: re-enumerated the live OpenAPI document
+  and called all 82 in-scope GET operations sequentially from Chromium through the dashboard
+  same-origin `/api` proxy. 80 returned 200; promotion eligibility correctly returned 400
+  without a CHAMPION; a valid-but-absent report filename correctly returned 404. No 5xx or
+  rate-limit responses occurred. Excluded only Fyers login/callback, unbounded candidate SSE,
+  fresh external news, and combined news/LLM inference. The 7 local route-shell checks and 3
+  mocked error/recovery flows also passed. This improves read-route evidence but does not
+  verify successful behavior for all 65 write operations; unsafe, irreversible, or externally
+  stateful writes remain explicitly unexercised.
+
+- [x] Additional local browser checks 2026-09-27: the first full multi-strategy view batch
+  exposed shared health/holiday requests exhausting the 100-request/minute cap. Those two
+  shell reads are fixture-backed in that view suite (and independently covered by the live
+  endpoint sweep); all feature-specific API calls remain live. The corrected full suite passed
+  8/8. Paper-trading read-only pages passed 4/4 and the orchestrator detail check passed 1/1
+  (50 rows, seven stage cards). The Pi Agent connection endpoint passed via
+  Chromium (HTTP 200, successful response). Inspection of run
+  `78068bda-d734-49f1-8379-9a4cbf58925a` found its LLM stage overlapped an earlier API shutdown:
+  Pi CLI exited 130, then startup orphan recovery marked the run FAILED. This is a historical
+  interrupted run, not a current live failure; the current API is healthy, the packaged LLM
+  class is present, and no job is RUNNING. No new scan was started. Final
+  `./bin/verify-changes` passed after the browser-test isolation update.
+
+- [x] Positions browser-suite follow-up 2026-09-27: the full positions Playwright suite passed
+  24/24 using deterministic open/closed position fixtures and isolated shared shell reads
+  (settings, latest signals, broker status, health, and holidays). The no-console-errors check
+  now runs without exhausting the API's 100-request/minute limit; position mutation requests
+  are explicitly rejected by the fixture, so no trades or database rows were changed. Final
+  `./bin/verify-changes` passed backend tests, dashboard formatting/typecheck, 356 unit tests,
+  lint, and production build. This remains UI behavior coverage, not successful live testing of
+  all 65 write operations; those remain unverified as described above.
+
+- [x] Signals browser-suite follow-up 2026-09-27: all 25 Signals Playwright tests passed against
+  deterministic fixtures. Clear-selected and clear-all flows assert the corresponding DELETE
+  behavior; the execution flow asserts its order payload while the intercepted endpoint returns
+  a test-only rejection. This removes an unsafe test path that could have created a paper
+  position from whichever live BUY happened to exist. Replaced a stale “Clear N” selector and
+  a filter test that could silently pass without a result assertion; the direct filter check now
+  completes in about 1.5 seconds. Final `./bin/verify-changes` passed backend tests, dashboard
+  formatting/typecheck, 356 unit tests, lint, and production build. No live signal, position,
+  provider, or database mutation was made; write-endpoint semantic coverage remains incomplete.
+
+- [x] Settings and local-route audit follow-up 2026-09-27: Settings Playwright passed 29/29.
+  Replaced conditional loading/success checks with one deterministic save test that gates the
+  response, verifies both button states, and asserts the submitted broker/LLM/trading/scanning
+  payload. Discord settings-save and test-webhook actions are intercepted and verified without
+  contacting Discord. The seven local route-shell checks passed 7/7, and the five live,
+  read-only Signals selection/navigation checks passed 5/5. Live OpenAPI still lists 152
+  operations; 82 safe GETs and all 65 write preflights have prior coverage, but successful
+  behavior remains unverified for many writes. Full endpoint/functionality sign-off is not yet
+  complete. `./bin/verify-changes` passed backend tests, dashboard formatting/typecheck, 356
+  unit tests, lint, and production build.
+
+- [x] Clean full GET endpoint sweep 2026-09-27: after rebuilding the current API jar, a native
+  Playwright Chromium sweep exercised all 82 in-scope GET operations from the live OpenAPI
+  document through the dashboard same-origin proxy. 78 returned 200; promotion eligibility
+  correctly returned 400 without a champion; missing candidate-run resources returned 404; and
+  the intentionally invalid report filename returned 400. There were no 5xx or 429 responses.
+  The reconciliation request used its valid seven-day range (the endpoint rejects ranges over
+  ten days). `/api/signals/type/BUY` returned 200 with real BUY data, with no date-overflow
+  errors in the rebuilt runtime. Five routes remain intentionally excluded: Fyers login and
+  callback, unbounded candidate SSE, external news, and combined news/LLM inference.
+
+- [x] Runtime and test simplification follow-up 2026-09-27: the orchestrator debug test now
+  checks the rendered 7-stage detail and collapse behavior once, isolates only shared health and
+  holiday shell reads, and no longer repeats the same API queries directly from the browser.
+  It passed 1/1; the multi-strategy live suite passed 8/8 after the rate window reset. DevStack
+  now accepts `PI_NODE_DOCKER_HOST=ssh://dietpi@192.168.0.100` as an opt-in fallback when
+  `piworm.local` DNS is unavailable; `PI_NODE_DOCKER_HOST=... ./dev-stack.sh status` passed with
+  Pi PostgreSQL, local API, and local dashboard healthy. Final `./bin/verify-changes` passed
+  backend tests, dashboard formatting/typecheck, 356 unit tests, lint, and production build.
+
+- [x] Deterministic browser regression batch 2026-09-27: 90/90 Playwright tests passed across
+  safe functional edges, error/recovery states, mocked orchestration, Settings, Signals, and
+  Positions. A separate Playwright request-context pass exercised all 65 OpenAPI write routes'
+  CORS preflights with zero failures; it executed no write method and changed no state. This
+  strengthens route and UI evidence, but does not turn provider/job/trading writes into successful
+  live semantic tests.
 
 - [x] GPUHub client/service coverage completed 2026-09-17: deployment, image, container,
   status, stop, delete, DTO, and API-error paths now have behavior-focused tests. Successful
@@ -223,6 +393,7 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] Qualified candidate results are automatically activated on the pilot wishlist; scheduled scans hand off to orchestration only when qualifiers exist.
 - [x] Interrupted RUNNING and PAUSED scans are cancelled during API startup; paused SSE streams remain reconnectable, and work already active when pause is requested still updates run counters.
 - [x] Verified 2026-09-01: `:api:test`, `:data:test`, all 277 dashboard tests, dashboard typecheck, lint, formatting, and production build passed. Dev-stack health, `/api/candidate-scans/settings`, `/api/candidate-scans`, and the dashboard returned HTTP 200. The latest persisted full-universe run completed 2,635 symbols with 5 qualifiers; settings at that verification were 50% minimum win rate, >0% total return, 8 workers, and 3 backfill years.
+- [x] Full NSE_BROAD scan verified 2026-09-27: 2,635/2,635 symbols processed with 0 qualified candidates and no trade handoff (manual screening only). 308 symbols have persisted `ERROR / TRANSIENT_SOURCE_FAILURE` outcomes from Yahoo historical-data unavailability; the completed-run error aggregate was corrected to match these records, and future scans now count provider failures consistently. Backfill remains configured for 5 years with annual chunks and stops retrying a symbol after a transient source failure. Focused API test and `./bin/verify-changes` passed; local API and dashboard are running.
 
 ## Data-integrity remediation
 
@@ -419,6 +590,13 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 
 **Note (2026-08-29):** no BUY signal has fired for any of the 14 active stocks in the entire `signals` table history — current market conditions produce mostly SELL/HOLD. This isn't a bug, but it means the BUY-side pipeline (sentiment gating, position entry) has never been exercised end-to-end on live data. See LLM Layer and Pilot Stocks Confirmed sections.
 
+- [ ] Isolated BUY-to-paper-position integration coverage added 2026-09-27: deterministic candles
+  generate a BUY, a mocked positive sentiment result is persisted, the real orchestrator queues a
+  paper order, and the real next-session scheduler fills it from the next candle open. It also
+  asserts the linked open `Trade` audit row and entry commission. The test compiles, but
+  Testcontainers execution is pending because the available Docker context is the remote SSH-based
+  `pi-node` daemon, which Testcontainers cannot use in this environment.
+
 ## Signal Pipeline (SELL/Exit)
 
 `8c2a4aa6` added any-1-of-3 exit confluence SELL/exit signal generation to the live pipeline — this is the newest, highest-stakes code on the critical path (it closes live paper positions). Unit-tested (Mockito) only. The real-DB integration test (`SignalPipelineSellExitIntegrationTest`) can't run here: this repo's `docker context` is pinned to `pi-node` (remote daemon on `piworm.local`, not local desktop — see docker context rule), so TestContainers is negotiating against a remote Docker API rather than a local one, which is what surfaced the version mismatch. Even fixing the version skew wouldn't make TestContainers a reliable check in this setup — it assumes a local daemon for port/network mapping, which a remote pi-node context doesn't give it cleanly. So this isn't a "fix Docker" TODO; manual verification against the real pi-node infra via dev-stack is the actual right-shaped check here, not a workaround for a broken test.
@@ -515,6 +693,20 @@ Dismissed (not bugs): C1 (param order safe), C3 (.env not in git), C5 (backtest 
 - [x] Graceful degradation tested - kill vLLM, confirm NEUTRAL default
 
 ## Dashboard
+
+### Endpoint and Playwright sanity check — 2026-09-27
+
+- [x] Live same-origin Playwright sweep covered 82 safe GET routes: 78 returned 200; the remaining 400/404 responses were expected validation/not-found cases; no 5xx or 429 responses occurred.
+- [x] Current OpenAPI inventory reconciled: 152 operations (87 GET, 51 POST, 8 PUT, 5 DELETE, 1 PATCH).
+- [x] Playwright preflighted all 65 write routes without executing a mutation; all returned an expected CORS/HTTP response.
+- [x] Complete local Playwright UI run passed 115/115 tests, including the live multi-strategy suite (8/8), and a direct sweep of all 17 registered feature routes found no page errors or 5xx responses.
+- [x] Browser interaction sweep passed for six previously lighter-covered workflows: news expand/fetch (provider mocked), gate selector/refresh, monitoring tabs, candidate settings panel, data range validation, and backtest symbol validation.
+- [x] Five settings PUT endpoints were safely round-tripped with unchanged values (GET → PUT same values → GET): LLM, GPUHub, Discord, trading, and scanning.
+- [x] Validation probes for invalid trading capital, invalid scan workers, malformed positions, and reconcile without `apply=true` all returned 400.
+- [x] Fixed malformed JSON/enum request handling: `HttpMessageNotReadableException` now returns a safe 400 `VALIDATION_ERROR` instead of a generic 500. Backend regression test and live malformed-position probe pass.
+- [x] Candidate-scan settings round-trip remained unchanged (`200 → 200 → 200`); reconciliation correctly rejects requests without `apply=true` (`400`).
+- [x] `./bin/verify-changes` passed: backend tests, 59 dashboard test files/356 tests, formatting, typecheck, lint, production build, shell syntax, and diff checks.
+- [ ] Successful state-changing behavior for every write route is intentionally not claimed: live checks avoid trades, scans, backfills, provider auth, and other irreversible/external mutations. Those routes still need isolated mocked or disposable-environment coverage.
 
 Verified via Playwright 2026-08-30 against a running dev stack.
 

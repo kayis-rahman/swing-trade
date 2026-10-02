@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -22,6 +23,10 @@ public class StrategyConfigEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Version
+    @Column(name = "lock_version", nullable = false)
+    private Integer lockVersion = 0;
 
     @Column(name = "variant_id", nullable = false, length = 40)
     private String variantId;

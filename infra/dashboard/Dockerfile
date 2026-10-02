@@ -8,6 +8,10 @@
 
 FROM nginx:alpine
 
+ARG BUILD_COMMIT=unknown
+LABEL org.opencontainers.image.revision="${BUILD_COMMIT}" \
+      org.opencontainers.image.source="swing-trade-dashboard"
+
 COPY dist/ /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

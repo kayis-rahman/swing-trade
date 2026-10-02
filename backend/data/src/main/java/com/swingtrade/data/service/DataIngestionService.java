@@ -57,7 +57,7 @@ public class DataIngestionService {
         DataIngestionMetrics ingestionMetrics,
         MarketCalendar marketCalendar,
         ReconciliationAuditRepository reconciliationAuditRepository,
-        @Value("${data.backfill.chunk-days:30}") int backfillChunkDays,
+        @Value("${data.backfill.chunk-days:365}") int backfillChunkDays,
         PriceBandStore priceBandStore
     ) {
         this.candleRepository = candleRepository;
@@ -127,7 +127,13 @@ public class DataIngestionService {
         }
         DataWindow existing = getExistingDataWindow(symbol);
         LocalDate effectiveFrom = requestedFrom;
-        if (existing.latestDate() != null && existing.latestDate().isAfter(requestedFrom.minusDays(1))) {
+        // A symbol can have a recent tail without having the requested historical head
+        // (for example, a newly listed or partially imported symbol). In that case using
+        // latestDate + 1 would permanently preserve the short tail and every candidate scan
+        // would reject it before signal generation. Re-request the full requested range;
+        // insertIfAbsent makes this safe for the candles already stored.
+        if ((existing.earliestDate() == null || !existing.earliestDate().isAfter(requestedFrom))
+                && existing.latestDate() != null && !existing.latestDate().isBefore(requestedFrom)) {
             effectiveFrom = existing.latestDate().plusDays(1);
         }
         if (effectiveFrom.isAfter(toDate)) {
@@ -154,12 +160,15 @@ public class DataIngestionService {
             fetched += outcome.fetchedRows();
             saved += outcome.savedRows();
             invalid += outcome.invalidRows();
-            receivedData |= !"NO_USABLE_DATA".equals(outcome.sourceOutcome())
-                && !"TRANSIENT_SOURCE_FAILURE".equals(outcome.sourceOutcome());
+            if ("TRANSIENT_SOURCE_FAILURE".equals(outcome.sourceOutcome())) {
+                if (firstError == null) firstError = outcome.errorMessage();
+                break;
+            }
+            receivedData |= !"NO_USABLE_DATA".equals(outcome.sourceOutcome());
             if (firstError == null) firstError = outcome.errorMessage();
             chunkStart = chunkEnd.plusDays(1);
         }
-        String sourceOutcome = firstError != null && fetched == 0 ? "TRANSIENT_SOURCE_FAILURE"
+        String sourceOutcome = firstError != null ? "TRANSIENT_SOURCE_FAILURE"
             : fetched == 0 ? "NO_USABLE_DATA"
             : invalid > 0 && saved == 0 ? "INVALID_ROWS_REJECTED"
             : receivedData ? "DATA_RECEIVED" : "NO_USABLE_DATA";

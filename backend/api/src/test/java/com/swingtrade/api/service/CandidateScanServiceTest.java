@@ -2,6 +2,7 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
+import com.swingtrade.data.entity.FyersSymbolEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.FyersSymbolRepository;
@@ -36,6 +37,7 @@ class CandidateScanServiceTest {
 
     private CandidateScanRunRepository runRepository;
     private CandidateScanResultRepository resultRepository;
+    private FyersSymbolRepository symbolRepository;
     private AppSettingsService settingsService;
     private CandidateScanService service;
 
@@ -43,9 +45,10 @@ class CandidateScanServiceTest {
     void setUp() {
         runRepository = mock(CandidateScanRunRepository.class);
         resultRepository = mock(CandidateScanResultRepository.class);
+        symbolRepository = mock(FyersSymbolRepository.class);
         settingsService = mock(AppSettingsService.class);
         service = new CandidateScanService(
-            mock(FyersSymbolRepository.class),
+            symbolRepository,
             runRepository,
             resultRepository,
             mock(DataIngestionService.class),
@@ -114,6 +117,23 @@ class CandidateScanServiceTest {
 
     @Nested
     class Lifecycle {
+
+        @Test
+        void manualScansUseTheNseSymbolMasterInsteadOfTheActiveWatchlist() {
+            FyersSymbolEntity first = new FyersSymbolEntity();
+            first.setTradingSymbol("INFY");
+            FyersSymbolEntity second = new FyersSymbolEntity();
+            second.setTradingSymbol("TCS");
+            when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
+            when(symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE"))
+                .thenReturn(List.of(first, second));
+
+            CandidateScanRunEntity scan = service.start();
+
+            assertThat(scan.getScanScope()).isEqualTo("NSE_BROAD");
+            assertThat(scan.getTotalSymbols()).isEqualTo(2);
+            verify(symbolRepository).findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE");
+        }
 
         @Test
         void pausesAndResumesRunningScan() {

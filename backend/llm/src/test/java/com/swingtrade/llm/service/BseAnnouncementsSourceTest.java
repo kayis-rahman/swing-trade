@@ -22,7 +22,7 @@ class BseAnnouncementsSourceTest {
 
         try (MockedStatic<Jsoup> jsoup = mockStatic(Jsoup.class)) {
             jsoup.when(() -> Jsoup.connect(anyString())).thenReturn(connection);
-            var filings = new BseAnnouncementsSource(10).fetchFilings("500112");
+            var filings = new BseAnnouncementsSource(10, true).fetchFilings("500112");
 
             assertThat(filings).singleElement().satisfies(filing -> {
                 assertThat(filing.type()).isEqualTo(StructuredFiling.FilingType.DIVIDEND);

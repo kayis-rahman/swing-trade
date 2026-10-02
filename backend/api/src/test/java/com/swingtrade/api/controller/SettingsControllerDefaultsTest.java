@@ -5,6 +5,7 @@ import com.swingtrade.broker.service.DiscordNotificationService;
 import com.swingtrade.data.service.AppSettingsService;
 import com.swingtrade.data.service.MarketDataClientProvider;
 import com.swingtrade.llm.config.LlmProperties;
+import com.swingtrade.llm.client.PiAgentLlmClient;
 import com.swingtrade.llm.service.LlamaCppServerManager;
 import com.swingtrade.llm.service.LlmBackendSelector;
 import com.swingtrade.llm.service.LlmClientProvider;
@@ -44,6 +45,8 @@ class SettingsControllerDefaultsTest {
     @Mock
     private LlmClientProvider llmClientProvider;
     @Mock
+    private PiAgentLlmClient piAgentLlmClient;
+    @Mock
     private LlamaCppServerManager localServerManager;
     @Mock
     private PiLlamaServerManager piServerManager;
@@ -62,6 +65,7 @@ class SettingsControllerDefaultsTest {
             discordNotificationService,
             selector,
             llmClientProvider,
+            piAgentLlmClient,
             localServerManager,
             piServerManager
         );
@@ -103,6 +107,8 @@ class SettingsControllerDefaultsTest {
             "http://ollama-default.test/v1", "ollama-default");
         configureProvider(properties.getProviders().getPiSsh(),
             "http://pi-default.test/v1", "pi-default");
+        configureProvider(properties.getProviders().getLaya(),
+            "http://laya-default.test/v1", "laya-default");
         properties.getLlamaCpp().setModel("/models/default.gguf");
         properties.getPdf().setBaseUrl(URI.create("http://pdf-default.test/v1"));
         properties.getPdf().setModel("pdf-default");
@@ -130,6 +136,8 @@ class SettingsControllerDefaultsTest {
                 .containsEntry("ollama.base_url", "http://ollama-default.test/v1")
                 .containsEntry("ollama.model", "ollama-default")
                 .containsEntry("llamacpp.model", "/models/default.gguf")
+                .containsEntry("laya.base_url", "http://laya-default.test/v1")
+                .containsEntry("laya.model", "laya-default")
                 .containsEntry("llm.pdf.base_url", "http://pdf-default.test/v1")
                 .containsEntry("llm.pdf.model", "pdf-default")
                 .doesNotContainKeys("openai.api_key", "ollama.api_key", "gpuhub.api_key");
@@ -170,6 +178,8 @@ class SettingsControllerDefaultsTest {
                 "http://ollama-default.test/v1", "ollama-default");
             configureProvider(props.getProviders().getPiSsh(),
                 "http://pi-default.test/v1", "pi-default");
+            configureProvider(props.getProviders().getLaya(),
+                "http://laya-default.test/v1", "laya-default");
             props.getLlamaCpp().setModel("/models/default.gguf");
             props.getPdf().setModel("pdf-default");
             // Intentionally do NOT set PDF baseUrl — it will stay null
@@ -181,6 +191,7 @@ class SettingsControllerDefaultsTest {
                 discordNotificationService,
                 selector,
                 llmClientProvider,
+                null,
                 localServerManager,
                 piServerManager
             );
@@ -192,6 +203,20 @@ class SettingsControllerDefaultsTest {
                 .containsEntry("llm.pdf.base_url", "")
                 .containsEntry("llm.pdf.model", "pdf-default");
         }
+    }
+
+    @Test
+    void llmSettingsConfigurePiAgentWithPersistedProviderAndModel() {
+        when(appSettingsService.get("pi-agent.provider", "openai-codex"))
+            .thenReturn("openai-codex");
+        when(appSettingsService.get("pi-agent.model", "gpt-5.6-luna"))
+            .thenReturn("gpt-5.6-luna");
+
+        controller.setLlmSettings(Map.of(
+            "pi-agent.provider", "openai-codex",
+            "pi-agent.model", "gpt-5.6-luna"));
+
+        verify(piAgentLlmClient).configure("openai-codex", "gpt-5.6-luna");
     }
 
     @Nested
@@ -211,6 +236,18 @@ class SettingsControllerDefaultsTest {
                 .containsEntry("openai.api_key.configured", "true")
                 .doesNotContainKey("openai.api_key")
                 .doesNotContainValue("top-secret");
+        }
+
+        @Test
+        void shouldPersistLayaEndpointAndModel() {
+            ResponseEntity<ApiResponse<Map<String, String>>> response = controller.setLlmSettings(
+                Map.of("laya.base_url", "https://laya.test/v1", "laya.model", "ornith-1.5"));
+
+            verify(appSettingsService).set("laya.base_url", "https://laya.test/v1");
+            verify(appSettingsService).set("laya.model", "ornith-1.5");
+            assertThat(response.getBody().data())
+                .containsEntry("laya.base_url", "https://laya.test/v1")
+                .containsEntry("laya.model", "ornith-1.5");
         }
     }
 

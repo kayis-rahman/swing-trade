@@ -60,6 +60,7 @@ public class FyersServiceClient implements MarketDataClient {
     private final FyersAuthService authService;
     private final FyersSymbolMasterService symbolMaster;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private volatile boolean missingTokenLogged = false;
 
     // Resilience4j fields
     private CircuitBreaker fyersCircuitBreaker;
@@ -324,7 +325,10 @@ public class FyersServiceClient implements MarketDataClient {
     private String getWithAuthRetry(URI uri) {
         String token = authService.getAccessToken();
         if (token == null) {
-            logger.error("Fyers access token is missing. Please complete authentication.");
+            if (!missingTokenLogged) {
+                logger.warn("Fyers access token is missing. Data ingestion skipped — configure Fyers credentials to enable.");
+                missingTokenLogged = true;
+            }
             return null;
         }
         String appId = authService.getClientId();

@@ -141,13 +141,19 @@
         v-if="authResultBanner"
         class="rounded-lg p-4 text-sm font-medium"
         :class="
-          authResultBanner === 'success' ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
+          authResultBanner === 'success'
+            ? 'bg-success-bg text-success'
+            : authResultBanner === 'not-configured'
+              ? 'bg-warning-bg text-warning'
+              : 'bg-danger-bg text-danger'
         "
       >
         {{
           authResultBanner === 'success'
             ? 'Fyers connected successfully!'
-            : 'Fyers authentication failed. Please try again.'
+            : authResultBanner === 'not-configured'
+              ? FYERS_NOT_CONFIGURED_MESSAGE
+              : 'Fyers authentication failed. Please try again.'
         }}
         <button class="ml-2 opacity-60 hover:opacity-100" @click="authResultBanner = null">
           &times;
@@ -363,6 +369,20 @@
               >
                 Local Ollama server for sentiment analysis. Runs entirely on your machine.
               </div>
+              <div
+                v-else-if="llmSettings.llmBackend === 'laya'"
+                class="rounded-md bg-bg-primary p-3"
+              >
+                Remote Laya backend (OpenAI-compatible), configured from the dashboard. No server
+                management needed.
+              </div>
+              <div
+                v-else-if="llmSettings.llmBackend === 'pi_agent'"
+                class="rounded-md bg-bg-primary p-3"
+              >
+                Local Pi CLI agent using its own authenticated provider session. Swing Trade never
+                stores the provider token.
+              </div>
             </div>
           </div>
 
@@ -474,6 +494,50 @@
             </div>
           </div>
 
+          <!-- Pi CLI agent -->
+          <div v-show="llmSettings.llmBackend === 'pi_agent'" class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-text-secondary">Pi CLI Agent</h3>
+            <p class="text-xs text-text-muted">
+              Uses the locally installed Pi agent in print-only, no-tools mode. Authenticate Pi
+              separately with <code>pi /login</code> or its provider setup.
+            </p>
+            <div class="flex gap-2">
+              <input
+                v-model="llmSettings.piAgentProvider"
+                placeholder="openai-codex"
+                class="flex-1 rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+              />
+              <span class="self-center text-xs text-text-muted">Provider</span>
+            </div>
+            <div class="flex gap-2">
+              <input
+                v-model="llmSettings.piAgentModel"
+                placeholder="gpt-5.6-luna"
+                class="flex-1 rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+              />
+              <span class="self-center text-xs text-text-muted">Model</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-text-muted">
+                Inference runs through the local <code>pi</code> executable.
+              </p>
+              <button
+                :disabled="testingPiAgent"
+                class="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+                @click="testPiAgentConnection"
+              >
+                {{ testingPiAgent ? 'Testing...' : 'Test' }}
+              </button>
+            </div>
+            <div
+              v-if="piAgentTestResult"
+              class="text-xs"
+              :class="piAgentTestSuccess ? 'text-success' : 'text-danger'"
+            >
+              {{ piAgentTestResult }}
+            </div>
+          </div>
+
           <!-- OpenAI-compatible LLM (Super Analysis) -->
           <div v-show="llmSettings.llmBackend === 'openai'" class="space-y-4 mb-6">
             <h3 class="text-sm font-medium text-text-secondary">OpenAI-compatible LLM</h3>
@@ -576,6 +640,31 @@
               :class="ollamaTestSuccess ? 'text-success' : 'text-danger'"
             >
               {{ ollamaTestResult }}
+            </div>
+          </div>
+
+          <!-- Laya (Remote OpenAI-compatible LLM) -->
+          <div v-show="llmSettings.llmBackend === 'laya'" class="space-y-4 mb-6">
+            <h3 class="text-sm font-medium text-text-secondary">Laya Backend</h3>
+            <p class="text-xs text-text-muted">
+              Remote Laya backend (OpenAI-compatible), configured from the dashboard. No server
+              management needed.
+            </p>
+            <div class="flex gap-2">
+              <input
+                v-model="llmSettings.layaBaseUrl"
+                placeholder="https://laya.example/v1"
+                class="flex-1 rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+              />
+            </div>
+
+            <div class="flex gap-2">
+              <input
+                v-model="llmSettings.layaModel"
+                placeholder="Ornith-1.5-35B-A3B-AWQ"
+                class="flex-1 rounded-md border border-border-subtle bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+              />
+              <span class="self-center text-xs text-text-muted">Model</span>
             </div>
           </div>
 
@@ -859,12 +948,13 @@ import {
   testPiConnection as apiTestPiConnection,
   testOpenAiConnection as apiTestOpenAiConnection,
   testOllamaConnection as apiTestOllamaConnection,
+  testPiAgentConnection as apiTestPiAgentConnection,
   startPiServer as apiStartPiServer,
   stopPiServer as apiStopPiServer,
   getPiServerStatus as apiGetPiServerStatus,
 } from '../api/client'
 import type { FyersStatus, HealthStatus } from '../api/types'
-import { formatAppError } from '../errors/appError'
+import { formatAppError, isAppError } from '../errors/appError'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import Toast from '../components/Toast.vue'
 import {
@@ -894,7 +984,20 @@ const fyersConnected = computed(
 )
 const healthStatus = ref<HealthStatus | null>(null)
 const healthStatusError = ref(false)
-const authResultBanner = ref<'success' | 'error' | null>(null)
+const authResultBanner = ref<'success' | 'error' | 'not-configured' | null>(null)
+
+// Stage environments without Fyers credentials get a 400 "not configured" from
+// /api/fyers/login. That is an environment state, not an authentication failure —
+// report it honestly instead of the misleading "authentication failed" banner.
+const FYERS_NOT_CONFIGURED_MESSAGE =
+  'Fyers is not configured on this environment. Contact an administrator to enable broker access.'
+
+function isFyersNotConfiguredError(err: unknown): boolean {
+  if (!isAppError(err)) return false
+  if (err.code === 'FYERS_NOT_CONFIGURED') return true
+  // Fallback for backends that only return the message (pre-code deployments).
+  return err.status === 400 && /not configured/i.test(err.message)
+}
 
 const authing = ref(false)
 const showAuthCodeInput = ref(false)
@@ -904,6 +1007,7 @@ const testingDiscord = ref(false)
 const testingPi = ref(false)
 const testingOpenai = ref(false)
 const testingOllama = ref(false)
+const testingPiAgent = ref(false)
 const piTestResult = ref('')
 const piTestSuccess = ref(false)
 const piServerRunning = ref(false)
@@ -915,6 +1019,8 @@ const openaiTestResult = ref('')
 const openaiTestSuccess = ref(false)
 const ollamaTestResult = ref('')
 const ollamaTestSuccess = ref(false)
+const piAgentTestResult = ref('')
+const piAgentTestSuccess = ref(false)
 const saving = ref(false)
 const saved = ref(false)
 const toastMessage = ref('')
@@ -934,6 +1040,8 @@ const llmBackends = [
   { value: 'pi_ssh' as const, label: 'Pi SSH' },
   { value: 'openai' as const, label: 'OpenAI' },
   { value: 'ollama' as const, label: 'Ollama' },
+  { value: 'laya' as const, label: 'Laya' },
+  { value: 'pi_agent' as const, label: 'Pi Agent' },
 ]
 
 const healthColor = (status: string) => {
@@ -1034,8 +1142,8 @@ const startFyersAuth = async () => {
         pollTimer = null
       }
     })
-  } catch {
-    authResultBanner.value = 'error'
+  } catch (err) {
+    authResultBanner.value = isFyersNotConfiguredError(err) ? 'not-configured' : 'error'
   } finally {
     authing.value = false
   }
@@ -1051,10 +1159,14 @@ const submitAuthCode = async () => {
     fyersStatus.value = data
     showAuthCodeInput.value = false
     authCodeInput.value = ''
-  } catch {
-    authResultBanner.value = 'error'
-    toastMessage.value = 'Fyers authentication failed. Please try again.'
-    toastType.value = 'error'
+  } catch (err) {
+    if (isFyersNotConfiguredError(err)) {
+      toastMessage.value = FYERS_NOT_CONFIGURED_MESSAGE
+      toastType.value = 'warning'
+    } else {
+      toastMessage.value = 'Fyers authentication failed. Please try again.'
+      toastType.value = 'error'
+    }
     toastVisible.value = true
     setTimeout(() => {
       toastVisible.value = false
@@ -1359,6 +1471,41 @@ const testOpenAiConnection = async () => {
     }, 4000)
   } finally {
     testingOpenai.value = false
+  }
+}
+
+const testPiAgentConnection = async () => {
+  testingPiAgent.value = true
+  piAgentTestResult.value = ''
+  piAgentTestSuccess.value = false
+  try {
+    const result = confirmed(await apiTestPiAgentConnection())
+    if (result) {
+      piAgentTestResult.value = result.message ?? (result.success ? 'Connected!' : 'Failed')
+      piAgentTestSuccess.value = result.success
+      toastMessage.value =
+        result.message ??
+        (result.success ? 'Pi agent responded successfully' : 'Pi agent test failed')
+      toastType.value = result.success ? 'success' : 'error'
+      toastVisible.value = true
+      setTimeout(() => {
+        toastVisible.value = false
+      }, 4000)
+    }
+  } catch (err: unknown) {
+    piAgentTestResult.value = formatAppError(err, {
+      title: 'Pi agent test failed',
+      operation: 'mutation',
+    }).message
+    piAgentTestSuccess.value = false
+    toastMessage.value = piAgentTestResult.value
+    toastType.value = 'error'
+    toastVisible.value = true
+    setTimeout(() => {
+      toastVisible.value = false
+    }, 4000)
+  } finally {
+    testingPiAgent.value = false
   }
 }
 

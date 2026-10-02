@@ -80,6 +80,12 @@ public interface SignalRepository extends JpaRepository<SignalEntity, Long> {
         Pageable pageable
     );
 
+    @Query("SELECT s FROM SignalEntity s WHERE s.signalType = :signalType ORDER BY s.date DESC")
+    List<SignalEntity> findBySignalType(
+        @Param("signalType") String signalType,
+        Pageable pageable
+    );
+
     /**
      * Finds all signals within a date range regardless of signal type.
      *

@@ -41,11 +41,15 @@ class LlmClientProviderRoutingTest {
     @Mock
     private OpenAiChatModel ollamaModel;
 
+    @Mock
+    private OpenAiChatModel layaModel;
+
     private LlmClientProvider provider;
 
     @BeforeEach
     void setUp() {
-        provider = new LlmClientProvider(selector, mock(LlamaCppClient.class), localModel, piSshModel, openAiModel, ollamaModel);
+        provider = new LlmClientProvider(selector, mock(LlamaCppClient.class), localModel,
+                piSshModel, openAiModel, ollamaModel, layaModel);
     }
 
     @Nested
@@ -103,14 +107,14 @@ class LlmClientProviderRoutingTest {
     }
 
     @Nested
-    @DisplayName("Routing — OLLAMA backend")
-    class OllamaRouting {
+    @DisplayName("Routing — LAYA backend")
+    class LayaRouting {
 
         @Test
-        @DisplayName("should return ollama client when backend is ollama")
-        void shouldReturnOllamaClientWhenBackendIsOllama() {
+        @DisplayName("should return laya client when backend is laya")
+        void shouldReturnLayaClientWhenBackendIsLaya() {
             // Arrange
-            when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.OLLAMA);
+            when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.LAYA);
 
             // Act
             LlmClient client = provider.getClient();

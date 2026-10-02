@@ -43,10 +43,16 @@ public class FyersAuthController {
     @GetMapping("/login")
     public ResponseEntity<Map<String, String>> getLoginUrl() {
         if (fyersConfig.getClientId() == null || fyersConfig.getClientId().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "FYERS_CLIENT_ID not configured"));
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "FYERS_CLIENT_ID not configured",
+                "code", "FYERS_NOT_CONFIGURED"
+            ));
         }
         if (fyersConfig.getSecretKey() == null || fyersConfig.getSecretKey().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "FYERS_SECRET_KEY not configured"));
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "FYERS_SECRET_KEY not configured",
+                "code", "FYERS_NOT_CONFIGURED"
+            ));
         }
         return ResponseEntity.ok(Map.of(
             "url", authService.getAuthorizationUrl(),

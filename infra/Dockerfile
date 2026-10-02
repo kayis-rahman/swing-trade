@@ -20,6 +20,10 @@ COPY lib/ /lib/
 # ------------------------------------------------------------------------------
 FROM eclipse-temurin:21-jre-alpine AS runtime-stage
 
+ARG BUILD_COMMIT=unknown
+LABEL org.opencontainers.image.revision="${BUILD_COMMIT}" \
+      org.opencontainers.image.source="swing-trade"
+
 WORKDIR /app
 
 COPY --from=artifacts /lib/ ./lib/

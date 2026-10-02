@@ -57,7 +57,7 @@ function label(symbol: string, variantId: string): string {
   const cell = matrix.value.cell(symbol, variantId)
   switch (kind(symbol, variantId)) {
     case 'signal':
-      return `${cell?.signal}${cell?.score != null ? ` (${cell.score})` : ''}`
+      return `${cell?.signal === true ? 'Signal' : (cell?.signal ?? '')}${cell?.score != null ? ` (${cell.score})` : ''}`
     case 'no-signal':
       return 'Evaluated · no signal'
     case 'skipped':

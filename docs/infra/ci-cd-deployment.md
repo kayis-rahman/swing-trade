@@ -77,6 +77,21 @@ Key env vars (all configurable via `-e`):
 - `STRATEGY_ENABLED` — signal generation
 - `SIGNAL_ENABLED`, `DISCORD_WEBHOOK_ENABLED` — notification toggles
 
+The stage API has a 2 GiB Docker memory cap and a 1.25 GiB JVM heap maximum
+(`-Xmx1280m`). The live container was observed without a Docker cap despite the
+Compose declaration, so `dev-stack.sh stage` applies the same limit with
+`docker update` and verifies `HostConfig.Memory` after startup. The 2 GiB cap is
+above the measured 1.42 GiB process RSS high-water; the heap maximum stays below
+the cap to leave about 768 MiB for metaspace, thread stacks, direct buffers,
+code cache, and other native memory. A measured heap-used peak near 1 GiB also
+motivates keeping more than 1 GiB available to the Java heap. These are starting
+bounds based on observational data, not a controlled peak-load sizing test.
+
+After deploying this change, re-measure Docker `HostConfig.Memory`, JVM
+`Runtime.maxMemory` (or `jvm_memory_max_bytes`), process RSS/high-water, JVM heap
+used, and startup duration under representative stage load. Confirm the memory
+limit leaves safe headroom and repeat cold starts before changing these bounds.
+
 ### Docker Compose Files
 - **`docker-compose.infra-stage.yml`** — PostgreSQL + Redis + API service definition
 - **`docker-compose.monitoring-stage.yml`** — Local Grafana (optional, bind-mount issue on Docker Desktop Mac)

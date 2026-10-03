@@ -43,7 +43,7 @@ services:
       - API_KEY_AUTH_ENABLED=true
       - API_KEY=${API_KEY:?API_KEY must be set for the stage API}
       # Half the 1 GiB container budget remains for JVM/native memory.
-      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m
+      - JAVA_TOOL_OPTIONS=-Xmx512m
       - LOG_FILE=/var/log/swing-trade/stage.log
       - TZ=Asia/Kolkata
     volumes:

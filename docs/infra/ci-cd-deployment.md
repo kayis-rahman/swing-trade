@@ -82,18 +82,19 @@ The stage API has a 1 GiB Docker memory cap and a 512 MiB JVM heap maximum
 Compose declaration, so `dev-stack.sh stage` applies the same limit with
 `docker update` and verifies `HostConfig.Memory` after startup. The heap maximum
 uses half of the container budget, leaving about 512 MiB for metaspace, thread
-stacks, direct buffers, code cache, and other native memory. This is a
-conservative starting budget: the prior process reached about 1.42 GiB RSS and
-observed heap usage peaked near 1 GB, so a 1 GiB cap may still be tight and the
-smaller heap may cause more garbage collection or fail under peak load. The
-measurements were observational, not a controlled peak-load sizing test.
+stacks, direct buffers, code cache, and other native memory. Prometheus showed a
+7-day maximum of about 1.0 GB summed JVM heap-used, while the prior process
+reached about 1.42 GiB RSS. A 512 MiB maximum may be too small for the observed
+workload and could cause out-of-memory errors; the measurements were
+observational, not a controlled peak-load sizing test. The maximum may need to
+rise to roughly 640–700 MiB within the 1 GiB cap after measurement.
 
 After deploying this change, check Docker `HostConfig.Memory` is 1073741824,
 JVM `Runtime.maxMemory` (or `jvm_memory_max_bytes`) is about 512 MiB, and cold
 startup duration completes within the 75-second poll window. Also re-measure
-process RSS/high-water, JVM heap used, garbage collection, and OOM/restart
-signals under representative stage load. Confirm the cap leaves safe operating
-headroom before changing these bounds.
+process RSS/high-water, JVM heap-used peak, garbage collection pressure, and
+container/JVM restarts under representative stage load. Confirm the cap leaves
+safe operating headroom before changing these bounds.
 
 Validation for this change is static only: the Compose values and shell syntax
 are checked, but stage is not deployed or cold-started during validation.

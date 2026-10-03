@@ -42,9 +42,8 @@ services:
       - LANGCHAIN4J_OPEN_AI_API_KEY=${LANGCHAIN4J_OPEN_AI_API_KEY:-}
       - API_KEY_AUTH_ENABLED=true
       - API_KEY=${API_KEY:?API_KEY must be set for the stage API}
-      # 1.25 GiB heap within the 2 GiB container budget leaves room for
-      # metaspace, code cache, thread stacks, direct buffers, and native libs.
-      - JAVA_TOOL_OPTIONS=-Xms256m -Xmx1280m
+      # Half the 1 GiB container budget remains for JVM/native memory.
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m
       - LOG_FILE=/var/log/swing-trade/stage.log
       - TZ=Asia/Kolkata
     volumes:
@@ -60,8 +59,8 @@ services:
       resources:
         limits:
           cpus: "1.5"
-          memory: 2G
-    mem_limit: 2g
+          memory: 1G
+    mem_limit: 1g
     cpus: 1.5
 
   dashboard:

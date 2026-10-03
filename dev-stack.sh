@@ -393,7 +393,7 @@ case "${1:-help}" in
     # Compose configuration and live container limits have disagreed before.
     # Apply the cap directly as a deployment guard, then fail if Docker did not
     # retain it. The compose file remains the declarative source of the same cap.
-    ssh dietpi@piworm.local "docker update --memory=2g swing-trade-stage-api >/dev/null && test \"\$(docker inspect swing-trade-stage-api --format '{{.HostConfig.Memory}}')\" -eq 2147483648"
+    ssh dietpi@piworm.local "docker update --memory=1g swing-trade-stage-api >/dev/null && test \"\$(docker inspect swing-trade-stage-api --format '{{.HostConfig.Memory}}')\" -eq 1073741824"
     echo "✓ Stage stack started"
     echo ""
 

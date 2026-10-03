@@ -77,20 +77,26 @@ Key env vars (all configurable via `-e`):
 - `STRATEGY_ENABLED` — signal generation
 - `SIGNAL_ENABLED`, `DISCORD_WEBHOOK_ENABLED` — notification toggles
 
-The stage API has a 2 GiB Docker memory cap and a 1.25 GiB JVM heap maximum
-(`-Xmx1280m`). The live container was observed without a Docker cap despite the
+The stage API has a 1 GiB Docker memory cap and a 512 MiB JVM heap maximum
+(`-Xmx512m`). The live container was observed without a Docker cap despite the
 Compose declaration, so `dev-stack.sh stage` applies the same limit with
-`docker update` and verifies `HostConfig.Memory` after startup. The 2 GiB cap is
-above the measured 1.42 GiB process RSS high-water; the heap maximum stays below
-the cap to leave about 768 MiB for metaspace, thread stacks, direct buffers,
-code cache, and other native memory. A measured heap-used peak near 1 GiB also
-motivates keeping more than 1 GiB available to the Java heap. These are starting
-bounds based on observational data, not a controlled peak-load sizing test.
+`docker update` and verifies `HostConfig.Memory` after startup. The heap maximum
+uses half of the container budget, leaving about 512 MiB for metaspace, thread
+stacks, direct buffers, code cache, and other native memory. This is a
+conservative starting budget: the prior process reached about 1.42 GiB RSS and
+observed heap usage peaked near 1 GB, so a 1 GiB cap may still be tight and the
+smaller heap may cause more garbage collection or fail under peak load. The
+measurements were observational, not a controlled peak-load sizing test.
 
-After deploying this change, re-measure Docker `HostConfig.Memory`, JVM
-`Runtime.maxMemory` (or `jvm_memory_max_bytes`), process RSS/high-water, JVM heap
-used, and startup duration under representative stage load. Confirm the memory
-limit leaves safe headroom and repeat cold starts before changing these bounds.
+After deploying this change, check Docker `HostConfig.Memory` is 1073741824,
+JVM `Runtime.maxMemory` (or `jvm_memory_max_bytes`) is about 512 MiB, and cold
+startup duration completes within the 75-second poll window. Also re-measure
+process RSS/high-water, JVM heap used, garbage collection, and OOM/restart
+signals under representative stage load. Confirm the cap leaves safe operating
+headroom before changing these bounds.
+
+Validation for this change is static only: the Compose values and shell syntax
+are checked, but stage is not deployed or cold-started during validation.
 
 ### Docker Compose Files
 - **`docker-compose.infra-stage.yml`** — PostgreSQL + Redis + API service definition

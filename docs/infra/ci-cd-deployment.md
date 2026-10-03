@@ -35,7 +35,7 @@ Flow:
 1. **Build Docker image** — `docker build -f backend/Dockerfile --target runtime-jar ..`
 2. **Start infra** — `docker compose -f docker-compose.infra-stage.yml up -d` (PostgreSQL + Redis)
 3. **Start API container** — runs on `swing-trade-stage_swingtrade-network` with all stage env vars
-4. **Enforce the API memory cap** — applies 1 GiB with `docker update` and verifies the live container limit
+4. **Apply the API memory cap** — requests 1 GiB with `docker update` and verifies the live container limit when the host kernel supports Docker memory limits; otherwise warns that the cap is not enforced and continues
 5. **Health check** — polls `http://piworm.local:8081/actuator/health` for up to 75 seconds
 6. **Prometheus verification** — checks that `swing-trade-stage` target appears in Prometheus
 
@@ -78,11 +78,15 @@ Key env vars (all configurable via `-e`):
 - `STRATEGY_ENABLED` — signal generation
 - `SIGNAL_ENABLED`, `DISCORD_WEBHOOK_ENABLED` — notification toggles
 
-The stage API has a 1 GiB Docker memory cap and a 512 MiB JVM heap maximum
-(`-Xmx512m`). The live container was observed without a Docker cap despite the
-Compose declaration, so `dev-stack.sh stage` applies the same limit with
-`docker update` and verifies `HostConfig.Memory` after startup. The heap maximum
-uses half of the container budget, leaving about 512 MiB for metaspace, thread
+The stage API declares a 1 GiB Docker memory cap and a 512 MiB JVM heap maximum
+(`-Xmx512m`). The cap is enforced only when the host kernel supports Docker
+memory limits. `dev-stack.sh stage` applies the same limit with `docker update`
+and verifies `HostConfig.Memory` after startup on supported hosts. If Docker
+reports that the limit was discarded, deployment continues with a warning that
+the container cap is not enforced on that host. Enabling memory limits on the
+Pi requires enabling cgroup memory support in its boot settings. The JVM heap
+maximum remains active independently and uses half of the declared container
+budget, leaving about 512 MiB for metaspace, thread
 stacks, direct buffers, code cache, and other native memory. Prometheus showed a
 7-day maximum of about 1.0 GB summed JVM heap-used, while the prior process
 reached about 1.42 GiB RSS. A 512 MiB maximum may be too small for the observed
@@ -90,8 +94,9 @@ workload and could cause out-of-memory errors; the measurements were
 observational, not a controlled peak-load sizing test. The maximum may need to
 rise to roughly 640–700 MiB within the 1 GiB cap after measurement.
 
-After deploying this change, check Docker `HostConfig.Memory` is 1073741824,
-JVM `Runtime.maxMemory` (or `jvm_memory_max_bytes`) is about 512 MiB, and cold
+After deploying this change, check Docker `HostConfig.Memory` is 1073741824 on
+hosts that support memory limits, JVM `Runtime.maxMemory` (or
+`jvm_memory_max_bytes`) is about 512 MiB, and cold
 startup duration completes within the 75-second poll window. Also re-measure
 process RSS/high-water, JVM heap-used peak, garbage collection pressure, and
 container/JVM restarts under representative stage load. Confirm the cap leaves

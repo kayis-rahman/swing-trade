@@ -391,9 +391,11 @@ case "${1:-help}" in
     echo "🚀 Starting stage stack on pi-node..."
     ssh dietpi@piworm.local "cd $STAGE_PATH && docker compose --env-file .env.stage -f docker-compose.infra-stage.yml up -d"
     # Compose configuration and live container limits have disagreed before.
-    # Apply the cap directly as a deployment guard, then fail if Docker did not
-    # retain it. The compose file remains the declarative source of the same cap.
-    ssh dietpi@piworm.local "docker update --memory=1g swing-trade-stage-api >/dev/null && test \"\$(docker inspect swing-trade-stage-api --format '{{.HostConfig.Memory}}')\" -eq 1073741824"
+    # Apply the cap directly, then require Docker to retain it when the host
+    # supports memory limits. Docker warns that the limit was discarded on
+    # kernels without cgroup memory support; in that case, continue with an
+    # explicit warning that the container cap is not enforced on this host.
+    ssh dietpi@piworm.local 'output=$(docker update --memory=1g swing-trade-stage-api 2>&1) && update_status=0 || update_status=$?; printf "%s\\n" "$output"; if printf "%s\\n" "$output" | grep -qi "memory limit capabilities.*limitation discarded"; then echo "⚠ Docker memory limits are unsupported: the 1 GiB container limit is NOT enforced on this host."; elif [ "$update_status" -ne 0 ]; then exit "$update_status"; else memory=$(docker inspect swing-trade-stage-api --format "{{.HostConfig.Memory}}") || exit $?; if [ "$memory" -ne 1073741824 ]; then echo "Docker did not retain the 1 GiB stage API memory limit (reported $memory)." >&2; exit 1; fi; fi'
     echo "✓ Stage stack started"
     echo ""
 

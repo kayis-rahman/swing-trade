@@ -23,105 +23,120 @@ repos:
     hooks:
       - id: check-no-jar-in-backend-root
         name: no JAR files in backend root
-        entry: bash -c 'for f in backend/*.jar; do [ -e "$f" ] && { echo "ERROR: $f should be in libs/ or removed (build artifact)"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in backend/*.jar; do [ -e "$f" ] && { echo "ERROR: $f should be in libs/ or removed (build artifact)"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-env-in-backend
         name: env files must be in infra/env/
-        entry: bash -c 'for f in backend/.env*; do [ -e "$f" ] && { echo "ERROR: $f should be in infra/env/"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in backend/.env*; do [ -e "$f" ] && { echo "ERROR: $f should be in infra/env/"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-docker-compose-in-backend
         name: docker-compose files must be in infra/
-        entry: bash -c 'for f in backend/docker-compose*.yml; do [ -e "$f" ] && { echo "ERROR: $f should be in infra/"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in backend/docker-compose*.yml; do [ -e "$f" ] && { echo "ERROR: $f should be in infra/"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-dockerfile-in-backend
         name: backend Dockerfile must be in infra/
-        entry: bash -c '[ -f backend/Dockerfile ] && { echo "ERROR: backend/Dockerfile should be in infra/"; exit 1; }'
+        entry: >-
+          bash -c '[ -f backend/Dockerfile ] && { echo "ERROR: backend/Dockerfile should be in infra/"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-deploy-sh-in-backend
         name: deploy.sh must be in infra/
-        entry: bash -c '[ -f backend/deploy.sh ] && { echo "ERROR: backend/deploy.sh should be in infra/"; exit 1; }'
+        entry: >-
+          bash -c '[ -f backend/deploy.sh ] && { echo "ERROR: backend/deploy.sh should be in infra/"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-nginx-in-backend
         name: nginx configs must be in infra/nginx/
-        entry: bash -c '[ -d backend/reports-nginx ] && { echo "ERROR: backend/reports-nginx/ should be in infra/nginx/"; exit 1; }'
+        entry: >-
+          bash -c '[ -d backend/reports-nginx ] && { echo "ERROR: backend/reports-nginx/ should be in infra/nginx/"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-monitoring-in-backend
         name: monitoring configs must be in infra/monitoring/
-        entry: bash -c '[ -d backend/monitoring ] && { echo "ERROR: backend/monitoring/ should be in infra/monitoring/"; exit 1; }'
+        entry: >-
+          bash -c '[ -d backend/monitoring ] && { echo "ERROR: backend/monitoring/ should be in infra/monitoring/"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-logs-in-backend
         name: no logs/ directory in backend
-        entry: bash -c '[ -d backend/logs ] && { echo "ERROR: backend/logs/ should not exist (runtime artifact)"; exit 1; }'
+        entry: >-
+          bash -c '[ -d backend/logs ] && { echo "ERROR: backend/logs/ should not exist (runtime artifact)"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-test-results-in-backend
         name: no test-results/ in backend root or api/
-        entry: bash -c 'for d in backend/test-results backend/api/test-results; do [ -d "$d" ] && { echo "ERROR: $d should not exist (Gradle build output)"; exit 1; }; done'
+        entry: >-
+          bash -c 'for d in backend/test-results backend/api/test-results; do [ -d "$d" ] && { echo "ERROR: $d should not exist (Gradle build output)"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-libs-in-data
         name: data/libs/ removed, JARs go in libs/
-        entry: bash -c '[ -d backend/data/libs ] && { echo "ERROR: backend/data/libs/ removed; use libs/ for shared JARs"; exit 1; }'
+        entry: >-
+          bash -c '[ -d backend/data/libs ] && { echo "ERROR: backend/data/libs/ removed; use libs/ for shared JARs"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-config-in-api
         name: api/config/ symlink removed
-        entry: bash -c '[ -d backend/api/config ] && { echo "ERROR: backend/api/config/ removed; use backend/config/ for shared config"; exit 1; }'
+        entry: >-
+          bash -c '[ -d backend/api/config ] && { echo "ERROR: backend/api/config/ removed; use backend/config/ for shared config"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^backend/$'
 
       - id: check-no-nested-dashboard
         name: no nested dashboard/ directory
-        entry: bash -c '[ -d dashboard/dashboard ] && { echo "ERROR: dashboard/dashboard/ is a leftover artifact"; exit 1; }'
+        entry: >-
+          bash -c '[ -d dashboard/dashboard ] && { echo "ERROR: dashboard/dashboard/ is a leftover artifact"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^dashboard/$'
 
       - id: check-no-infra-in-dashboard
         name: no Dockerfile or nginx.conf in dashboard/
-        entry: bash -c 'for f in dashboard/Dockerfile dashboard/nginx.conf; do [ -e "$f" ] && { echo "ERROR: $f should be in infra/"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in dashboard/Dockerfile dashboard/nginx.conf; do [ -e "$f" ] && { echo "ERROR: $f should be in infra/"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^dashboard/$'
 
       - id: check-no-build-output-in-dashboard
         name: no build output in dashboard/
-        entry: bash -c 'for d in dashboard/dist dashboard/logs dashboard/test-results; do [ -d "$d" ] && { echo "ERROR: $d should not exist in source tree"; exit 1; }; done'
+        entry: >-
+          bash -c 'for d in dashboard/dist dashboard/logs dashboard/test-results; do [ -d "$d" ] && { echo "ERROR: $d should not exist in source tree"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^dashboard/$'
 
       - id: check-issues-in-docs
         name: issue files must be in docs/issues/
-        entry: bash -c 'for f in .github/issues/*.md; do [ -e "$f" ] && { echo "ERROR: $f should be in docs/issues/"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in .github/issues/*.md; do [ -e "$f" ] && { echo "ERROR: $f should be in docs/issues/"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^\.github/$'
@@ -135,21 +150,24 @@ repos:
 
       - id: check-docs-structure
         name: analysis/infra/api-references docs not in docs root
-        entry: bash -c 'for f in docs/full-analysis-orchestration.md docs/sentiment-analysis-redesign.md docs/architecture-audit-*.md docs/llm-accuracy-monitoring.md docs/ci-cd-deployment.md docs/fyers-api-v3.md; do [ -e "$f" ] && { echo "ERROR: $f moved to docs/analysis/ or docs/infra/ or docs/api-references/"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in docs/full-analysis-orchestration.md docs/sentiment-analysis-redesign.md docs/architecture-audit-*.md docs/llm-accuracy-monitoring.md docs/ci-cd-deployment.md docs/fyers-api-v3.md; do [ -e "$f" ] && { echo "ERROR: $f moved to docs/analysis/ or docs/infra/ or docs/api-references/"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^docs/$'
 
       - id: check-docs-plan-merged
         name: docs/plan/ merged into docs/plans/
-        entry: bash -c '[ -d docs/plan ] && { echo "ERROR: docs/plan/ merged into docs/plans/"; exit 1; }'
+        entry: >-
+          bash -c '[ -d docs/plan ] && { echo "ERROR: docs/plan/ merged into docs/plans/"; exit 1; }'
         language: system
         pass_filenames: false
         files: '^docs/$'
 
       - id: check-env-in-dashboard
         name: no .env in dashboard/ (use .env.example)
-        entry: bash -c 'for f in dashboard/.env*; do [ -e "$f" ] && [ "$f" != "dashboard/.env.example" ] && { echo "ERROR: $f should be gitignored or removed"; exit 1; }; done'
+        entry: >-
+          bash -c 'for f in dashboard/.env*; do [ -e "$f" ] && [ "$f" != "dashboard/.env.example" ] && { echo "ERROR: $f should be gitignored or removed"; exit 1; }; done'
         language: system
         pass_filenames: false
         files: '^dashboard/$'

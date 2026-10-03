@@ -390,6 +390,10 @@ case "${1:-help}" in
 
     echo "🚀 Starting stage stack on pi-node..."
     ssh dietpi@piworm.local "cd $STAGE_PATH && docker compose --env-file .env.stage -f docker-compose.infra-stage.yml up -d"
+    # Compose configuration and live container limits have disagreed before.
+    # Apply the cap directly as a deployment guard, then fail if Docker did not
+    # retain it. The compose file remains the declarative source of the same cap.
+    ssh dietpi@piworm.local "docker update --memory=1g swing-trade-stage-api >/dev/null && test \"\$(docker inspect swing-trade-stage-api --format '{{.HostConfig.Memory}}')\" -eq 1073741824"
     echo "✓ Stage stack started"
     echo ""
 
@@ -407,8 +411,8 @@ case "${1:-help}" in
     echo ""
 
     # --- Step 10: Wait for API startup ---
-    echo "⏳ Waiting for Spring Boot startup (~30s)..."
-    for i in $(seq 1 30); do
+    echo "⏳ Waiting for Spring Boot startup (up to ~75s; one cold start took ~51s)..."
+    for i in $(seq 1 75); do
       HEALTH=$(curl -sf "http://piworm.local:8081/actuator/health" 2>/dev/null || true)
       if [ -n "$HEALTH" ]; then
         echo ""

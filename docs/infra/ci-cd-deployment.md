@@ -35,8 +35,9 @@ Flow:
 1. **Build Docker image** — `docker build -f backend/Dockerfile --target runtime-jar ..`
 2. **Start infra** — `docker compose -f docker-compose.infra-stage.yml up -d` (PostgreSQL + Redis)
 3. **Start API container** — runs on `swing-trade-stage_swingtrade-network` with all stage env vars
-4. **Health check** — curls `http://piworm.local:8081/actuator/health`
-5. **Prometheus verification** — checks that `swing-trade-stage` target appears in Prometheus
+4. **Enforce the API memory cap** — applies 1 GiB with `docker update` and verifies the live container limit
+5. **Health check** — polls `http://piworm.local:8081/actuator/health` for up to 75 seconds
+6. **Prometheus verification** — checks that `swing-trade-stage` target appears in Prometheus
 
 ### Deployment path (manual, authoritative)
 

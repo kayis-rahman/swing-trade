@@ -256,8 +256,9 @@ Last checked: 2026-09-27 (expanded endpoint/API and dashboard sanity verificatio
   deterministic source, ingestion, server-manager, PDF, sentiment, and utility coverage.
 
 - [x] Full backend build and integration verification completed 2026-09-17: `./gradlew
-  :api:integrationTest` passed all API integration tests against PostgreSQL in local Colima with
-  `TESTCONTAINERS_RYUK_DISABLED=true`, and `./bin/verify-changes` passed all change-aware checks.
+  :api:integrationTest` passed all API integration tests against PostgreSQL in a local Docker
+  daemon with `TESTCONTAINERS_RYUK_DISABLED=true`, and `./bin/verify-changes` passed all
+  change-aware checks.
   The custom integration task now propagates that Testcontainers setting; the duplicate V41 audit
   migration is idempotent, and test-only scheduler JPA wiring is excluded from production scans.
 
@@ -383,7 +384,7 @@ Self-hosted personal project — no CI gate. `dev-stack.sh` against pi-node infr
 The development database was intentionally reset on 2026-08-29 for a clean verification run, then repopulated the same day: 10 active watchlist symbols, each backfilled with 3yr/738 candles, and one full `/api/backtest/run-all` pass (see Strategy section). The current database is no longer empty: runtime verification on 2026-09-02 loaded 2 open and 8 closed paper positions/trades. The API runs in local paper-trading mode with Yahoo Finance as the active market-data client. Historical verification claims below the Strategy section still describe the earlier reset dataset and are not claims about current state.
 
 **Post-stage follow-ups verification (2026-09-15, commit `e947f7f9`)** — full backend/dashboard check from `docs/plans/2026-09-14-post-stage-follow-ups.md`:
-- Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green against a local colima Docker daemon (`DOCKER_HOST` pointed at colima's socket for this run only; the shared `pi-node` docker context was left untouched). The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
+- Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green against a local Docker daemon; the shared `pi-node` Docker context was left untouched. The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
 - Dashboard: `yarn typecheck` and `yarn test:run` (281 tests) green. `yarn build` fails at the `format:check` step on pre-existing Prettier drift in `DashboardView.vue` and `OrchestratorView.vue`, confirmed present on `main` with no dashboard files modified this session.
 - All three follow-up plan items (equity-curve status, Position decomposition, Docker-capable SELL integration test) are implementation-complete; this entry closes the plan's final "full verification recorded" checklist item.
 
@@ -589,6 +590,13 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] BacktestEngine and live engine share same constants from StrategyParams
 
 **Note (2026-08-29):** no BUY signal has fired for any of the 14 active stocks in the entire `signals` table history — current market conditions produce mostly SELL/HOLD. This isn't a bug, but it means the BUY-side pipeline (sentiment gating, position entry) has never been exercised end-to-end on live data. See LLM Layer and Pilot Stocks Confirmed sections.
+
+- [ ] Isolated BUY-to-paper-position integration coverage added 2026-09-27: deterministic candles
+  generate a BUY, a mocked positive sentiment result is persisted, the real orchestrator queues a
+  paper order, and the real next-session scheduler fills it from the next candle open. It also
+  asserts the linked open `Trade` audit row and entry commission. The test compiles, but
+  Testcontainers execution is pending because the available Docker context is the remote SSH-based
+  `pi-node` daemon, which Testcontainers cannot use in this environment.
 
 ## Signal Pipeline (SELL/Exit)
 

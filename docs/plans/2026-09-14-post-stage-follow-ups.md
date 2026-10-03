@@ -162,8 +162,8 @@ cd backend
 
 ## Phase 3 — Provide Docker-capable SELL integration verification
 
-**Status: complete.** A local Docker daemon (colima) was installed and
-configured on this machine. `SignalPipelineSellExitIntegrationTest` now runs
+**Status: complete.** A local Docker daemon was configured on this machine.
+`SignalPipelineSellExitIntegrationTest` now runs
 and passes green. Getting it running and green surfaced and fixed four real
 pre-existing bugs (none related to Docker/Testcontainers infrastructure once
 that was wired up):
@@ -198,7 +198,7 @@ any of the above bugs could even be reached.
 
 No REST response shapes, the `positions` table, or Flyway migrations changed.
 No dev/stage PostgreSQL was touched — everything ran through Testcontainers
-against a local colima daemon.
+against a local Docker daemon.
 
 ### Decision
 

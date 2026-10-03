@@ -53,6 +53,33 @@ dependencies {
 }
 
 tasks {
+    val checkMigrationVersions = register("checkMigrationVersions") {
+        val migrationFiles = fileTree("src/main/resources/db/migration") {
+            include("V*__*.sql")
+        }
+        inputs.files(migrationFiles)
+        doLast {
+            val migrationsByVersion = migrationFiles.files
+                .mapNotNull { file ->
+                    Regex("^V(\\d+)__.*\\.sql$")
+                        .matchEntire(file.name)
+                        ?.let { it.groupValues[1] to file }
+                }
+                .groupBy({ it.first }, { it.second })
+            val duplicates = migrationsByVersion.filterValues { it.size > 1 }
+            check(duplicates.isEmpty()) {
+                duplicates.entries.joinToString(
+                    prefix = "Duplicate Flyway migration versions:\n",
+                    separator = "\n"
+                ) { (version, files) -> "  V$version: ${files.joinToString { it.name }}" }
+            }
+        }
+    }
+
+    check {
+        dependsOn(checkMigrationVersions)
+    }
+
     compileJava {
         options.compilerArgs.add("-proc:none")
     }

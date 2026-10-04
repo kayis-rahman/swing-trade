@@ -588,4 +588,54 @@ class YahooFinanceClientTest {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
         assertThat(client.searchSymbols("TCS")).isEmpty();
     }
+
+    @Test
+    void fetchCandlesAtFifteenMinuteIntervalRequestsIntradayResolutionAndParsesBarTimes() throws InterruptedException {
+        LocalDate date = LocalDate.of(2026, 9, 15);
+        long ts0915 = java.time.LocalDateTime.of(date, java.time.LocalTime.of(9, 15))
+            .atZone(java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond();
+        long ts0930 = java.time.LocalDateTime.of(date, java.time.LocalTime.of(9, 30))
+            .atZone(java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond();
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(multiCandleResponse(List.of(
+                    new Object[]{ts0915, 4000.0, 4010.0, 3990.0, 4005.0, 500000L, 4005.0},
+                    new Object[]{ts0930, 4005.0, 4020.0, 4000.0, 4015.0, 600000L, 4015.0})))
+                .addHeader("Content-Type", "application/json")
+        );
+
+        List<CandleData> candles = new ArrayList<>();
+        client.fetchCandles("RELIANCE", date, date, com.swingtrade.data.service.Interval.FIFTEEN_MINUTES)
+            .forEach(candles::add);
+
+        var request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).contains("interval=15m");
+
+        assertThat(candles).hasSize(2);
+        assertThat(candles.get(0).interval()).isEqualTo(com.swingtrade.data.service.Interval.FIFTEEN_MINUTES);
+        assertThat(candles.get(0).date()).isEqualTo(date);
+        assertThat(candles.get(0).barTime()).isEqualTo(java.time.LocalTime.of(9, 15));
+        assertThat(candles.get(1).barTime()).isEqualTo(java.time.LocalTime.of(9, 30));
+        assertThat(candles.get(0).close()).isEqualByComparingTo(new BigDecimal("4005.0"));
+        assertThat(candles.get(1).close()).isEqualByComparingTo(new BigDecimal("4015.0"));
+    }
+
+    @Test
+    void fetchCandlesAtDailyIntervalKeepsTheDailyRequestShapeAndNormalizesBarTime() throws InterruptedException {
+        LocalDate date = LocalDate.of(2026, 9, 15);
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(yahooResponse(date, 4000.0, 4010.0, 3990.0, 4005.0, 5000000L))
+                .addHeader("Content-Type", "application/json")
+        );
+
+        List<CandleData> candles = new ArrayList<>();
+        client.fetchCandles("RELIANCE", date, date).forEach(candles::add);
+
+        var request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).contains("interval=1d");
+
+        assertThat(candles).hasSize(1);
+        assertThat(candles.get(0).interval()).isEqualTo(com.swingtrade.data.service.Interval.DAILY);
+        // Daily bars are identified by trading date alone, regardless of the source timestamp.
+        assertThat(candles.get(0).barTime()).isEqualTo(java.time.LocalTime.MIN);
+    }
 }

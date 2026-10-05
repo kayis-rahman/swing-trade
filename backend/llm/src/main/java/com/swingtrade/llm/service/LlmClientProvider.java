@@ -15,6 +15,13 @@ import org.springframework.stereotype.Component;
  * Provider that routes LLM requests to the correct backend.
  * Creates a SpringAiLlmClient backed by the OpenAiChatModel
  * selected by LlmBackendSelector at runtime.
+ *
+ * <p>The model itself is resolved from the live app_settings by
+ * {@link SettingsAwareChatModels}, so a settings write through
+ * {@code PUT /api/settings/llm} takes effect on the next call without a
+ * container restart — the model is rebuilt when the resolved configuration
+ * changes. (The startup-built model beans in LlmConfig cannot do this: the
+ * OpenAI client inside OpenAiChatModel is bound to its options at construction.)
  */
 @Component
 public class LlmClientProvider {
@@ -23,23 +30,15 @@ public class LlmClientProvider {
 
     private final LlmBackendSelector selector;
     private final LlamaCppClient llamaCppClient;
-    private final OpenAiChatModel localModel;
-    private final OpenAiChatModel piSshModel;
-    private final OpenAiChatModel openAiModel;
-    private final OpenAiChatModel ollamaModel;
-    private final OpenAiChatModel layaModel;
+    private final SettingsAwareChatModels settingsAwareChatModels;
     private final PiAgentLlmClient piAgentClient;
     private final String ollamaReasoningEffort;
 
     public LlmClientProvider(LlmBackendSelector selector,
                              LlamaCppClient llamaCppClient,
-                             OpenAiChatModel localModel,
-                             OpenAiChatModel piSshModel,
-                             OpenAiChatModel openAiModel,
-                             OpenAiChatModel ollamaModel,
-                             OpenAiChatModel layaModel) {
-        this(selector, llamaCppClient, localModel, piSshModel, openAiModel, ollamaModel,
-                layaModel, new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
+                             SettingsAwareChatModels settingsAwareChatModels) {
+        this(selector, llamaCppClient, settingsAwareChatModels,
+                new PiAgentLlmClient("pi", "openai-codex", "gpt-5.6-luna", java.time.Duration.ofSeconds(180), false), null);
     }
 
     /**
@@ -51,21 +50,13 @@ public class LlmClientProvider {
     @org.springframework.beans.factory.annotation.Autowired
     public LlmClientProvider(LlmBackendSelector selector,
                              LlamaCppClient llamaCppClient,
-                             @Qualifier("localChatModel") OpenAiChatModel localModel,
-                             @Qualifier("piSshChatModel") OpenAiChatModel piSshModel,
-                             @Qualifier("openAiChatModel") OpenAiChatModel openAiModel,
-                             @Qualifier("ollamaChatModel") OpenAiChatModel ollamaModel,
-                             @Qualifier("layaChatModel") OpenAiChatModel layaModel,
+                             SettingsAwareChatModels settingsAwareChatModels,
                              PiAgentLlmClient piAgentClient,
                              @org.springframework.beans.factory.annotation.Value("${llm.providers.ollama.reasoning-effort:none}") String ollamaReasoningEffort) {
         this.ollamaReasoningEffort = ollamaReasoningEffort;
         this.selector = selector;
         this.llamaCppClient = llamaCppClient;
-        this.localModel = localModel;
-        this.piSshModel = piSshModel;
-        this.openAiModel = openAiModel;
-        this.ollamaModel = ollamaModel;
-        this.layaModel = layaModel;
+        this.settingsAwareChatModels = settingsAwareChatModels;
         this.piAgentClient = piAgentClient;
     }
 
@@ -74,28 +65,22 @@ public class LlmClientProvider {
      * selected by the backend selector.
      */
     public LlmClient getClient() {
-        if (selector.resolve() == LlmBackendSelector.Backend.PI_SSH) {
+        LlmBackendSelector.Backend backend = selector.resolve();
+        if (backend == LlmBackendSelector.Backend.PI_SSH) {
             logger.info("Using native llama.cpp HTTP client for PI_SSH backend");
             return llamaCppClient;
         }
-        if (selector.resolve() == LlmBackendSelector.Backend.PI_AGENT) {
+        if (backend == LlmBackendSelector.Backend.PI_AGENT) {
             logger.info("Using Pi CLI agent provider");
             return piAgentClient;
         }
-        OpenAiChatModel model = switch (selector.resolve()) {
-            case LOCAL -> localModel;
-            case PI_SSH -> piSshModel;
-            case OPENAI -> openAiModel;
-            case OLLAMA -> ollamaModel;
-            case LAYA -> layaModel;
-            case PI_AGENT -> throw new IllegalStateException("Pi agent should be selected before model routing");
-        };
+        OpenAiChatModel model = settingsAwareChatModels.resolve(backend);
         if (model.getOptions() != null) {
-            logger.info("Selected LLM backend {} with model {} at {}", selector.resolve(),
+            logger.info("Selected LLM backend {} with model {} at {}", backend,
                     model.getOptions().getModel(), model.getOptions().getBaseUrl());
         }
         ChatClient chatClient = ChatClient.create(model);
-        String effort = selector.resolve() == LlmBackendSelector.Backend.OLLAMA
+        String effort = backend == LlmBackendSelector.Backend.OLLAMA
                 ? ollamaReasoningEffort : null;
         return new SpringAiLlmClient(chatClient, false, effort);
     }

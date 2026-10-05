@@ -1,5 +1,30 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-05 (Laya dashboard settings slice DevStack verification)
+
+- [x] Laya LLM settings slice (branch `fm/swing-trade-laya-dashboard-config-v1`, commit fe3764f2) verified
+  through the repository DevStack: `GET/PUT /api/settings/llm` expose `laya.base_url`/`laya.model`;
+  PUT persists to the `app_settings` table (cache + DB) and survives backend restart; backend
+  selection stays dynamic (`LlmBackendSelector`); after restart the provider logs
+  `Selected LLM backend LAYA with model qwen3.5:4b at http://localhost:11434/v1`, confirming the
+  persisted configuration is wired into the Laya client. Live request through the Laya client
+  reached local Ollama. Note: with thinking models (qwen3.5:4b) the response `content` can be
+  empty while the answer lands in `reasoning`; `SpringAiLlmClient` recovers JSON from the reasoning
+  field for JSON workloads (sentiment). The Ollama backend additionally sends
+  `reasoning_effort=none` (pre-existing design, sent only to the Ollama backend); the Laya
+  backend follows the OpenAI-backend pattern. Existing local/Pi SSH/OpenAI/Ollama backends are
+  unaffected (Ollama probe passes on the same endpoint/model).
+- [x] Focused tests pass in this copy: backend `:llm` config/service tests, `:api`
+  `SettingsController*` tests, and dashboard `settings.test.ts` + `SettingsView.test.ts` (32 tests).
+  One transient `:api:test` failure (`GradleWorkerMain` ClassNotFoundException) cleared after
+  `./gradlew --stop` — stale daemon state, not a code defect.
+- [x] DevStack API startup limitation diagnosed: the reported "exits during startup after Flyway
+  connects" was reproduced only after two overlapping `dev-stack.sh start` runs raced each other
+  (second start's processes interfered with the first). A single clean start is reliable; the
+  full validation above completed on a cleanly started stack. `backend/gradle/wrapper/gradle-wrapper.jar`
+  is gitignored and was missing in this copy; restored from the primary checkout (identical
+  pinned Gradle 9.6.1 config, matching jar hash) without committing it.
+
 Last checked: 2026-09-27 (expanded endpoint/API and dashboard sanity verification)
 
 - [x] Expanded endpoint/API and dashboard sanity verification: OpenAPI Playwright now exercises

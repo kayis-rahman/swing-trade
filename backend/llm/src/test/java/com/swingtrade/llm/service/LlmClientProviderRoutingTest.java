@@ -51,12 +51,11 @@ class LlmClientProviderRoutingTest {
 
     @BeforeEach
     void setUp() {
-        when(settingsAwareChatModels.resolve(LlmBackendSelector.Backend.LOCAL)).thenReturn(localModel);
-        when(settingsAwareChatModels.resolve(LlmBackendSelector.Backend.PI_SSH)).thenReturn(piSshModel);
-        when(settingsAwareChatModels.resolve(LlmBackendSelector.Backend.OPENAI)).thenReturn(openAiModel);
-        when(settingsAwareChatModels.resolve(LlmBackendSelector.Backend.OLLAMA)).thenReturn(ollamaModel);
-        when(settingsAwareChatModels.resolve(LlmBackendSelector.Backend.LAYA)).thenReturn(layaModel);
         provider = new LlmClientProvider(selector, mock(LlamaCppClient.class), settingsAwareChatModels);
+    }
+
+    private void stubModel(LlmBackendSelector.Backend backend, OpenAiChatModel model) {
+        when(settingsAwareChatModels.resolve(backend)).thenReturn(model);
     }
 
     @Nested
@@ -68,6 +67,7 @@ class LlmClientProviderRoutingTest {
         void shouldReturnLocalClientWhenBackendIsLocal() {
             // Arrange
             when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.LOCAL);
+            stubModel(LlmBackendSelector.Backend.LOCAL, localModel);
 
             // Act
             LlmClient client = provider.getClient();
@@ -104,6 +104,7 @@ class LlmClientProviderRoutingTest {
         void shouldReturnOpenaiClientWhenBackendIsOpenai() {
             // Arrange
             when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+            stubModel(LlmBackendSelector.Backend.OPENAI, openAiModel);
 
             // Act
             LlmClient client = provider.getClient();
@@ -122,6 +123,7 @@ class LlmClientProviderRoutingTest {
         void shouldReturnLayaClientWhenBackendIsLaya() {
             // Arrange
             when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.LAYA);
+            stubModel(LlmBackendSelector.Backend.LAYA, layaModel);
 
             // Act
             LlmClient client = provider.getClient();

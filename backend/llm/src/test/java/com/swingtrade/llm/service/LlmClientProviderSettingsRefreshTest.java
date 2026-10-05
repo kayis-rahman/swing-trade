@@ -78,7 +78,7 @@ class LlmClientProviderSettingsRefreshTest {
     void settingsChangeIsHonouredOnNextCallWithoutRestart() throws Exception {
         // First call uses the initial configuration.
         String first = provider.getClient()
-            .generateChatCompletion(List.of(Map.of("role", "user", "content", "hi")), 16, 0.0)
+            .generateChatCompletion(testMessages(), 16, 0.0)
             .block();
         assertThat(first).isEqualTo("hello");
         RecordedRequest request1 = server1.takeRequest(10, TimeUnit.SECONDS);
@@ -95,7 +95,7 @@ class LlmClientProviderSettingsRefreshTest {
         // server1 with key-1 again (the startup-built model bean) and the
         // orchestrator degraded against the stale configuration.
         String second = provider.getClient()
-            .generateChatCompletion(List.of(Map.of("role", "user", "content", "hi")), 16, 0.0)
+            .generateChatCompletion(testMessages(), 16, 0.0)
             .block();
         assertThat(second).isEqualTo("hello");
         RecordedRequest request2 = server2.takeRequest(10, TimeUnit.SECONDS);
@@ -112,7 +112,7 @@ class LlmClientProviderSettingsRefreshTest {
         store.set("llm.extra_headers", "{\"x-opencode-session\":\"session-abc\"}");
 
         provider.getClient()
-            .generateChatCompletion(List.of(Map.of("role", "user", "content", "hi")), 16, 0.0)
+            .generateChatCompletion(testMessages(), 16, 0.0)
             .block();
 
         RecordedRequest request = server1.takeRequest(10, TimeUnit.SECONDS);
@@ -130,6 +130,12 @@ class LlmClientProviderSettingsRefreshTest {
         store.set("openai.api_key", "key-2");
         OpenAiChatModel third = models.resolve(LlmBackendSelector.Backend.OPENAI);
         assertThat(third).isNotSameAs(first);
+    }
+
+    private static List<Map<String, String>> testMessages() {
+        return List.of(
+            Map.of("role", "system", "content", "You are a test."),
+            Map.of("role", "user", "content", "hi"));
     }
 
     private static MockResponse completionResponse(String model) {

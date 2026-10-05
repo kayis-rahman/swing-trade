@@ -11,8 +11,8 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import com.swingtrade.llm.client.LlamaCppClient;
 import com.swingtrade.llm.client.LlmClient;
 import static org.mockito.Mockito.mock;
-
 import static org.mockito.Mockito.when;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -44,12 +44,18 @@ class LlmClientProviderRoutingTest {
     @Mock
     private OpenAiChatModel layaModel;
 
+    @Mock
+    private SettingsAwareChatModels settingsAwareChatModels;
+
     private LlmClientProvider provider;
 
     @BeforeEach
     void setUp() {
-        provider = new LlmClientProvider(selector, mock(LlamaCppClient.class), localModel,
-                piSshModel, openAiModel, ollamaModel, layaModel);
+        provider = new LlmClientProvider(selector, mock(LlamaCppClient.class), settingsAwareChatModels);
+    }
+
+    private void stubModel(LlmBackendSelector.Backend backend, OpenAiChatModel model) {
+        when(settingsAwareChatModels.resolve(backend)).thenReturn(model);
     }
 
     @Nested
@@ -61,6 +67,7 @@ class LlmClientProviderRoutingTest {
         void shouldReturnLocalClientWhenBackendIsLocal() {
             // Arrange
             when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.LOCAL);
+            stubModel(LlmBackendSelector.Backend.LOCAL, localModel);
 
             // Act
             LlmClient client = provider.getClient();
@@ -94,9 +101,10 @@ class LlmClientProviderRoutingTest {
 
         @Test
         @DisplayName("should return openai client when backend is openai")
-        void shouldReturnOpenAiClientWhenBackendIsOpenai() {
+        void shouldReturnOpenaiClientWhenBackendIsOpenai() {
             // Arrange
             when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+            stubModel(LlmBackendSelector.Backend.OPENAI, openAiModel);
 
             // Act
             LlmClient client = provider.getClient();
@@ -115,6 +123,7 @@ class LlmClientProviderRoutingTest {
         void shouldReturnLayaClientWhenBackendIsLaya() {
             // Arrange
             when(selector.resolve()).thenReturn(LlmBackendSelector.Backend.LAYA);
+            stubModel(LlmBackendSelector.Backend.LAYA, layaModel);
 
             // Act
             LlmClient client = provider.getClient();

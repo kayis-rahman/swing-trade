@@ -11,7 +11,6 @@ import com.swingtrade.llm.service.SentimentAnalyzer;
 import com.swingtrade.llm.service.LlmBackendSelector;
 import com.swingtrade.llm.service.LlmClientProvider;
 import com.swingtrade.llm.service.LlmServerManagerProvider;
-import org.springframework.ai.openai.OpenAiChatModel;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration;
@@ -129,13 +128,8 @@ public class TestLlmConfig {
     public LlmClientProvider llmClientProvider(
             LlmBackendSelector selector,
             com.swingtrade.llm.client.LlamaCppClient llamaCppClient,
-            OpenAiChatModel localChatModel,
-            OpenAiChatModel piSshChatModel,
-            OpenAiChatModel openAiChatModel,
-            OpenAiChatModel ollamaChatModel,
-            OpenAiChatModel layaChatModel) {
-        return new LlmClientProvider(selector, llamaCppClient,
-                localChatModel, piSshChatModel, openAiChatModel, ollamaChatModel, layaChatModel);
+            com.swingtrade.llm.service.SettingsAwareChatModels settingsAwareChatModels) {
+        return new LlmClientProvider(selector, llamaCppClient, settingsAwareChatModels);
     }
 
     // ===== H2 Database Configuration for Testing =====

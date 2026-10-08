@@ -281,7 +281,7 @@ Last checked: 2026-09-27 (expanded endpoint/API and dashboard sanity verificatio
   deterministic source, ingestion, server-manager, PDF, sentiment, and utility coverage.
 
 - [x] Full backend build and integration verification completed 2026-09-17: `./gradlew
-  :api:integrationTest` passed all API integration tests against PostgreSQL in local Colima with
+  :api:integrationTest` passed all API integration tests against PostgreSQL with
   `TESTCONTAINERS_RYUK_DISABLED=true`, and `./bin/verify-changes` passed all change-aware checks.
   The custom integration task now propagates that Testcontainers setting; the duplicate V41 audit
   migration is idempotent, and test-only scheduler JPA wiring is excluded from production scans.
@@ -408,7 +408,7 @@ Self-hosted personal project — no CI gate. `dev-stack.sh` against pi-node infr
 The development database was intentionally reset on 2026-08-29 for a clean verification run, then repopulated the same day: 10 active watchlist symbols, each backfilled with 3yr/738 candles, and one full `/api/backtest/run-all` pass (see Strategy section). The current database is no longer empty: runtime verification on 2026-09-02 loaded 2 open and 8 closed paper positions/trades. The API runs in local paper-trading mode with Yahoo Finance as the active market-data client. Historical verification claims below the Strategy section still describe the earlier reset dataset and are not claims about current state.
 
 **Post-stage follow-ups verification (2026-09-15, commit `e947f7f9`)** — full backend/dashboard check from `docs/plans/2026-09-14-post-stage-follow-ups.md`:
-- Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green against a local colima Docker daemon (`DOCKER_HOST` pointed at colima's socket for this run only; the shared `pi-node` docker context was left untouched). The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
+- Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green. The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
 - Dashboard: `yarn typecheck` and `yarn test:run` (281 tests) green. `yarn build` fails at the `format:check` step on pre-existing Prettier drift in `DashboardView.vue` and `OrchestratorView.vue`, confirmed present on `main` with no dashboard files modified this session.
 - All three follow-up plan items (equity-curve status, Position decomposition, Docker-capable SELL integration test) are implementation-complete; this entry closes the plan's final "full verification recorded" checklist item.
 
@@ -635,7 +635,7 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] Stale exit price / wrong P&L — `PositionService.closePosition()` now sources exit price from `CandleStore.findLatestBySymbol()` (latest ingested OHLCV close, same source `PaperTradingMonitorService` uses), falling back to `currentPrice`/`entryPrice` only if no candle exists.
 - [x] Reviewed via Crit (2026-08-29): raw exit-reason string literals (`"SIGNAL_EXIT"`, `"manual"`, `"manual_close"`) replaced with `backend/strategy/.../ExitReason` enum (added missing `MANUAL` value; previously only used by the backtest engine, not the live path). Also fixed a pre-existing inconsistency where `PositionService` defaulted to `"manual_close"` and `PaperTradingStateService` defaulted to `"manual"` for the same case, and picked up a genuinely missing `broker → strategy` Gradle dependency along the way.
 - New tests: `PaperTradingStateServiceTest.ClosePosition.usesActualExitReason_notHardcodedManual`, `PositionServiceTest` (`ClosePosition`/`CreatePosition` groups). The pre-existing `SignalPipelineSellExitIntegrationTest` was extended with assertions for all three, compiles clean.
-- **Accepted risk (2026-08-29):** the extended integration test still can't execute here — TestContainers vs. `pi-node`'s SSH-based remote Docker context is a fundamental mismatch, not a fixable version skew (see note above). Decision: acceptable to start the pilot on unit-level verification alone; fix once Docker access to a TestContainers-compatible daemon is sorted (e.g. a local daemon or a CI runner with local Docker), not a pilot blocker.
+- **Accepted risk (2026-08-29):** the extended integration test still can't execute here — TestContainers vs. `pi-node`'s SSH-based remote Docker context is a fundamental mismatch, not a fixable version skew (see note above). Decision: acceptable to start the pilot on unit-level verification alone; fix once Docker access to a TestContainers-compatible daemon is sorted (for example, a CI runner with Docker), not a pilot blocker.
 - The former `generate-all` SELL wiring inconsistency is resolved: both signal-generation paths now share `closeHeldPositionOnSell()`.
 - The bad WIPRO test state (`realized_pnl=0.00`, `exit_reason='manual'`) is gone — the whole paper trading portfolio was reset to a clean ₹5,00,000/zero-P&L baseline (see Paper Trading section note).
 

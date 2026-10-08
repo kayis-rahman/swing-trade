@@ -8,7 +8,7 @@ reopening completed deployment work:
 1. reconcile the stale dashboard equity-curve status;
 2. split the oversized core `Position` model safely across module boundaries;
 3. make the SELL close-out integration test runnable in an environment with a
-   local Docker daemon.
+   Docker-capable environment.
 
 The stage deployment recorded in
 `docs/plans/2026-09-02-stage-deploy-progress.md` remains complete. None of the
@@ -162,9 +162,8 @@ cd backend
 
 ## Phase 3 — Provide Docker-capable SELL integration verification
 
-**Status: complete.** A local Docker daemon (colima) was installed and
-configured on this machine. `SignalPipelineSellExitIntegrationTest` now runs
-and passes green. Getting it running and green surfaced and fixed four real
+**Status: complete.** `SignalPipelineSellExitIntegrationTest` now runs and
+passes green. Getting it running and green surfaced and fixed four real
 pre-existing bugs (none related to Docker/Testcontainers infrastructure once
 that was wired up):
 
@@ -197,19 +196,17 @@ authoritative `data` module's `V1` migration once `data.jar` was on the
 any of the above bugs could even be reached.
 
 No REST response shapes, the `positions` table, or Flyway migrations changed.
-No dev/stage PostgreSQL was touched — everything ran through Testcontainers
-against a local colima daemon.
+No dev/stage PostgreSQL was touched — everything ran through Testcontainers.
 
 ### Decision
 
-Keep the existing Testcontainers test and run it only on a developer machine
-where Docker is local to the Gradle process. This avoids destructive use of the
-shared development/stage databases and avoids pretending a remote SSH Docker
-context is Testcontainers-compatible. No GitHub Actions workflow is required.
+Keep the existing Testcontainers test. This avoids destructive use of the
+shared development/stage databases and avoids relying on an SSH Docker context
+that may not be Testcontainers-compatible. No GitHub Actions workflow is required.
 
 ### Changes
 
-1. On a machine with a local Docker daemon, run only:
+1. Run only:
 
    ```bash
    cd backend
@@ -218,8 +215,7 @@ context is Testcontainers-compatible. No GitHub Actions workflow is required.
    ```
 
 2. Ensure the shell environment does not inherit repository `DOCKER_HOST` or
-   remote Docker context settings. Testcontainers must discover the local
-   daemon.
+   remote Docker context settings.
 3. Preserve the Gradle XML and HTML reports from the local run when sharing a
    result.
 4. Document the manual invocation and expected assertions in the SELL pipeline
@@ -228,9 +224,9 @@ context is Testcontainers-compatible. No GitHub Actions workflow is required.
 5. After one green run, record the commit and date in `docs/status.md`. Do not
    claim integration verification before the report is available.
 
-If hosted CI is intentionally out of scope, use the same command on a developer
-machine with a local Docker daemon. Do not replace the Testcontainers test with
-a script pointed at `pi-node` PostgreSQL.
+If hosted CI is intentionally out of scope, run the same command in an
+appropriate Docker-capable environment. Do not replace the Testcontainers test
+with a script pointed at `pi-node` PostgreSQL.
 
 ### Acceptance criteria
 
@@ -258,6 +254,6 @@ completed stage deployment.
 - [x] Dashboard equity states are covered and `docs/status.md` is corrected.
 - [x] Position is decomposed without API, persistence, or trading-behavior drift.
 - [x] Unused API Position DTO is removed.
-- [x] SELL integration test has a green report from a local-Docker environment.
+- [x] SELL integration test has a green report.
 - [x] Full relevant backend/dashboard verification is recorded before any stage
       promotion.

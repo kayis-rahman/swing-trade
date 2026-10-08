@@ -31,8 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -135,18 +133,28 @@ class CandidateScanServiceTest {
     class Lifecycle {
 
         @Test
-        void manualScansCoverAllActiveStockRecords() {
+        void manualScansAllNseStockRowsRegardlessOfActivityAndSkipsOtherExchanges() {
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
             StockEntity firstStock = new StockEntity();
             firstStock.setSymbol("INFY");
+            firstStock.setExchange("NSE");
             StockEntity secondStock = new StockEntity();
             secondStock.setSymbol("TCS");
+            secondStock.setExchange("NSE");
             StockEntity thirdStock = new StockEntity();
             thirdStock.setSymbol("M&M");
+            thirdStock.setExchange("NSE");
             StockEntity fourthStock = new StockEntity();
             fourthStock.setSymbol("BAJAJ-AUTO");
-            when(stockRepository.findByActiveTrueOrderBySymbolAsc())
-                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock));
+            fourthStock.setExchange("NSE");
+            StockEntity fifthStock = new StockEntity();
+            fifthStock.setSymbol("BSECO");
+            fifthStock.setExchange("BSE");
+            StockEntity sixthStock = new StockEntity();
+            sixthStock.setSymbol("FOOCO");
+            sixthStock.setExchange("FOO");
+            when(stockRepository.findAllByOrderBySymbol())
+                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, fifthStock, sixthStock));
 
             CandidateScanRunEntity scan = service.start();
 
@@ -154,65 +162,15 @@ class CandidateScanServiceTest {
             assertThat(scan.getTotalSymbols()).isEqualTo(4);
             assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
             assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
-            verify(stockRepository).findByActiveTrueOrderBySymbolAsc();
+            verify(stockRepository).findAllByOrderBySymbol();
             verify(watchlistService, never()).getAllWatchlist();
-        }
-
-        @Test
-        void manualScanCarriesBseExchangeThroughIngestionAndResult() {
-            when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            StockEntity stock = new StockEntity();
-            stock.setSymbol("BSECO");
-            stock.setExchange("BSE");
-            when(stockRepository.findByActiveTrueOrderBySymbolAsc()).thenReturn(List.of(stock));
-            when(ingestionService.backfillStockDataWithOutcome("BSECO", "BSE", 3))
-                .thenReturn(new DataIngestionService.BackfillOutcome("NO_USABLE_DATA", 0, 0, 0, null));
-
-            service.start();
-
-            org.mockito.Mockito.verify(ingestionService, org.mockito.Mockito.timeout(1000))
-                .backfillStockDataWithOutcome("BSECO", "BSE", 3);
-            org.mockito.ArgumentCaptor<CandidateScanResultEntity> result =
-                org.mockito.ArgumentCaptor.forClass(CandidateScanResultEntity.class);
-            org.mockito.Mockito.verify(resultRepository, org.mockito.Mockito.timeout(1000)).save(result.capture());
-            assertThat(result.getValue().getExchange()).isEqualTo("BSE");
-        }
-
-        @Test
-        void unsupportedExchangeIsRecordedWithoutCallingMarketData() {
-            AtomicReference<CandidateScanRunEntity> savedRun = new AtomicReference<>();
-            when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            org.mockito.Mockito.doAnswer(invocation -> {
-                CandidateScanRunEntity run = invocation.getArgument(0);
-                savedRun.set(run);
-                return run;
-            }).when(runRepository).save(any());
-            when(runRepository.findByRunId(any()))
-                .thenAnswer(invocation -> Optional.ofNullable(savedRun.get()));
-            StockEntity stock = new StockEntity();
-            stock.setSymbol("FOOCO");
-            stock.setExchange("FOO");
-            when(stockRepository.findByActiveTrueOrderBySymbolAsc()).thenReturn(List.of(stock));
-
-            CandidateScanRunEntity scan = service.start();
-
-            org.mockito.ArgumentCaptor<CandidateScanResultEntity> result =
-                org.mockito.ArgumentCaptor.forClass(CandidateScanResultEntity.class);
-            org.mockito.Mockito.verify(resultRepository, org.mockito.Mockito.timeout(1000)).save(result.capture());
-            org.mockito.Mockito.verify(ingestionService, never())
-                .backfillStockDataWithOutcome(anyString(), anyString(), anyInt());
-            org.mockito.Mockito.verify(runRepository, org.mockito.Mockito.timeout(1000).atLeast(3)).save(scan);
-            assertThat(result.getValue().getExchange()).isEqualTo("FOO");
-            assertThat(result.getValue().getDataStatus()).isEqualTo("ERROR");
-            assertThat(result.getValue().getErrorMessage()).contains("Unsupported exchange: FOO");
-            assertThat(scan.getFailedSymbols()).isEqualTo(1);
         }
 
         @Test
         void completedManualScanWithNoQualifiedSymbolsKeepsItsHandoffPending() {
             AtomicReference<CandidateScanRunEntity> savedRun = new AtomicReference<>();
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            when(stockRepository.findByActiveTrueOrderBySymbolAsc()).thenReturn(List.of());
+            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of());
             org.mockito.Mockito.doAnswer(invocation -> {
                 CandidateScanRunEntity run = invocation.getArgument(0);
                 savedRun.set(run);

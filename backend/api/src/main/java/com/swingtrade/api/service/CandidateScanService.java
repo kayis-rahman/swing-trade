@@ -2,6 +2,7 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
+import com.swingtrade.data.entity.StockEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.CandidateHistoryEligibilityRepository;
@@ -166,7 +167,7 @@ public class CandidateScanService {
     }
 
     @Transactional
-    /** Manual scans discover candidates across active stock records. */
+    /** Manual scans discover candidates from NSE stock rows. */
     public CandidateScanRunEntity start() { return start(false, false); }
 
     /** Scheduled scans persist a handoff request for their qualified candidates. */
@@ -193,7 +194,15 @@ public class CandidateScanService {
             sourceSymbols = symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
                 .map(s -> new ScanTarget(s.getTradingSymbol(), "NSE")).toList();
         } else {
-            sourceSymbols = stockRepository.findByActiveTrueOrderBySymbolAsc().stream()
+            List<StockEntity> stocks = stockRepository.findAllByOrderBySymbol();
+            long skippedOtherExchanges = stocks.stream()
+                .filter(stock -> !"NSE".equalsIgnoreCase(stock.getExchange() == null
+                    ? "" : stock.getExchange().trim()))
+                .count();
+            logger.info("Manual candidate scan skipped {} stock row(s) outside NSE.", skippedOtherExchanges);
+            sourceSymbols = stocks.stream()
+                .filter(stock -> "NSE".equalsIgnoreCase(stock.getExchange() == null
+                    ? "" : stock.getExchange().trim()))
                 .map(stock -> new ScanTarget(stock.getSymbol(), stock.getExchange())).toList();
         }
 
@@ -220,7 +229,7 @@ public class CandidateScanService {
         pauses.put(run.getRunId(), new AtomicBoolean(false));
         logHistory.put(run.getRunId(), new ConcurrentLinkedDeque<>());
         publish(run.getRunId(), "RUN_STARTED", null, "INFO",
-            "Scanning " + symbols.size() + " active stock symbols with up to " + maxConcurrent + " workers.");
+            "Scanning " + symbols.size() + " stock symbols with up to " + maxConcurrent + " workers.");
         Runnable scanTask = () -> execute(run.getRunId(), symbols, scheduled);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

@@ -23,7 +23,6 @@ class StockStoreImplTest {
     void mapsQueriesAndDelegatesSave() {
         StockRepository repository = mock(StockRepository.class);
         StockEntity entity = StockEntity.fromDomain(STOCK);
-        when(repository.findByActiveTrueOrderBySymbolAsc()).thenReturn(List.of(entity));
         when(repository.findAllByOrderBySymbol()).thenReturn(List.of(entity));
         when(repository.findBySymbol("TCS")).thenReturn(Optional.of(entity));
         when(repository.findBySector("IT")).thenReturn(List.of(entity));
@@ -32,7 +31,6 @@ class StockStoreImplTest {
         StockStoreImpl store = new StockStoreImpl(repository);
 
         assertThat(store.findAllActive()).extracting(Stock::symbol).containsExactly("TCS");
-        verify(repository).findByActiveTrueOrderBySymbolAsc();
         assertThat(store.findBySymbol("TCS")).get().extracting(Stock::symbol).isEqualTo("TCS");
         assertThat(store.findBySector("IT")).hasSize(1);
         assertThat(store.findByAddedOnBefore(LocalDate.of(2021, 1, 1))).hasSize(1);
@@ -43,18 +41,4 @@ class StockStoreImplTest {
         verify(repository).save(any(StockEntity.class));
     }
 
-    @Test
-    void savingExistingStockPreservesItsActiveState() {
-        StockRepository repository = mock(StockRepository.class);
-        StockEntity inactive = StockEntity.fromDomain(STOCK);
-        inactive.setActive(false);
-        when(repository.findBySymbol("TCS")).thenReturn(Optional.of(inactive));
-        StockStoreImpl store = new StockStoreImpl(repository);
-
-        store.save(STOCK);
-
-        org.mockito.ArgumentCaptor<StockEntity> saved = org.mockito.ArgumentCaptor.forClass(StockEntity.class);
-        verify(repository).save(saved.capture());
-        assertThat(saved.getValue().isActive()).isFalse();
-    }
 }

@@ -21,7 +21,7 @@ public class StockStoreImpl implements StockStore {
 
     @Override
     public List<Stock> findAllActive() {
-        return repository.findByActiveTrueOrderBySymbolAsc().stream()
+        return repository.findAllByOrderBySymbol().stream()
             .map(StockEntity::toDomain)
             .toList();
     }
@@ -33,9 +33,7 @@ public class StockStoreImpl implements StockStore {
 
     @Override
     public void save(Stock stock) {
-        StockEntity entity = StockEntity.fromDomain(stock);
-        repository.findBySymbol(stock.symbol()).ifPresent(existing -> entity.setActive(existing.isActive()));
-        repository.save(entity);
+        repository.save(StockEntity.fromDomain(stock));
     }
 
     @Override

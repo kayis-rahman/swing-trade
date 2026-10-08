@@ -69,6 +69,8 @@ public interface StockRepository extends JpaRepository<StockEntity, Long> {
      */
     List<StockEntity> findAllByOrderBySymbol();
 
+    List<StockEntity> findByActiveTrueOrderBySymbolAsc();
+
     /**
      * Checks if a symbol exists in NSE or BSE.
      *

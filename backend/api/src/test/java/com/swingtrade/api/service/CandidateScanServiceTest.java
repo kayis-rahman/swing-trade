@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -134,15 +135,41 @@ class CandidateScanServiceTest {
             firstStock.setSymbol("INFY");
             StockEntity secondStock = new StockEntity();
             secondStock.setSymbol("TCS");
-            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of(firstStock, secondStock));
+            StockEntity thirdStock = new StockEntity();
+            thirdStock.setSymbol("M&M");
+            StockEntity fourthStock = new StockEntity();
+            fourthStock.setSymbol("BAJAJ-AUTO");
+            when(stockRepository.findAllByOrderBySymbol())
+                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock));
 
             CandidateScanRunEntity scan = service.start();
 
             assertThat(scan.getScanScope()).isEqualTo("ACTIVE_STOCKS");
-            assertThat(scan.getTotalSymbols()).isEqualTo(2);
+            assertThat(scan.getTotalSymbols()).isEqualTo(4);
             assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
             assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
             verify(stockRepository).findAllByOrderBySymbol();
+        }
+
+        @Test
+        void completedManualScanWithNoQualifiedSymbolsKeepsItsHandoffPending() {
+            AtomicReference<CandidateScanRunEntity> savedRun = new AtomicReference<>();
+            when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
+            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of());
+            org.mockito.Mockito.doAnswer(invocation -> {
+                CandidateScanRunEntity run = invocation.getArgument(0);
+                savedRun.set(run);
+                return run;
+            }).when(runRepository).save(any());
+            when(runRepository.findByRunId(any()))
+                .thenAnswer(invocation -> Optional.ofNullable(savedRun.get()));
+
+            CandidateScanRunEntity scan = service.start();
+
+            org.mockito.Mockito.verify(runRepository, org.mockito.Mockito.timeout(1000).atLeast(2)).save(scan);
+            assertThat(scan.getStatus()).isEqualTo("COMPLETED");
+            assertThat(scan.getQualifiedSymbols()).isZero();
+            assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
         }
 
         @Test

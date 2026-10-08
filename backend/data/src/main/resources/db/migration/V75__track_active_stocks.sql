@@ -1,5 +1,0 @@
-ALTER TABLE stocks ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
-
-UPDATE stocks
-SET is_active = FALSE
-WHERE symbol = 'HDFC';

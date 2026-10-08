@@ -191,15 +191,8 @@ public class CandidateScanService {
             sourceSymbols = symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
                 .map(s -> s.getTradingSymbol()).toList();
         } else {
-            var inactiveSymbols = watchlistService == null ? java.util.Set.<String>of()
-                : watchlistService.getAllWatchlist().stream()
-                    .filter(entry -> Boolean.FALSE.equals(entry.getIsActive()))
-                    .map(entry -> entry.getSymbol() == null ? "" : entry.getSymbol().trim().toUpperCase())
-                    .collect(java.util.stream.Collectors.toSet());
-            sourceSymbols = stockRepository.findAllByOrderBySymbol().stream()
-                .map(stock -> stock.getSymbol())
-                .filter(symbol -> symbol == null || !inactiveSymbols.contains(symbol.trim().toUpperCase()))
-                .toList();
+            sourceSymbols = stockRepository.findByActiveTrueOrderBySymbolAsc().stream()
+                .map(stock -> stock.getSymbol()).toList();
         }
 
         List<String> symbols = sourceSymbols.stream()

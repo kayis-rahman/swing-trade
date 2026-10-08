@@ -3,7 +3,6 @@ package com.swingtrade.api.service;
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
 import com.swingtrade.data.entity.StockEntity;
-import com.swingtrade.data.entity.WatchlistEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.FyersSymbolRepository;
@@ -142,13 +141,8 @@ class CandidateScanServiceTest {
             thirdStock.setSymbol("M&M");
             StockEntity fourthStock = new StockEntity();
             fourthStock.setSymbol("BAJAJ-AUTO");
-            StockEntity inactiveStock = new StockEntity();
-            inactiveStock.setSymbol("HDFC");
-            when(stockRepository.findAllByOrderBySymbol())
-                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, inactiveStock));
-            WatchlistEntity inactiveWatchlistEntry = new WatchlistEntity("HDFC", "Former issuer");
-            inactiveWatchlistEntry.setIsActive(false);
-            when(watchlistService.getAllWatchlist()).thenReturn(List.of(inactiveWatchlistEntry));
+            when(stockRepository.findByActiveTrueOrderBySymbolAsc())
+                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock));
 
             CandidateScanRunEntity scan = service.start();
 
@@ -156,14 +150,15 @@ class CandidateScanServiceTest {
             assertThat(scan.getTotalSymbols()).isEqualTo(4);
             assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
             assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
-            verify(stockRepository).findAllByOrderBySymbol();
+            verify(stockRepository).findByActiveTrueOrderBySymbolAsc();
+            verify(watchlistService, never()).getAllWatchlist();
         }
 
         @Test
         void completedManualScanWithNoQualifiedSymbolsKeepsItsHandoffPending() {
             AtomicReference<CandidateScanRunEntity> savedRun = new AtomicReference<>();
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of());
+            when(stockRepository.findByActiveTrueOrderBySymbolAsc()).thenReturn(List.of());
             org.mockito.Mockito.doAnswer(invocation -> {
                 CandidateScanRunEntity run = invocation.getArgument(0);
                 savedRun.set(run);

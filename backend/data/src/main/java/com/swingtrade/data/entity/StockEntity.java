@@ -40,6 +40,9 @@ public class StockEntity {
     @Column(length = 50)
     private String exchange;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     @Column(length = 100)
     private String sector;
 
@@ -166,6 +169,14 @@ public class StockEntity {
 
     public void setExchange(String exchange) {
         this.exchange = exchange;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public String getSector() {

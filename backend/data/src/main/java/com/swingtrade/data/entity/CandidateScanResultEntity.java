@@ -29,8 +29,6 @@ public class CandidateScanResultEntity {
     private UUID runId;
     @Column(nullable = false, length = 32)
     private String symbol;
-    @Column(nullable = false, length = 8)
-    private String exchange = "NSE";
     @Column(name = "data_status", nullable = false, length = 24)
     private String dataStatus;
     @Column(name = "candle_count", nullable = false)
@@ -86,8 +84,6 @@ public class CandidateScanResultEntity {
     public void setRunId(UUID value) { this.runId = value; }
     public String getSymbol() { return symbol; }
     public void setSymbol(String value) { this.symbol = value; }
-    public String getExchange() { return exchange; }
-    public void setExchange(String value) { this.exchange = value; }
     public String getDataStatus() { return dataStatus; }
     public void setDataStatus(String value) { this.dataStatus = value; }
     public int getCandleCount() { return candleCount; }

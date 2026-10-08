@@ -127,15 +127,16 @@ public class FyersServiceClient implements MarketDataClient {
 
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate) {
-        return fetchCandles(symbol, "NSE", startDate, endDate);
+        // The daily path stays the default: identical request shape to the pre-interval client.
+        return fetchCandles(symbol, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
     }
 
-    @Override
-    public Iterable<CandleData> fetchCandles(String symbol, String exchange,
-                                              LocalDate startDate, LocalDate endDate) {
-        return fetchCandlesList(symbol, exchange, startDate, endDate);
-    }
-
+    /**
+     * Interval-aware fetch. Fyers' history API takes the resolution as a request
+     * parameter ({@code D} for daily, {@code 15} for fifteen-minute bars); each returned
+     * bar is stamped with its start time, except daily bars which are normalized to
+     * 00:00 so daily identity stays {@code (symbol, date)}.
+     */
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate,
                                              com.swingtrade.data.service.Interval interval) {
@@ -149,16 +150,7 @@ public class FyersServiceClient implements MarketDataClient {
 
     List<CandleData> fetchCandlesList(String symbol, LocalDate startDate, LocalDate endDate,
                                       com.swingtrade.data.service.Interval interval) {
-        return fetchCandlesList(symbol, "NSE", startDate, endDate, interval);
-    }
-
-    List<CandleData> fetchCandlesList(String symbol, String exchange, LocalDate startDate, LocalDate endDate) {
-        return fetchCandlesList(symbol, exchange, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
-    }
-
-    List<CandleData> fetchCandlesList(String symbol, String exchange, LocalDate startDate, LocalDate endDate,
-                                      com.swingtrade.data.service.Interval interval) {
-        String fyersSymbol = exchange.toUpperCase() + ":" + symbol + "-EQ";
+        String fyersSymbol = "NSE:" + symbol + "-EQ";
         // Keyed by (date, barTime): daily bars collapse to one entry per date, while
         // intraday bars keep every bar of the session.
         Map<String, CandleData> byBar = new LinkedHashMap<>();

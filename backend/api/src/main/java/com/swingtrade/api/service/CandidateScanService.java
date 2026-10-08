@@ -489,7 +489,7 @@ public class CandidateScanService {
     private void processSymbol(UUID runId, ScanTarget target, boolean scheduled) {
         String symbol = target.symbol();
         if (isCancelled(runId)) return;
-        if (!"NSE".equals(target.exchange()) && !"BSE".equals(target.exchange())) {
+        if (!"NSE".equals(target.exchange())) {
             saveFailure(runId, target, new IllegalArgumentException("Unsupported exchange: " + target.exchange()));
             return;
         }
@@ -500,7 +500,7 @@ public class CandidateScanService {
             awaitIfPaused(runId);
             if (isCancelled(runId)) return;
             publish(runId, "SYMBOL_STARTED", symbol, "INFO", "Processing " + symbol + ".");
-            boolean qualified = scanSymbol(runId, target, scheduled);
+            boolean qualified = scanSymbol(runId, symbol, scheduled);
             increment(runId, false, qualified);
             publish(runId, "SYMBOL_COMPLETED", symbol, qualified ? "SUCCESS" : "INFO",
                 qualified ? symbol + " qualified and was activated." : symbol + " did not pass the gate.");
@@ -540,9 +540,7 @@ public class CandidateScanService {
         completeStreams(runId);
     }
 
-    private boolean scanSymbol(UUID runId, ScanTarget target, boolean scheduled) {
-        String symbol = target.symbol();
-        String exchange = target.exchange();
+    private boolean scanSymbol(UUID runId, String symbol, boolean scheduled) {
         int backfillYears = configuredBackfillYears();
         int candles = (int) candleStore.countBySymbol(symbol);
         boolean fetched = false;
@@ -553,12 +551,12 @@ public class CandidateScanService {
         LocalDate today = LocalDate.now(MARKET_ZONE);
         if (scheduled && candles < MIN_CANDLES && eligibility != null && eligibility.getRetryAfter() != null
             && today.isBefore(eligibility.getRetryAfter())) {
-            return saveInsufficientResult(runId, target, candles, eligibility, "History retry scheduled");
+            return saveInsufficientResult(runId, symbol, candles, eligibility, "History retry scheduled");
         }
         if (candles < MIN_CANDLES) {
             publish(runId, "STAGE_STARTED", symbol, "INFO",
                 "Data: fetching " + backfillYears + " years of OHLCV history.");
-            outcome = ingestionService.backfillStockDataWithOutcome(symbol, exchange, backfillYears);
+            outcome = ingestionService.backfillStockDataWithOutcome(symbol, backfillYears);
             fetched = true;
             candles = (int) candleStore.countBySymbol(symbol);
         }
@@ -567,7 +565,6 @@ public class CandidateScanService {
         CandidateScanResultEntity result = new CandidateScanResultEntity();
         result.setRunId(runId);
         result.setSymbol(symbol);
-        result.setExchange(exchange);
         result.setCandleCount(candles);
         List<com.swingtrade.domain.OhlcvCandle> availableCandles = new ArrayList<>(candleStore.findAllBySymbolOrderByDateDesc(symbol));
         availableCandles.sort(java.util.Comparator.comparing(com.swingtrade.domain.OhlcvCandle::date));
@@ -603,7 +600,7 @@ public class CandidateScanService {
         publish(runId, "STAGE_STARTED", symbol, "INFO", "Signal: generating technical signal.");
         SignalResult signal = signalEngine.generateSignal(symbol);
         List<CandidateStrategyEvaluator.Outcome> strategyOutcomes = candidateStrategyEvaluator == null
-            ? List.of() : candidateStrategyEvaluator.evaluateWithPerformance(symbol, availableCandles, exchange,
+            ? List.of() : candidateStrategyEvaluator.evaluateWithPerformance(symbol, availableCandles, "NSE",
                 BacktestConfig.defaults(), configuredOosDays(), configuredOosFolds());
         // Keeps compatibility with lightweight callers that provide the pre-performance evaluator
         // contract (notably isolated data-quality tests). Spring production always supplies the
@@ -653,7 +650,7 @@ public class CandidateScanService {
             "Backtest: running common default strategy (consensus signals evaluated separately).");
         BacktestResult backtest;
         try {
-            backtest = backtestEngine.runBacktest(symbol, exchange, BacktestConfig.defaults());
+            backtest = backtestEngine.runBacktest(symbol, "NSE", BacktestConfig.defaults());
         } catch (IllegalStateException e) {
             if (isHistoricalMembershipFailure(e)) {
                 return saveHistoricalMembershipSkip(runId, result, e.getMessage());
@@ -672,7 +669,7 @@ public class CandidateScanService {
         int oosFolds = configuredOosFolds();
         WalkForwardEvaluation walkForward;
         try {
-            walkForward = backtestEngine.runWalkForward(symbol, exchange, BacktestConfig.defaults(), oosDays, oosFolds);
+            walkForward = backtestEngine.runWalkForward(symbol, "NSE", BacktestConfig.defaults(), oosDays, oosFolds);
         } catch (IllegalStateException e) {
             if (isHistoricalMembershipFailure(e)) {
                 return saveHistoricalMembershipSkip(runId, result, e.getMessage());
@@ -712,7 +709,7 @@ public class CandidateScanService {
             : consensusReason(strategyBuys, evaluatedStrategies, minStrategyBuys, signal, backtest, oosBacktest,
                 walkForward, minTrades, minWinRate, minTotalReturn));
         if (qualified && watchlistService != null) {
-            watchlistService.addToWatchlist(symbol, symbol, exchange);
+            watchlistService.addToWatchlist(symbol, symbol, "NSE");
             result.setActivated(true);
         } else {
             result.setActivated(false);
@@ -721,12 +718,11 @@ public class CandidateScanService {
         return qualified;
     }
 
-    private boolean saveInsufficientResult(UUID runId, ScanTarget target, int candles,
+    private boolean saveInsufficientResult(UUID runId, String symbol, int candles,
                                            CandidateHistoryEligibilityEntity eligibility, String reason) {
         CandidateScanResultEntity result = new CandidateScanResultEntity();
         result.setRunId(runId);
-        result.setSymbol(target.symbol());
-        result.setExchange(target.exchange());
+        result.setSymbol(symbol);
         result.setCandleCount(candles);
         result.setDataStatus("INSUFFICIENT");
         result.setSourceOutcome(eligibility.getSourceOutcome());
@@ -805,7 +801,6 @@ public class CandidateScanService {
         CandidateScanResultEntity result = new CandidateScanResultEntity();
         result.setRunId(runId);
         result.setSymbol(target.symbol());
-        result.setExchange(target.exchange());
         result.setDataStatus("ERROR");
         result.setReason("Scan failed");
         result.setErrorMessage(error.getMessage());

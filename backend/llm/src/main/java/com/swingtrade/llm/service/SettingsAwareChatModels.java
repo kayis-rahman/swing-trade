@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import okhttp3.Interceptor;
@@ -190,6 +191,9 @@ public class SettingsAwareChatModels {
             return false;
         }
         String host = URI.create(baseUrl).getHost();
+        if (host != null) {
+            host = host.toLowerCase(Locale.ROOT);
+        }
         return host != null && (host.equals("opencode.ai") || host.endsWith(".opencode.ai"));
     }
 

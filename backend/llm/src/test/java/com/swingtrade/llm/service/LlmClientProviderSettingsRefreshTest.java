@@ -115,6 +115,16 @@ class LlmClientProviderSettingsRefreshTest {
     }
 
     @Test
+    @DisplayName("OpenCode endpoint detection ignores host casing")
+    void opencodeSessionHeaderDefaultsForUppercaseHost() {
+        store.set("openai.base_url", "https://OPENCODE.AI/zen/go/v1");
+
+        var config = models.resolveConfig(LlmBackendSelector.Backend.OPENAI);
+
+        assertThat(config.extraHeaders()).containsEntry("x-opencode-session", "swing-trade-orchestrator");
+    }
+
+    @Test
     @DisplayName("an explicitly configured OpenCode session header is honored regardless of case")
     void opencodeSessionHeaderDefaultDoesNotOverrideCaseVariant() {
         store.set("openai.base_url", "https://opencode.ai/zen/go/v1");

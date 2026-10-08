@@ -184,12 +184,25 @@ public class CandidateScanService {
         maxConcurrent = configuredMaxConcurrent();
         semaphore = new Semaphore(maxConcurrent);
 
-        List<String> symbols = (watchlistOnly && watchlistService != null
-            ? watchlistService.getActiveWatchlist().stream().map(entry -> entry.getSymbol())
-            : scheduled || stockRepository == null
-                ? symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
-                    .map(s -> s.getTradingSymbol())
-                : stockRepository.findAllByOrderBySymbol().stream().map(stock -> stock.getSymbol()))
+        List<String> sourceSymbols;
+        if (watchlistOnly && watchlistService != null) {
+            sourceSymbols = watchlistService.getActiveWatchlist().stream().map(entry -> entry.getSymbol()).toList();
+        } else if (scheduled || stockRepository == null) {
+            sourceSymbols = symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
+                .map(s -> s.getTradingSymbol()).toList();
+        } else {
+            var inactiveSymbols = watchlistService == null ? java.util.Set.<String>of()
+                : watchlistService.getAllWatchlist().stream()
+                    .filter(entry -> Boolean.FALSE.equals(entry.getIsActive()))
+                    .map(entry -> entry.getSymbol() == null ? "" : entry.getSymbol().trim().toUpperCase())
+                    .collect(java.util.stream.Collectors.toSet());
+            sourceSymbols = stockRepository.findAllByOrderBySymbol().stream()
+                .map(stock -> stock.getSymbol())
+                .filter(symbol -> symbol == null || !inactiveSymbols.contains(symbol.trim().toUpperCase()))
+                .toList();
+        }
+
+        List<String> symbols = sourceSymbols.stream()
             .map(symbol -> symbol == null ? "" : symbol.trim().toUpperCase())
             .filter(s -> !s.isBlank())
             .collect(java.util.stream.Collectors.collectingAndThen(

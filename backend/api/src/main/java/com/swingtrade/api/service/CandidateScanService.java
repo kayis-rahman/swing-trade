@@ -7,6 +7,7 @@ import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.CandidateHistoryEligibilityRepository;
 import com.swingtrade.data.entity.CandidateHistoryEligibilityEntity;
 import com.swingtrade.data.repository.FyersSymbolRepository;
+import com.swingtrade.data.repository.StockRepository;
 import com.swingtrade.data.service.DataIngestionService;
 import com.swingtrade.data.service.AppSettingsService;
 import com.swingtrade.data.service.WatchlistService;
@@ -72,6 +73,7 @@ public class CandidateScanService {
     private static final int DEFAULT_MIN_STRATEGY_BUYS = 2;
 
     private final FyersSymbolRepository symbolRepository;
+    private final StockRepository stockRepository;
     private final CandidateScanRunRepository runRepository;
     private final CandidateScanResultRepository resultRepository;
     private final CandidateHistoryEligibilityRepository eligibilityRepository;
@@ -97,6 +99,7 @@ public class CandidateScanService {
 
     @Autowired
     public CandidateScanService(FyersSymbolRepository symbolRepository,
+                                StockRepository stockRepository,
                                 CandidateScanRunRepository runRepository,
                                 CandidateScanResultRepository resultRepository,
                                 CandidateHistoryEligibilityRepository eligibilityRepository,
@@ -111,6 +114,7 @@ public class CandidateScanService {
                                 @Value("${candidate-scan.delay-ms:1000}") long delayMs,
                                 @Value("${candidate-scan.max-concurrent:3}") int maxConcurrent) {
         this.symbolRepository = symbolRepository;
+        this.stockRepository = stockRepository;
         this.runRepository = runRepository;
         this.resultRepository = resultRepository;
         this.eligibilityRepository = eligibilityRepository;
@@ -138,7 +142,7 @@ public class CandidateScanService {
                                 PriceActionSignalEngine signalEngine,
                                 BacktestEngine backtestEngine,
                                 int backfillYears, long delayMs, int maxConcurrent) {
-        this(symbolRepository, runRepository, resultRepository, null, ingestionService, null,
+        this(symbolRepository, null, runRepository, resultRepository, null, ingestionService, null,
             appSettingsService, candleStore, signalEngine, backtestEngine,
             null,
             backfillYears, delayMs, maxConcurrent);
@@ -182,8 +186,10 @@ public class CandidateScanService {
 
         List<String> symbols = (watchlistOnly && watchlistService != null
             ? watchlistService.getActiveWatchlist().stream().map(entry -> entry.getSymbol())
-            : symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
-                .map(s -> s.getTradingSymbol()))
+            : scheduled || stockRepository == null
+                ? symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
+                    .map(s -> s.getTradingSymbol())
+                : stockRepository.findAllByOrderBySymbol().stream().map(stock -> stock.getSymbol()))
             .map(symbol -> symbol == null ? "" : symbol.trim().toUpperCase())
             .filter(s -> !s.isBlank() && s.matches("[A-Z0-9]+"))
             .collect(java.util.stream.Collectors.collectingAndThen(
@@ -193,9 +199,10 @@ public class CandidateScanService {
         run.setRunId(UUID.randomUUID());
         run.setStatus("RUNNING");
         run.setTotalSymbols(symbols.size());
-        run.setScanScope(watchlistOnly ? "WATCHLIST" : "NSE_BROAD");
+        run.setScanScope(watchlistOnly ? "WATCHLIST" : scheduled ? "NSE_BROAD" : "ACTIVE_STOCKS");
+        run.setScanTrigger(scheduled ? "SCHEDULED" : "MANUAL");
         run.setStartedAt(LocalDateTime.now(MARKET_ZONE));
-        run.setOrchestrationStatus(scheduled ? "PENDING" : "NOT_REQUIRED");
+        run.setOrchestrationStatus("PENDING");
         runRepository.save(run);
         activeRun.set(run.getRunId());
         cancellations.put(run.getRunId(), new AtomicBoolean(false));

@@ -2,10 +2,13 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
-import com.swingtrade.data.entity.FyersSymbolEntity;
+import com.swingtrade.data.entity.StockEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.FyersSymbolRepository;
+import com.swingtrade.data.repository.StockRepository;
+import com.swingtrade.data.repository.CandidateHistoryEligibilityRepository;
+import com.swingtrade.data.service.WatchlistService;
 import com.swingtrade.data.service.AppSettingsService;
 import com.swingtrade.data.service.DataIngestionService;
 import com.swingtrade.domain.store.CandleStore;
@@ -38,6 +41,7 @@ class CandidateScanServiceTest {
     private CandidateScanRunRepository runRepository;
     private CandidateScanResultRepository resultRepository;
     private FyersSymbolRepository symbolRepository;
+    private StockRepository stockRepository;
     private AppSettingsService settingsService;
     private CandidateScanService service;
 
@@ -46,16 +50,21 @@ class CandidateScanServiceTest {
         runRepository = mock(CandidateScanRunRepository.class);
         resultRepository = mock(CandidateScanResultRepository.class);
         symbolRepository = mock(FyersSymbolRepository.class);
+        stockRepository = mock(StockRepository.class);
         settingsService = mock(AppSettingsService.class);
         service = new CandidateScanService(
             symbolRepository,
+            stockRepository,
             runRepository,
             resultRepository,
+            mock(CandidateHistoryEligibilityRepository.class),
             mock(DataIngestionService.class),
+            mock(WatchlistService.class),
             settingsService,
             mock(CandleStore.class),
             mock(PriceActionSignalEngine.class),
             mock(BacktestEngine.class),
+            mock(CandidateStrategyEvaluator.class),
             3,
             0,
             3);
@@ -119,20 +128,21 @@ class CandidateScanServiceTest {
     class Lifecycle {
 
         @Test
-        void manualScansUseTheNseSymbolMasterInsteadOfTheActiveWatchlist() {
-            FyersSymbolEntity first = new FyersSymbolEntity();
-            first.setTradingSymbol("INFY");
-            FyersSymbolEntity second = new FyersSymbolEntity();
-            second.setTradingSymbol("TCS");
+        void manualScansCoverAllActiveStockRecords() {
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            when(symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE"))
-                .thenReturn(List.of(first, second));
+            StockEntity firstStock = new StockEntity();
+            firstStock.setSymbol("INFY");
+            StockEntity secondStock = new StockEntity();
+            secondStock.setSymbol("TCS");
+            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of(firstStock, secondStock));
 
             CandidateScanRunEntity scan = service.start();
 
-            assertThat(scan.getScanScope()).isEqualTo("NSE_BROAD");
+            assertThat(scan.getScanScope()).isEqualTo("ACTIVE_STOCKS");
             assertThat(scan.getTotalSymbols()).isEqualTo(2);
-            verify(symbolRepository).findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE");
+            assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
+            assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
+            verify(stockRepository).findAllByOrderBySymbol();
         }
 
         @Test

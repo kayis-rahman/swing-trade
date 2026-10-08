@@ -51,7 +51,7 @@ class CandidateScanDataQualityTest {
     @BeforeEach
     void setUp() {
         service = new CandidateScanService(
-            mock(FyersSymbolRepository.class), runs, results, eligibility, ingestion,
+            mock(FyersSymbolRepository.class), null, runs, results, eligibility, ingestion,
             mock(WatchlistService.class), mock(AppSettingsService.class), candles,
             signalEngine, backtest, evaluator, 3, 0, 1);
     }

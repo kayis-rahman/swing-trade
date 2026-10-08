@@ -563,7 +563,10 @@ async function load(runId: string) {
   results.value = nextResults.items
   totalResults.value = nextResults.total
   updatedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  if (nextRun.status !== 'RUNNING' && nextRun.status !== 'PAUSED') stopPolling()
+  const scanActive = nextRun.status === 'RUNNING' || nextRun.status === 'PAUSED'
+  const orchestrationPending =
+    nextRun.status === 'COMPLETED' && nextRun.orchestrationStatus === 'PENDING'
+  if (!scanActive && !orchestrationPending) stopPolling()
   tableLoading.value = false
 }
 
@@ -680,7 +683,11 @@ onMounted(async () => {
     if (history[0]) {
       await load(history[0].runId)
       logs.value = []
-      if (run.value?.status === 'RUNNING' || run.value?.status === 'PAUSED') {
+      if (
+        run.value?.status === 'RUNNING' ||
+        run.value?.status === 'PAUSED' ||
+        (run.value?.status === 'COMPLETED' && run.value.orchestrationStatus === 'PENDING')
+      ) {
         startStream(history[0].runId)
         startPolling(history[0].runId)
       }

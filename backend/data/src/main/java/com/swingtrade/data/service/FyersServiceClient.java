@@ -127,20 +127,40 @@ public class FyersServiceClient implements MarketDataClient {
 
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate) {
-        return fetchCandlesList(symbol, startDate, endDate);
+        // The daily path stays the default: identical request shape to the pre-interval client.
+        return fetchCandles(symbol, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
+    }
+
+    /**
+     * Interval-aware fetch. Fyers' history API takes the resolution as a request
+     * parameter ({@code D} for daily, {@code 15} for fifteen-minute bars); each returned
+     * bar is stamped with its start time, except daily bars which are normalized to
+     * 00:00 so daily identity stays {@code (symbol, date)}.
+     */
+    @Override
+    public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate,
+                                             com.swingtrade.data.service.Interval interval) {
+        return fetchCandlesList(symbol, startDate, endDate, interval);
     }
 
     // Exposed for testing
     List<CandleData> fetchCandlesList(String symbol, LocalDate startDate, LocalDate endDate) {
+        return fetchCandlesList(symbol, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
+    }
+
+    List<CandleData> fetchCandlesList(String symbol, LocalDate startDate, LocalDate endDate,
+                                      com.swingtrade.data.service.Interval interval) {
         String fyersSymbol = "NSE:" + symbol + "-EQ";
-        Map<LocalDate, CandleData> byDate = new LinkedHashMap<>();
+        // Keyed by (date, barTime): daily bars collapse to one entry per date, while
+        // intraday bars keep every bar of the session.
+        Map<String, CandleData> byBar = new LinkedHashMap<>();
         LocalDate windowStart = startDate;
         while (!windowStart.isAfter(endDate)) {
             LocalDate windowEnd = windowStart.plusDays(CHUNK_DAYS - 1);
             if (windowEnd.isAfter(endDate)) windowEnd = endDate;
             URI uri = UriComponentsBuilder.fromPath("/data/history")
                 .queryParam("symbol", fyersSymbol)
-                .queryParam("resolution", "D")
+                .queryParam("resolution", interval.toFyersResolution())
                 .queryParam("date_format", "1")
                 .queryParam("date[from]", windowStart)
                 .queryParam("date[to]", windowEnd)
@@ -148,8 +168,8 @@ public class FyersServiceClient implements MarketDataClient {
             String body = getWithAuthRetry(uri);
             if (body != null) {
                 try {
-                    for (CandleData candle : parseCandles(symbol, body)) {
-                        byDate.put(candle.date(), candle);
+                    for (CandleData candle : parseCandles(symbol, body, interval)) {
+                        byBar.put(candle.date() + "|" + candle.barTime(), candle);
                     }
                 } catch (Exception e) {
                     logger.error("Failed to parse candles for {}: {}", symbol, e.getMessage());
@@ -157,10 +177,11 @@ public class FyersServiceClient implements MarketDataClient {
             }
             windowStart = windowEnd.plusDays(1);
         }
-        return new ArrayList<>(byDate.values());
+        return new ArrayList<>(byBar.values());
     }
 
-    private List<CandleData> parseCandles(String symbol, String responseBody) throws Exception {
+    private List<CandleData> parseCandles(String symbol, String responseBody,
+                                          com.swingtrade.data.service.Interval interval) throws Exception {
         if (responseBody == null) return Collections.emptyList();
         JsonNode root = objectMapper.readTree(responseBody);
         if (!root.has("candles") || "error".equals(root.path("s").asText())) {
@@ -172,14 +193,20 @@ public class FyersServiceClient implements MarketDataClient {
         List<CandleData> candles = new ArrayList<>();
         for (JsonNode node : candlesNode) {
             long epochSeconds = node.get(0).asLong();
+            ZoneId ist = ZoneId.of("Asia/Kolkata");
             LocalDate date = OffsetDateTime.ofInstant(
-                java.time.Instant.ofEpochSecond(epochSeconds), ZoneId.of("Asia/Kolkata")).toLocalDate();
+                java.time.Instant.ofEpochSecond(epochSeconds), ist).toLocalDate();
             BigDecimal open = node.get(1).decimalValue();
             BigDecimal high = node.get(2).decimalValue();
             BigDecimal low = node.get(3).decimalValue();
             BigDecimal close = node.get(4).decimalValue();
             long volume = node.get(5).asLong();
-            candles.add(CandleData.of(symbol, date, open, high, low, close, volume));
+            // Daily bars are identified by trading date alone; intraday bars carry
+            // their actual bar start time.
+            java.time.LocalTime barTime = com.swingtrade.data.service.Interval.DAILY.equals(interval)
+                ? java.time.LocalTime.MIN
+                : OffsetDateTime.ofInstant(java.time.Instant.ofEpochSecond(epochSeconds), ist).toLocalTime();
+            candles.add(CandleData.of(symbol, date, barTime, open, high, low, close, volume, close, interval));
         }
         return candles;
     }

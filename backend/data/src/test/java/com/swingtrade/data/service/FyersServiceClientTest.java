@@ -110,6 +110,62 @@ class FyersServiceClientTest {
     }
 
     @Test
+    void fetchCandlesListAtFifteenMinuteResolutionRequests15AndParsesBarTimes() throws InterruptedException {
+        // 2026-09-15 09:15 and 09:30 IST
+        long ts0915 = java.time.LocalDateTime.of(2026, 9, 15, 9, 15)
+            .atZone(java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond();
+        long ts0930 = java.time.LocalDateTime.of(2026, 9, 15, 9, 30)
+            .atZone(java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond();
+        mockWebServer.enqueue(new MockResponse()
+            .setBody("""
+                {"s":"success","candles":[
+                  [%d,4000.0,4010.0,3990.0,4005.0,500000],
+                  [%d,4005.0,4020.0,4000.0,4015.0,600000]
+                ]}
+                """.formatted(ts0915, ts0930))
+            .addHeader("Content-Type", "application/json")
+        );
+
+        List<CandleData> candles = client.fetchCandlesList("RELIANCE",
+            java.time.LocalDate.of(2026, 9, 15), java.time.LocalDate.of(2026, 9, 15),
+            com.swingtrade.data.service.Interval.FIFTEEN_MINUTES);
+
+        var request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).contains("resolution=15");
+
+        assertThat(candles).hasSize(2);
+        assertThat(candles.get(0).interval()).isEqualTo(com.swingtrade.data.service.Interval.FIFTEEN_MINUTES);
+        assertThat(candles.get(0).barTime()).isEqualTo(java.time.LocalTime.of(9, 15));
+        assertThat(candles.get(1).barTime()).isEqualTo(java.time.LocalTime.of(9, 30));
+        assertThat(candles.get(0).close()).isEqualByComparingTo(new BigDecimal("4005.0"));
+    }
+
+    @Test
+    void fetchCandlesListAtDailyResolutionKeepsDailyRequestShapeAndNormalizesBarTime() throws InterruptedException {
+        // 2026-09-15 09:15 IST — a daily bar's epoch carries a time of day that must not leak into bar_time
+        long ts = java.time.LocalDateTime.of(2026, 9, 15, 9, 15)
+            .atZone(java.time.ZoneId.of("Asia/Kolkata")).toEpochSecond();
+        mockWebServer.enqueue(new MockResponse()
+            .setBody("""
+                {"s":"success","candles":[
+                  [%d,4000.0,4010.0,3990.0,4005.0,5000000]
+                ]}
+                """.formatted(ts))
+            .addHeader("Content-Type", "application/json")
+        );
+
+        List<CandleData> candles = client.fetchCandlesList("RELIANCE",
+            java.time.LocalDate.of(2026, 9, 15), java.time.LocalDate.of(2026, 9, 15));
+
+        var request = mockWebServer.takeRequest();
+        assertThat(request.getPath()).contains("resolution=D");
+
+        assertThat(candles).hasSize(1);
+        assertThat(candles.get(0).interval()).isEqualTo(com.swingtrade.data.service.Interval.DAILY);
+        assertThat(candles.get(0).barTime()).isEqualTo(java.time.LocalTime.MIN);
+    }
+
+    @Test
     void fetchCandleReturnsEmptyWhenNoToken() {
         when(mockAuthService.getAccessToken()).thenReturn(null);
 

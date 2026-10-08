@@ -602,6 +602,17 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] No gaps, invalid sessions, or duplicates in the repaired 2026-08-14 through 2026-08-25 window (reconciliation verified twice; second apply inserted/removed zero rows)
 - [x] NSE holidays set for FY27 in scheduler
 
+## Intraday stage 0 — interval data plane (2026-10-05)
+
+- [x] `ohlcv_candles` interval dimension: migration V75 adds `timeframe VARCHAR(10) NOT NULL DEFAULT 'D'` and `bar_time TIME NOT NULL DEFAULT '00:00:00'`, widens the unique constraint to `(symbol, timeframe, date, bar_time)`, and adds `idx_ohlcv_timeframe_date`. Forward-only (V1–V74 untouched), idempotent, and reversible (rollback SQL in the migration header; intraday rows must be deleted before the pre-interval constraint can be re-added). Column named `timeframe` because `interval` is a reserved keyword in H2.
+- [x] Daily-mode repository queries filter `timeframe = 'D'` implicitly — daily behaviour is unchanged even with 15-minute bars stored for the same symbol/date.
+- [x] Interval-aware market-data layer: `MarketDataClient.fetchCandles(symbol, from, to, Interval)` (default throws `UnsupportedOperationException`); Yahoo parameterizes `interval=1d/15m`, Fyers parameterizes `resolution=D/15`; the 3-arg daily path is unchanged. `Interval` enum (`D`, `15m`) carries the provider codes.
+- [x] NSE session calendar: `NseSessionCalendar` models the 09:15–15:30 normal session, 09:00–09:08 pre-open, 15:40–16:00 closing auction, and the 15:20 IST square-off cutoff, reusing the exchange holiday calendar (PARTIAL = Muhurat sessions). Tested against real NSE holiday and Muhurat dates (incl. weekend Muhurat sessions 2026-11-08, 2023-11-12, 2020-11-14).
+- [x] Bounded session-aware 15-minute ingestion: `IntradayIngestionService` (watchlist only, normal-session bar filtering, per-symbol failure isolation, idempotent upsert = restart-safe, resumption from the latest stored bar) + `IntradayIngestionScheduler` (own 15:45 IST Mon–Fri cron, holiday-skipped; EOD scheduler untouched). No live-broker, order-placement, or auth code.
+- [x] Contract tests: `OhlcvCandleIntervalContractTest` (H2) proves daily-mode queries return exactly their pre-change rows and 15-minute queries return interval-correct rows, plus the widened uniqueness contract; Yahoo/Fyers MockWebServer tests prove the interval-parameterized requests and bar-time parsing.
+- [x] Migration validated on a throwaway local PostgreSQL 16: all 51 migrations apply cleanly, daily defaults apply, 15-minute rows coexist with daily rows, `ON CONFLICT (symbol, timeframe, date, bar_time) DO NOTHING` is idempotent, duplicate daily rows fail loudly.
+- [ ] Not covered: live provider fetch (paper-only phase), dashboard, strategy/indicator changes, intraday cost model, and anything requiring the remote Docker/Testcontainers context.
+
 ## Strategy
 
 - [x] Backtest run on all 10 active stocks — run 2026-08-30 via `POST /api/backtest/run-all?exchange=NSE` against the same backfilled dev DB (10 symbols, 3yr/738 candles each). Note: the watchlist currently holds 10 active symbols, not 14 — this checklist's original "14" figure is stale relative to the current watchlist state, not a claim that 4 stocks were skipped.

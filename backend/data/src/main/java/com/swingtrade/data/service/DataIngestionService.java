@@ -382,8 +382,8 @@ public class DataIngestionService {
      * @param candle the candle data
      */
     private int saveCandle(String symbol, CandleData candle) {
-        return candleRepository.insertIfAbsent(symbol, candle.date(), candle.open(), candle.high(),
-            candle.low(), candle.close(), candle.volume(), candle.adjClose());
+        return candleRepository.insertIfAbsent(symbol, candle.interval().getCode(), candle.date(), candle.barTime(),
+            candle.open(), candle.high(), candle.low(), candle.close(), candle.volume(), candle.adjClose());
     }
 
     private List<LocalDate> getTradingDays(LocalDate startDate, LocalDate endDate) {

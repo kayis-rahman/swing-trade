@@ -60,7 +60,7 @@ public class YahooFinanceClient implements MarketDataClient {
     private final MarketCalendar marketCalendar;
 
     // URI format strings — static to avoid repeated allocation
-    private static final String CANDLE_URI_FMT = "/v8/finance/chart/%s?period1=%d&period2=%d&interval=1d&events=history&includePrePost=false";
+    private static final String CANDLE_URI_FMT = "/v8/finance/chart/%s?period1=%d&period2=%d&interval=%s&events=history&includePrePost=false";
     private static final String CHART_META_URI_FMT = "/v8/finance/chart/%s?range=1mo&interval=1d";
     private static final String QUOTE_URI_FMT = "/v7/finance/quote?symbols=%s";
     private static final String SEARCH_URI_FMT = "/v1/finance/search?q=%s&quotesCount=6&enableFuzzyQuery=true";
@@ -237,6 +237,19 @@ public class YahooFinanceClient implements MarketDataClient {
      */
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate) {
+        // The daily path stays the default: identical request shape to the pre-interval client.
+        return fetchCandles(symbol, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
+    }
+
+    /**
+     * Interval-aware fetch. Yahoo's chart API takes the interval as a request parameter
+     * ({@code 1d} for daily, {@code 15m} for fifteen-minute bars); the response parser
+     * stamps each bar with its start time, except daily bars which are normalized to
+     * 00:00 so daily identity stays {@code (symbol, date)}.
+     */
+    @Override
+    public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate,
+                                             com.swingtrade.data.service.Interval interval) {
         List<CandleData> candles = new ArrayList<>();
 
         try {
@@ -245,7 +258,8 @@ public class YahooFinanceClient implements MarketDataClient {
             long period1 = startDate.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC);
             long period2 = endDate.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC) + 86400;
 
-            String uri = String.format(CANDLE_URI_FMT, yfinanceSymbol, period1, period2);
+            String uri = String.format(CANDLE_URI_FMT, yfinanceSymbol, period1, period2,
+                interval.toYahooCode());
 
             String response = executeWithResilience(client ->
                     client.get().uri(uri)
@@ -297,10 +311,14 @@ public class YahooFinanceClient implements MarketDataClient {
                 }
                 BigDecimal adjClose = (adjArr != null && !adjArr.isNull() && i < adjArr.size())
                     ? parseBigDecimal(adjArr.get(i)) : parseBigDecimal(closeArr.get(i));
-                candles.add(CandleData.of(symbol,
-                    resolvedDate,
+                // Daily bars are identified by trading date alone; intraday bars carry
+                // their actual bar start time.
+                java.time.LocalTime barTime = com.swingtrade.data.service.Interval.DAILY.equals(interval)
+                    ? java.time.LocalTime.MIN
+                    : java.time.LocalTime.ofInstant(Instant.ofEpochSecond(timestamps.get(i).asLong()), exchangeZone);
+                candles.add(CandleData.of(symbol, resolvedDate, barTime,
                     parseBigDecimal(openArr.get(i)), parseBigDecimal(highArr.get(i)),
-                    parseBigDecimal(lowArr.get(i)), parseBigDecimal(closeArr.get(i)), volume, adjClose));
+                    parseBigDecimal(lowArr.get(i)), parseBigDecimal(closeArr.get(i)), volume, adjClose, interval));
             }
             logger.info("Fetched {} candles for {} from {} to {}", candles.size(), symbol, startDate, endDate);
 

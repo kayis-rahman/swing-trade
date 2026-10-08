@@ -61,6 +61,7 @@ class CandidateScanHandoffDispatcherTest {
         scan.setStatus("COMPLETED");
         scan.setScanTrigger("MANUAL");
         scan.setOrchestrationStatus("PENDING");
+        scan.setQualifiedSymbols(0);
         when(runs.findByStatusAndOrchestrationStatus("COMPLETED", "PENDING")).thenReturn(List.of(scan));
         when(jobs.findFirstByCandidateScanRunIdOrderByStartedAtDesc(scan.getRunId())).thenReturn(Optional.empty());
         when(orchestrator.findActiveRun()).thenReturn(Optional.empty());

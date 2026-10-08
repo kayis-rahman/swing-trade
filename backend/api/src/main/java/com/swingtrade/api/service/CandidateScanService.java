@@ -191,7 +191,7 @@ public class CandidateScanService {
                     .map(s -> s.getTradingSymbol())
                 : stockRepository.findAllByOrderBySymbol().stream().map(stock -> stock.getSymbol()))
             .map(symbol -> symbol == null ? "" : symbol.trim().toUpperCase())
-            .filter(s -> !s.isBlank() && s.matches("[A-Z0-9]+"))
+            .filter(s -> !s.isBlank())
             .collect(java.util.stream.Collectors.collectingAndThen(
                 java.util.stream.Collectors.toCollection(LinkedHashSet::new), ArrayList::new));
 
@@ -500,6 +500,7 @@ public class CandidateScanService {
             run.setCompletedAt(LocalDateTime.now(MARKET_ZONE));
             if (error != null) run.setErrorMessage(error.getMessage());
             if ("COMPLETED".equals(run.getStatus()) && run.getQualifiedSymbols() == 0
+                && !"MANUAL".equals(run.getScanTrigger())
                 && "PENDING".equals(run.getOrchestrationStatus())) {
                 run.setOrchestrationStatus("NOT_REQUIRED");
             }

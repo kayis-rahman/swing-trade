@@ -3,6 +3,7 @@ package com.swingtrade.api.service;
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
 import com.swingtrade.data.entity.StockEntity;
+import com.swingtrade.data.entity.WatchlistEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.FyersSymbolRepository;
@@ -43,6 +44,7 @@ class CandidateScanServiceTest {
     private CandidateScanResultRepository resultRepository;
     private FyersSymbolRepository symbolRepository;
     private StockRepository stockRepository;
+    private WatchlistService watchlistService;
     private AppSettingsService settingsService;
     private CandidateScanService service;
 
@@ -52,6 +54,7 @@ class CandidateScanServiceTest {
         resultRepository = mock(CandidateScanResultRepository.class);
         symbolRepository = mock(FyersSymbolRepository.class);
         stockRepository = mock(StockRepository.class);
+        watchlistService = mock(WatchlistService.class);
         settingsService = mock(AppSettingsService.class);
         service = new CandidateScanService(
             symbolRepository,
@@ -60,7 +63,7 @@ class CandidateScanServiceTest {
             resultRepository,
             mock(CandidateHistoryEligibilityRepository.class),
             mock(DataIngestionService.class),
-            mock(WatchlistService.class),
+            watchlistService,
             settingsService,
             mock(CandleStore.class),
             mock(PriceActionSignalEngine.class),
@@ -139,8 +142,13 @@ class CandidateScanServiceTest {
             thirdStock.setSymbol("M&M");
             StockEntity fourthStock = new StockEntity();
             fourthStock.setSymbol("BAJAJ-AUTO");
+            StockEntity inactiveStock = new StockEntity();
+            inactiveStock.setSymbol("HDFC");
             when(stockRepository.findAllByOrderBySymbol())
-                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock));
+                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, inactiveStock));
+            WatchlistEntity inactiveWatchlistEntry = new WatchlistEntity("HDFC", "Former issuer");
+            inactiveWatchlistEntry.setIsActive(false);
+            when(watchlistService.getAllWatchlist()).thenReturn(List.of(inactiveWatchlistEntry));
 
             CandidateScanRunEntity scan = service.start();
 

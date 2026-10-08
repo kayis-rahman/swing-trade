@@ -175,6 +175,17 @@ class FyersServiceClientTest {
     }
 
     @Test
+    void fetchesBseHistoryUsingBseInstrumentSymbol() throws InterruptedException {
+        mockWebServer.enqueue(new MockResponse()
+            .setBody("{\"s\":\"success\",\"candles\":[]}")
+            .addHeader("Content-Type", "application/json"));
+
+        client.fetchCandlesList("BSECO", "BSE", LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15));
+
+        assertThat(mockWebServer.takeRequest().getPath()).contains("symbol=BSE:BSECO-EQ");
+    }
+
+    @Test
     void isConnectedDelegatesToAuthService() {
         when(mockAuthService.validateToken()).thenReturn(true);
         assertThat(client.isConnected()).isTrue();

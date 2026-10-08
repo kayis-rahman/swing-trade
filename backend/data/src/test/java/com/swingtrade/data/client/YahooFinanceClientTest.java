@@ -445,6 +445,17 @@ class YahooFinanceClientTest {
     }
 
     @Test
+    void selectsBseTickerForBseHistoryRequests() throws Exception {
+        mockWebServer.enqueue(new MockResponse()
+            .setBody(yahooResponse(LocalDate.of(2024, 1, 15), 100.0, 105.0, 99.0, 104.0, 5000000))
+            .addHeader("Content-Type", "application/json"));
+
+        client.fetchCandles("BSECO", "BSE", LocalDate.of(2024, 1, 15), LocalDate.of(2024, 1, 15));
+
+        assertThat(mockWebServer.takeRequest().getPath()).contains("BSECO.BO");
+    }
+
+    @Test
     @org.junit.jupiter.api.Disabled("Pre-existing, unrelated to Spring Boot 4.1.1 upgrade: see fetchCandlesReturnsMultipleCandles.")
     void fetchCandlesSkipsZeroVolumeCandles() {
         List<Object[]> rows = new ArrayList<>();

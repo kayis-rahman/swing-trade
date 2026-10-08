@@ -114,6 +114,7 @@ describe('CandidateExplorerView', () => {
         {
           runId: 'run-2',
           symbol: 'JSWSTEEL',
+          exchange: 'NSE',
           dataStatus: 'READY',
           candleCount: 738,
           signalType: 'BUY',

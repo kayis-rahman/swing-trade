@@ -103,12 +103,17 @@ public class DataIngestionService {
 
     @Transactional
     public BackfillOutcome backfillStockDataWithOutcome(String stockSymbol, int yearsBack) {
-        logger.info("Starting backfill for {}: {} years of historical data", stockSymbol, yearsBack);
+        return backfillStockDataWithOutcome(stockSymbol, "NSE", yearsBack);
+    }
+
+    @Transactional
+    public BackfillOutcome backfillStockDataWithOutcome(String stockSymbol, String exchange, int yearsBack) {
+        logger.info("Starting backfill for {}:{}: {} years of historical data", exchange, stockSymbol, yearsBack);
 
         LocalDate toDate = LocalDate.now(ZoneId.of("Asia/Kolkata"));
         LocalDate fromDate = toDate.minusYears(yearsBack);
 
-        BackfillOutcome outcome = processIncrementalStockData(stockSymbol, fromDate, toDate);
+        BackfillOutcome outcome = processIncrementalStockData(stockSymbol, exchange, fromDate, toDate);
 
         logger.info("Backfill completed for {}: {}", stockSymbol, outcome.sourceOutcome());
         return outcome;
@@ -121,6 +126,11 @@ public class DataIngestionService {
      */
     public BackfillOutcome processIncrementalStockData(String symbol, LocalDate requestedFrom,
                                                        LocalDate toDate) {
+        return processIncrementalStockData(symbol, "NSE", requestedFrom, toDate);
+    }
+
+    public BackfillOutcome processIncrementalStockData(String symbol, String exchange,
+                                                       LocalDate requestedFrom, LocalDate toDate) {
         if (symbol == null || symbol.isBlank() || requestedFrom == null || toDate == null
                 || requestedFrom.isAfter(toDate)) {
             throw new IllegalArgumentException("symbol and an ordered date range are required");
@@ -143,10 +153,11 @@ public class DataIngestionService {
         }
         logger.info("Incremental backfill for {}: requested {} to {}, fetching {} to {} in {}-day chunks",
             symbol, requestedFrom, toDate, effectiveFrom, toDate, backfillChunkDays);
-        return processStockDataInChunks(symbol, effectiveFrom, toDate);
+        return processStockDataInChunks(symbol, exchange, effectiveFrom, toDate);
     }
 
-    private BackfillOutcome processStockDataInChunks(String symbol, LocalDate fromDate, LocalDate toDate) {
+    private BackfillOutcome processStockDataInChunks(String symbol, String exchange,
+                                                     LocalDate fromDate, LocalDate toDate) {
         int fetched = 0;
         int saved = 0;
         int invalid = 0;
@@ -156,7 +167,7 @@ public class DataIngestionService {
         while (!chunkStart.isAfter(toDate)) {
             LocalDate chunkEnd = chunkStart.plusDays(backfillChunkDays - 1L);
             if (chunkEnd.isAfter(toDate)) chunkEnd = toDate;
-            BackfillOutcome outcome = processStockDataWithOutcome(symbol, chunkStart, chunkEnd);
+            BackfillOutcome outcome = processStockDataWithOutcome(symbol, exchange, chunkStart, chunkEnd);
             fetched += outcome.fetchedRows();
             saved += outcome.savedRows();
             invalid += outcome.invalidRows();
@@ -198,12 +209,20 @@ public class DataIngestionService {
 
     /** Returns source quality rather than making callers infer it from a candle count. */
     public BackfillOutcome processStockDataWithOutcome(String symbol, LocalDate fromDate, LocalDate toDate) {
+        return processStockDataWithOutcome(symbol, "NSE", fromDate, toDate);
+    }
+
+    public BackfillOutcome processStockDataWithOutcome(String symbol, String exchange,
+                                                       LocalDate fromDate, LocalDate toDate) {
         logger.info("Processing data for {} from {} to {}", symbol, fromDate, toDate);
 
         // Batch-fetch all candles in one API call
         Iterable<CandleData> candles;
         try {
-            candles = marketDataClientProvider.getClient().fetchCandles(symbol, fromDate, toDate);
+            MarketDataClient client = marketDataClientProvider.getClient();
+            candles = "NSE".equalsIgnoreCase(exchange)
+                ? client.fetchCandles(symbol, fromDate, toDate)
+                : client.fetchCandles(symbol, exchange, fromDate, toDate);
         } catch (RuntimeException e) {
             logger.warn("Market data source failed for {}: {}", symbol, e.getMessage());
             return new BackfillOutcome("TRANSIENT_SOURCE_FAILURE", 0, 0, 0, e.getMessage());

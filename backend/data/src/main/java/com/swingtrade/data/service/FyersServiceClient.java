@@ -127,12 +127,22 @@ public class FyersServiceClient implements MarketDataClient {
 
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate) {
-        return fetchCandlesList(symbol, startDate, endDate);
+        return fetchCandles(symbol, "NSE", startDate, endDate);
+    }
+
+    @Override
+    public Iterable<CandleData> fetchCandles(String symbol, String exchange,
+                                              LocalDate startDate, LocalDate endDate) {
+        return fetchCandlesList(symbol, exchange, startDate, endDate);
     }
 
     // Exposed for testing
     List<CandleData> fetchCandlesList(String symbol, LocalDate startDate, LocalDate endDate) {
-        String fyersSymbol = "NSE:" + symbol + "-EQ";
+        return fetchCandlesList(symbol, "NSE", startDate, endDate);
+    }
+
+    List<CandleData> fetchCandlesList(String symbol, String exchange, LocalDate startDate, LocalDate endDate) {
+        String fyersSymbol = exchange.toUpperCase() + ":" + symbol + "-EQ";
         Map<LocalDate, CandleData> byDate = new LinkedHashMap<>();
         LocalDate windowStart = startDate;
         while (!windowStart.isAfter(endDate)) {

@@ -100,7 +100,7 @@ class CandidateScanDataQualityTest {
         when(runs.findByRunId(runId)).thenReturn(Optional.of(run));
         when(eligibility.findById("SMALL")).thenReturn(Optional.empty());
         when(candles.countBySymbol("SMALL")).thenReturn(12L);
-        when(ingestion.backfillStockDataWithOutcome("SMALL", 3))
+        when(ingestion.backfillStockDataWithOutcome("SMALL", "NSE", 3))
             .thenReturn(new DataIngestionService.BackfillOutcome("NO_USABLE_DATA", 12, 0, 0, null));
         when(candles.findAllBySymbolOrderByDateDesc("SMALL")).thenReturn(List.of());
         AtomicReference<CandidateScanResultEntity> saved = new AtomicReference<>();
@@ -126,7 +126,7 @@ class CandidateScanDataQualityTest {
         when(runs.findByRunId(runId)).thenReturn(Optional.of(run));
         when(eligibility.findById("TRANSIENT")).thenReturn(Optional.empty());
         when(candles.countBySymbol("TRANSIENT")).thenReturn(0L);
-        when(ingestion.backfillStockDataWithOutcome("TRANSIENT", 3))
+        when(ingestion.backfillStockDataWithOutcome("TRANSIENT", "NSE", 3))
             .thenReturn(new DataIngestionService.BackfillOutcome(
                 "TRANSIENT_SOURCE_FAILURE", 0, 0, 0, "Yahoo Finance returned HTTP 400"));
         when(candles.findAllBySymbolOrderByDateDesc("TRANSIENT")).thenReturn(List.of());
@@ -142,9 +142,9 @@ class CandidateScanDataQualityTest {
     private boolean invokeScan(UUID runId, String symbol) {
         try {
             Method method = CandidateScanService.class.getDeclaredMethod(
-                "scanSymbol", UUID.class, String.class, boolean.class);
+                "scanSymbol", UUID.class, CandidateScanService.ScanTarget.class, boolean.class);
             method.setAccessible(true);
-            return (boolean) method.invoke(service, runId, symbol, true);
+            return (boolean) method.invoke(service, runId, new CandidateScanService.ScanTarget(symbol, "NSE"), true);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             if (cause instanceof RuntimeException runtime) throw runtime;

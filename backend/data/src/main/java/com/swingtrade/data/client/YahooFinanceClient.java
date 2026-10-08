@@ -237,10 +237,16 @@ public class YahooFinanceClient implements MarketDataClient {
      */
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate) {
+        return fetchCandles(symbol, "NSE", startDate, endDate);
+    }
+
+    @Override
+    public Iterable<CandleData> fetchCandles(String symbol, String exchange,
+                                              LocalDate startDate, LocalDate endDate) {
         List<CandleData> candles = new ArrayList<>();
 
         try {
-            String yfinanceSymbol = formatSymbolForYahoo(symbol);
+            String yfinanceSymbol = formatSymbolForYahoo(symbol, exchange);
 
             long period1 = startDate.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC);
             long period2 = endDate.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC) + 86400;
@@ -587,11 +593,15 @@ public class YahooFinanceClient implements MarketDataClient {
     }
 
     private String formatSymbolForYahoo(String symbol) {
+        return formatSymbolForYahoo(symbol, "NSE");
+    }
+
+    private String formatSymbolForYahoo(String symbol, String exchange) {
         if ("NIFTY50".equalsIgnoreCase(symbol) || "NIFTY 50".equalsIgnoreCase(symbol)) {
             return "^NSEI";
         }
         if (symbol.endsWith(".NS") || symbol.endsWith(".BO")) return symbol;
-        return symbol + ".NS";
+        return symbol + ("BSE".equalsIgnoreCase(exchange) ? ".BO" : ".NS");
     }
 
     private BigDecimal parseBigDecimal(JsonNode node) {

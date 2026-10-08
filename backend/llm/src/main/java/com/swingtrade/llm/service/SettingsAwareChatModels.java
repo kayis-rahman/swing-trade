@@ -51,9 +51,9 @@ public class SettingsAwareChatModels {
     private static final int LOCAL_LLAMA_MAX_RETRIES = 0;
 
     /**
-     * app_settings key holding extra request headers as a JSON object, for endpoints
-     * that require them — e.g. {@code {"x-opencode-session":"swing-trade-stage"}} for
-     * opencode.ai's /zen/go bridge, which answers 400 MissingSessionID without it.
+     * app_settings key holding additional request headers as a JSON object. OpenCode
+     * endpoints receive a default {@code x-opencode-session} header unless one is
+     * explicitly configured here.
      */
     public static final String EXTRA_HEADERS_KEY = "llm.extra_headers";
 
@@ -64,14 +64,6 @@ public class SettingsAwareChatModels {
     private static final String DEFAULT_OPENCODE_SESSION = "swing-trade-orchestrator";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    /** Everything the model build depends on; equality decides whether to rebuild. */
-    public record ResolvedModelConfig(String baseUrl, String model, String apiKey, Duration timeout,
-                                      Integer maxRetries, Map<String, String> extraHeaders) {
-    }
-
-    private record CachedModel(ResolvedModelConfig config, OpenAiChatModel model) {
-    }
 
     private final AppSettingsStore settings;
     private final LlmProperties properties;
@@ -229,5 +221,13 @@ public class SettingsAwareChatModels {
             headers.forEach(requestBuilder::addHeader);
             return chain.proceed(requestBuilder.build());
         }
+    }
+
+    /** Everything the model build depends on; equality decides whether to rebuild. */
+    public record ResolvedModelConfig(String baseUrl, String model, String apiKey, Duration timeout,
+                                      Integer maxRetries, Map<String, String> extraHeaders) {
+    }
+
+    private record CachedModel(ResolvedModelConfig config, OpenAiChatModel model) {
     }
 }

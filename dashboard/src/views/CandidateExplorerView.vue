@@ -9,9 +9,9 @@
           Candidate Explorer
         </h1>
         <p class="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-          Scan the NSE symbol master for strategy-consensus BUY signals with a profitable backtest.
-          Candidates need agreement from at least two active strategies before they join the pilot
-          wishlist.
+          Scan all active stock records for strategy-consensus BUY signals with a profitable
+          backtest. Candidates need agreement from at least two active strategies before they join
+          the pilot wishlist.
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -49,7 +49,7 @@
           :disabled="loading"
           @click="start"
         >
-          {{ loading ? 'Starting...' : 'Scan NSE universe' }}
+          {{ loading ? 'Starting...' : 'Scan full universe' }}
         </button>
       </div>
     </header>
@@ -389,9 +389,9 @@
     </section>
 
     <p class="mt-4 text-xs leading-5 text-text-muted">
-      Candidate scans never invoke paper trading. Manual scans use the NSE symbol master; qualified
-      symbols are automatically added to the wishlist, and scheduled scans hand off to orchestration
-      only when qualifiers exist.
+      Candidate scans never invoke paper trading. Manual scans cover all active stock records;
+      qualified symbols are automatically added to the wishlist. After a manual scan, orchestration
+      runs over the active watchlist only; scheduled scans hand off qualified symbols only.
     </p>
   </div>
 </template>
@@ -492,9 +492,11 @@ const metrics = computed(() => [
     detail:
       run.value?.scanScope === 'WATCHLIST'
         ? 'active watchlist symbols'
-        : run.value?.scanScope === 'NSE_BROAD'
-          ? 'NSE symbol master'
-          : 'scope unavailable for legacy run',
+        : run.value?.scanScope === 'ACTIVE_STOCKS'
+          ? 'all active stock records'
+          : run.value?.scanScope === 'NSE_BROAD'
+            ? 'NSE symbol master'
+            : 'scope unavailable for legacy run',
     tone: 'text-text-primary',
   },
   {
@@ -525,8 +527,12 @@ const metrics = computed(() => [
     value: run.value?.status ?? 'READY',
     detail:
       run.value?.orchestrationStatus === 'STARTED'
-        ? 'candidate handoff started'
-        : 'screening only; no trades run',
+        ? 'watchlist orchestration started'
+        : run.value?.orchestrationStatus === 'PENDING'
+          ? run.value.scanTrigger === 'MANUAL'
+            ? 'watchlist orchestration pending'
+            : 'candidate handoff pending'
+          : 'screening only; no trades run',
     tone: 'text-text-primary',
   },
 ])

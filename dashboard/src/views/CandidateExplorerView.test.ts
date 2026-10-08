@@ -52,7 +52,7 @@ describe('CandidateExplorerView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Find the next pilot symbol')
-    expect(wrapper.text()).toContain('Scan NSE universe')
+    expect(wrapper.text()).toContain('Scan full universe')
     expect(wrapper.text()).toContain('scope unavailable for legacy run')
     await wrapper.get('button[data-test="scan-toggle"]').trigger('click')
     await flushPromises()
@@ -61,6 +61,31 @@ describe('CandidateExplorerView', () => {
     expect(wrapper.text()).toContain('Cancel scan')
     expect(wrapper.text()).toContain('RUNNING')
     expect(wrapper.text()).toContain('active watchlist symbols')
+  })
+
+  it('labels the manual candidate universe and watchlist orchestration separately', async () => {
+    const completed = {
+      runId: 'run-manual',
+      status: 'COMPLETED',
+      totalSymbols: 59,
+      completedSymbols: 59,
+      failedSymbols: 0,
+      qualifiedSymbols: 0,
+      scanScope: 'ACTIVE_STOCKS',
+      scanTrigger: 'MANUAL',
+      orchestrationStatus: 'STARTED',
+      startedAt: '2026-08-31T00:00:00',
+    }
+    api.getCandidateScanHistory.mockResolvedValue([completed])
+    api.getCandidateScan.mockResolvedValue(completed)
+    api.getCandidateScanResults.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
+
+    const wrapper = mount(CandidateExplorerView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('59')
+    expect(wrapper.text()).toContain('all active stock records')
+    expect(wrapper.text()).toContain('watchlist orchestration started')
   })
 
   it('renders qualified candidates and activation state', async () => {

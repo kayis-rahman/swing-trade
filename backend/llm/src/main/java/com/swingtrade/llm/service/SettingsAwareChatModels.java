@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import okhttp3.Interceptor;
@@ -49,25 +51,19 @@ public class SettingsAwareChatModels {
     private static final int LOCAL_LLAMA_MAX_RETRIES = 0;
 
     /**
-     * app_settings key holding extra request headers as a JSON object, for endpoints
-     * that require them — e.g. {@code {"x-opencode-session":"swing-trade-stage"}} for
-     * opencode.ai's /zen/go bridge, which answers 400 MissingSessionID without it.
+     * app_settings key holding additional request headers as a JSON object. OpenCode
+     * endpoints receive a default {@code x-opencode-session} header unless one is
+     * explicitly configured here.
      */
     public static final String EXTRA_HEADERS_KEY = "llm.extra_headers";
 
     private static final String OPENAI_API_KEY_KEY = "openai.api_key";
     private static final String OLLAMA_API_KEY_KEY = "ollama.api_key";
     private static final String GPUHUB_API_KEY_KEY = "gpuhub.api_key";
+    private static final String OPENCODE_SESSION_HEADER = "x-opencode-session";
+    private static final String DEFAULT_OPENCODE_SESSION = "swing-trade-orchestrator";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    /** Everything the model build depends on; equality decides whether to rebuild. */
-    public record ResolvedModelConfig(String baseUrl, String model, String apiKey, Duration timeout,
-                                      Integer maxRetries, Map<String, String> extraHeaders) {
-    }
-
-    private record CachedModel(ResolvedModelConfig config, OpenAiChatModel model) {
-    }
 
     private final AppSettingsStore settings;
     private final LlmProperties properties;
@@ -136,7 +132,7 @@ public class SettingsAwareChatModels {
                 .orElseGet(() -> defaultBaseUrl == null ? null : defaultBaseUrl.toString());
         String model = settings.get(modelKey).orElse(defaultModel);
         return new ResolvedModelConfig(baseUrl, model, resolveApiKey(apiKeyKey), timeout, maxRetries,
-                resolveExtraHeaders());
+                resolveExtraHeaders(baseUrl));
     }
 
     /**
@@ -158,19 +154,39 @@ public class SettingsAwareChatModels {
         return key == null || key.isBlank() || "none".equals(key) || "not-needed".equals(key);
     }
 
-    private Map<String, String> resolveExtraHeaders() {
+    private Map<String, String> resolveExtraHeaders(String baseUrl) {
+        Map<String, String> headers = new HashMap<>();
         String raw = settings.get(EXTRA_HEADERS_KEY).orElse("");
-        if (raw.isBlank()) {
-            return Map.of();
+        if (!raw.isBlank()) {
+            try {
+                Map<String, String> parsed = OBJECT_MAPPER.readValue(raw, new TypeReference<>() {
+                });
+                if (parsed != null) {
+                    headers.putAll(parsed);
+                }
+            } catch (Exception e) {
+                logger.warn("Ignoring malformed {} setting: {}", EXTRA_HEADERS_KEY, e.getMessage());
+            }
         }
-        try {
-            Map<String, String> parsed = OBJECT_MAPPER.readValue(raw, new TypeReference<>() {
-            });
-            return parsed != null ? parsed : Map.of();
-        } catch (Exception e) {
-            logger.warn("Ignoring malformed {} setting: {}", EXTRA_HEADERS_KEY, e.getMessage());
-            return Map.of();
+        if (isOpenCodeEndpoint(baseUrl)) {
+            boolean hasSessionHeader = headers.keySet().stream()
+                    .anyMatch(name -> OPENCODE_SESSION_HEADER.equalsIgnoreCase(name));
+            if (!hasSessionHeader) {
+                headers.put(OPENCODE_SESSION_HEADER, DEFAULT_OPENCODE_SESSION);
+            }
         }
+        return Map.copyOf(headers);
+    }
+
+    private boolean isOpenCodeEndpoint(String baseUrl) {
+        if (baseUrl == null) {
+            return false;
+        }
+        String host = URI.create(baseUrl).getHost();
+        if (host != null) {
+            host = host.toLowerCase(Locale.ROOT);
+        }
+        return host != null && (host.equals("opencode.ai") || host.endsWith(".opencode.ai"));
     }
 
     private OpenAiChatModel buildModel(ResolvedModelConfig config) {
@@ -205,5 +221,13 @@ public class SettingsAwareChatModels {
             headers.forEach(requestBuilder::addHeader);
             return chain.proceed(requestBuilder.build());
         }
+    }
+
+    /** Everything the model build depends on; equality decides whether to rebuild. */
+    public record ResolvedModelConfig(String baseUrl, String model, String apiKey, Duration timeout,
+                                      Integer maxRetries, Map<String, String> extraHeaders) {
+    }
+
+    private record CachedModel(ResolvedModelConfig config, OpenAiChatModel model) {
     }
 }

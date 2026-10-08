@@ -105,11 +105,70 @@ class LlmClientProviderSettingsRefreshTest {
     }
 
     @Test
+    @DisplayName("the OpenCode endpoint gets a default session header without extra-header configuration")
+    void opencodeSessionHeaderDefaultsForOpenCodeEndpoint() {
+        store.set("openai.base_url", "https://opencode.ai/zen/go/v1");
+
+        var config = models.resolveConfig(LlmBackendSelector.Backend.OPENAI);
+
+        assertThat(config.extraHeaders()).containsEntry("x-opencode-session", "swing-trade-orchestrator");
+    }
+
+    @Test
+    @DisplayName("OpenCode endpoint detection ignores host casing")
+    void opencodeSessionHeaderDefaultsForUppercaseHost() {
+        store.set("openai.base_url", "https://OPENCODE.AI/zen/go/v1");
+
+        var config = models.resolveConfig(LlmBackendSelector.Backend.OPENAI);
+
+        assertThat(config.extraHeaders()).containsEntry("x-opencode-session", "swing-trade-orchestrator");
+    }
+
+    @Test
+    @DisplayName("an explicitly configured OpenCode session header is honored regardless of case")
+    void opencodeSessionHeaderDefaultDoesNotOverrideCaseVariant() {
+        store.set("openai.base_url", "https://opencode.ai/zen/go/v1");
+        store.set("llm.extra_headers", "{\"X-OpenCode-Session\":\"session-abc\"}");
+
+        var config = models.resolveConfig(LlmBackendSelector.Backend.OPENAI);
+
+        assertThat(config.extraHeaders()).containsEntry("X-OpenCode-Session", "session-abc");
+        assertThat(config.extraHeaders()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("OpenCode chat requests succeed with the generated session header")
+    void openCodeChatRequestUsesGeneratedSessionHeader() throws Exception {
+        server1.enqueue(completionResponse("model-1"));
+        store.set("openai.base_url", "http://OPENCODE.AI:" + server1.getPort() + "/zen/go/v1");
+
+        String oldProxyHost = System.getProperty("http.proxyHost");
+        String oldProxyPort = System.getProperty("http.proxyPort");
+        String oldNonProxyHosts = System.getProperty("http.nonProxyHosts");
+        try {
+            System.setProperty("http.proxyHost", "127.0.0.1");
+            System.setProperty("http.proxyPort", Integer.toString(server1.getPort()));
+            System.setProperty("http.nonProxyHosts", "localhost|127.*|[::1]");
+
+            String response = provider.getClient()
+                .generateChatCompletion(testMessages(), 16, 0.0)
+                .block();
+
+            assertThat(response).isEqualTo("hello");
+            RecordedRequest request = server1.takeRequest(10, TimeUnit.SECONDS);
+            assertThat(request).isNotNull();
+            assertThat(request.getHeader("x-opencode-session")).isEqualTo("swing-trade-orchestrator");
+        } finally {
+            restoreProperty("http.proxyHost", oldProxyHost);
+            restoreProperty("http.proxyPort", oldProxyPort);
+            restoreProperty("http.nonProxyHosts", oldNonProxyHosts);
+        }
+    }
+
+    @Test
     @DisplayName("configured extra headers are sent with every request")
     void configuredExtraHeadersAreSentWithEveryRequest() throws Exception {
-        // opencode.ai's /zen/go bridge answers 400 MissingSessionID without an
-        // x-opencode-session header; the setting carries it.
-        store.set("llm.extra_headers", "{\"x-opencode-session\":\"session-abc\"}");
+        store.set("llm.extra_headers", "{\"x-opencode-session\":\"session-abc\",\"x-custom\":\"value\"}");
 
         provider.getClient()
             .generateChatCompletion(testMessages(), 16, 0.0)
@@ -118,6 +177,7 @@ class LlmClientProviderSettingsRefreshTest {
         RecordedRequest request = server1.takeRequest(10, TimeUnit.SECONDS);
         assertThat(request).isNotNull();
         assertThat(request.getHeader("x-opencode-session")).isEqualTo("session-abc");
+        assertThat(request.getHeader("x-custom")).isEqualTo("value");
     }
 
     @Test
@@ -151,6 +211,14 @@ class LlmClientProviderSettingsRefreshTest {
             + "\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"hello\"},"
             + "\"finish_reason\":\"stop\"}],"
             + "\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":1,\"total_tokens\":6}}";
+    }
+
+    private static void restoreProperty(String name, String value) {
+        if (value == null) {
+            System.clearProperty(name);
+        } else {
+            System.setProperty(name, value);
+        }
     }
 
     private static final class InMemorySettingsStore implements AppSettingsStore {

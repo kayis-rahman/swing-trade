@@ -115,6 +115,18 @@ class LlmClientProviderSettingsRefreshTest {
     }
 
     @Test
+    @DisplayName("an explicitly configured OpenCode session header is honored regardless of case")
+    void opencodeSessionHeaderDefaultDoesNotOverrideCaseVariant() {
+        store.set("openai.base_url", "https://opencode.ai/zen/go/v1");
+        store.set("llm.extra_headers", "{\"X-OpenCode-Session\":\"session-abc\"}");
+
+        var config = models.resolveConfig(LlmBackendSelector.Backend.OPENAI);
+
+        assertThat(config.extraHeaders()).containsEntry("X-OpenCode-Session", "session-abc");
+        assertThat(config.extraHeaders()).hasSize(1);
+    }
+
+    @Test
     @DisplayName("configured extra headers are sent with every request")
     void configuredExtraHeadersAreSentWithEveryRequest() throws Exception {
         store.set("llm.extra_headers", "{\"x-opencode-session\":\"session-abc\",\"x-custom\":\"value\"}");

@@ -176,7 +176,11 @@ public class SettingsAwareChatModels {
             }
         }
         if (isOpenCodeEndpoint(baseUrl)) {
-            headers.putIfAbsent(OPENCODE_SESSION_HEADER, DEFAULT_OPENCODE_SESSION);
+            boolean hasSessionHeader = headers.keySet().stream()
+                    .anyMatch(name -> OPENCODE_SESSION_HEADER.equalsIgnoreCase(name));
+            if (!hasSessionHeader) {
+                headers.put(OPENCODE_SESSION_HEADER, DEFAULT_OPENCODE_SESSION);
+            }
         }
         return Map.copyOf(headers);
     }

@@ -527,7 +527,9 @@ const metrics = computed(() => [
     value: run.value?.status ?? 'READY',
     detail:
       run.value?.orchestrationStatus === 'STARTED'
-        ? 'watchlist orchestration started'
+        ? run.value.scanTrigger === 'MANUAL'
+          ? 'watchlist orchestration started'
+          : 'candidate orchestration started'
         : run.value?.orchestrationStatus === 'PENDING'
           ? run.value.scanTrigger === 'MANUAL'
             ? 'watchlist orchestration pending'

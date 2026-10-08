@@ -88,6 +88,30 @@ describe('CandidateExplorerView', () => {
     expect(wrapper.text()).toContain('watchlist orchestration started')
   })
 
+  it('labels scheduled candidate orchestration separately from watchlist runs', async () => {
+    const completed = {
+      runId: 'run-scheduled',
+      status: 'COMPLETED',
+      totalSymbols: 2650,
+      completedSymbols: 2650,
+      failedSymbols: 0,
+      qualifiedSymbols: 4,
+      scanScope: 'NSE_BROAD',
+      scanTrigger: 'SCHEDULED',
+      orchestrationStatus: 'STARTED',
+      startedAt: '2026-08-31T00:00:00',
+    }
+    api.getCandidateScanHistory.mockResolvedValue([completed])
+    api.getCandidateScan.mockResolvedValue(completed)
+    api.getCandidateScanResults.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
+
+    const wrapper = mount(CandidateExplorerView)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('candidate orchestration started')
+    expect(wrapper.text()).not.toContain('watchlist orchestration started')
+  })
+
   it('renders qualified candidates and activation state', async () => {
     api.getCandidateScanHistory.mockResolvedValue([
       {

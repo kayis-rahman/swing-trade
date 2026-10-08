@@ -480,6 +480,10 @@ public class CandidateScanService {
     private void processSymbol(UUID runId, ScanTarget target, boolean scheduled) {
         String symbol = target.symbol();
         if (isCancelled(runId)) return;
+        if (!"NSE".equals(target.exchange()) && !"BSE".equals(target.exchange())) {
+            saveFailure(runId, target, new IllegalArgumentException("Unsupported exchange: " + target.exchange()));
+            return;
+        }
         boolean acquired = false;
         try {
             semaphore.acquire();

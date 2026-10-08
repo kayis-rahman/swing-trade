@@ -44,6 +44,7 @@ class CandidateScanServiceTest {
     private FyersSymbolRepository symbolRepository;
     private StockRepository stockRepository;
     private WatchlistService watchlistService;
+    private DataIngestionService ingestionService;
     private AppSettingsService settingsService;
     private CandidateScanService service;
 
@@ -54,6 +55,7 @@ class CandidateScanServiceTest {
         symbolRepository = mock(FyersSymbolRepository.class);
         stockRepository = mock(StockRepository.class);
         watchlistService = mock(WatchlistService.class);
+        ingestionService = mock(DataIngestionService.class);
         settingsService = mock(AppSettingsService.class);
         service = new CandidateScanService(
             symbolRepository,
@@ -61,7 +63,7 @@ class CandidateScanServiceTest {
             runRepository,
             resultRepository,
             mock(CandidateHistoryEligibilityRepository.class),
-            mock(DataIngestionService.class),
+            ingestionService,
             watchlistService,
             settingsService,
             mock(CandleStore.class),
@@ -152,6 +154,26 @@ class CandidateScanServiceTest {
             assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
             verify(stockRepository).findByActiveTrueOrderBySymbolAsc();
             verify(watchlistService, never()).getAllWatchlist();
+        }
+
+        @Test
+        void manualScanCarriesBseExchangeThroughIngestionAndResult() {
+            when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
+            StockEntity stock = new StockEntity();
+            stock.setSymbol("BSECO");
+            stock.setExchange("BSE");
+            when(stockRepository.findByActiveTrueOrderBySymbolAsc()).thenReturn(List.of(stock));
+            when(ingestionService.backfillStockDataWithOutcome("BSECO", "BSE", 3))
+                .thenReturn(new DataIngestionService.BackfillOutcome("NO_USABLE_DATA", 0, 0, 0, null));
+
+            service.start();
+
+            org.mockito.Mockito.verify(ingestionService, org.mockito.Mockito.timeout(1000))
+                .backfillStockDataWithOutcome("BSECO", "BSE", 3);
+            org.mockito.ArgumentCaptor<CandidateScanResultEntity> result =
+                org.mockito.ArgumentCaptor.forClass(CandidateScanResultEntity.class);
+            org.mockito.Mockito.verify(resultRepository, org.mockito.Mockito.timeout(1000)).save(result.capture());
+            assertThat(result.getValue().getExchange()).isEqualTo("BSE");
         }
 
         @Test

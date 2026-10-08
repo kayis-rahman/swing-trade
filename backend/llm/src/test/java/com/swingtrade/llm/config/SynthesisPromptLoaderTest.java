@@ -32,6 +32,15 @@ class SynthesisPromptLoaderTest {
     }
 
     @Test
+    @DisplayName("Synthesis system prompt limits narrative length to preserve the complete JSON object")
+    void systemPromptRequiresCompactCompleteJson() {
+        String prompt = loader.getSystemPrompt();
+        assertThat(prompt).contains("exactly one compact, syntactically valid JSON object");
+        assertThat(prompt).contains("Complete every field and close the object");
+        assertThat(prompt).contains("one concise sentence");
+    }
+
+    @Test
     @DisplayName("Synthesis user prompt template loads with format specifiers")
     void userPromptHasPlaceholders() {
         String prompt = loader.getUserPromptTemplate();

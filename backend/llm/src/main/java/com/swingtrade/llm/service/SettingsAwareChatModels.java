@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import okhttp3.Interceptor;
@@ -58,6 +59,8 @@ public class SettingsAwareChatModels {
     private static final String OPENAI_API_KEY_KEY = "openai.api_key";
     private static final String OLLAMA_API_KEY_KEY = "ollama.api_key";
     private static final String GPUHUB_API_KEY_KEY = "gpuhub.api_key";
+    private static final String OPENCODE_SESSION_HEADER = "x-opencode-session";
+    private static final String DEFAULT_OPENCODE_SESSION = "swing-trade-orchestrator";
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -136,7 +139,7 @@ public class SettingsAwareChatModels {
                 .orElseGet(() -> defaultBaseUrl == null ? null : defaultBaseUrl.toString());
         String model = settings.get(modelKey).orElse(defaultModel);
         return new ResolvedModelConfig(baseUrl, model, resolveApiKey(apiKeyKey), timeout, maxRetries,
-                resolveExtraHeaders());
+                resolveExtraHeaders(baseUrl));
     }
 
     /**
@@ -158,19 +161,32 @@ public class SettingsAwareChatModels {
         return key == null || key.isBlank() || "none".equals(key) || "not-needed".equals(key);
     }
 
-    private Map<String, String> resolveExtraHeaders() {
+    private Map<String, String> resolveExtraHeaders(String baseUrl) {
+        Map<String, String> headers = new HashMap<>();
         String raw = settings.get(EXTRA_HEADERS_KEY).orElse("");
-        if (raw.isBlank()) {
-            return Map.of();
+        if (!raw.isBlank()) {
+            try {
+                Map<String, String> parsed = OBJECT_MAPPER.readValue(raw, new TypeReference<>() {
+                });
+                if (parsed != null) {
+                    headers.putAll(parsed);
+                }
+            } catch (Exception e) {
+                logger.warn("Ignoring malformed {} setting: {}", EXTRA_HEADERS_KEY, e.getMessage());
+            }
         }
-        try {
-            Map<String, String> parsed = OBJECT_MAPPER.readValue(raw, new TypeReference<>() {
-            });
-            return parsed != null ? parsed : Map.of();
-        } catch (Exception e) {
-            logger.warn("Ignoring malformed {} setting: {}", EXTRA_HEADERS_KEY, e.getMessage());
-            return Map.of();
+        if (isOpenCodeEndpoint(baseUrl)) {
+            headers.putIfAbsent(OPENCODE_SESSION_HEADER, DEFAULT_OPENCODE_SESSION);
         }
+        return Map.copyOf(headers);
+    }
+
+    private boolean isOpenCodeEndpoint(String baseUrl) {
+        if (baseUrl == null) {
+            return false;
+        }
+        String host = URI.create(baseUrl).getHost();
+        return host != null && (host.equals("opencode.ai") || host.endsWith(".opencode.ai"));
     }
 
     private OpenAiChatModel buildModel(ResolvedModelConfig config) {

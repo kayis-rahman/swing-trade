@@ -105,11 +105,19 @@ class LlmClientProviderSettingsRefreshTest {
     }
 
     @Test
+    @DisplayName("the OpenCode endpoint gets a default session header without extra-header configuration")
+    void opencodeSessionHeaderDefaultsForOpenCodeEndpoint() {
+        store.set("openai.base_url", "https://opencode.ai/zen/go/v1");
+
+        var config = models.resolveConfig(LlmBackendSelector.Backend.OPENAI);
+
+        assertThat(config.extraHeaders()).containsEntry("x-opencode-session", "swing-trade-orchestrator");
+    }
+
+    @Test
     @DisplayName("configured extra headers are sent with every request")
     void configuredExtraHeadersAreSentWithEveryRequest() throws Exception {
-        // opencode.ai's /zen/go bridge answers 400 MissingSessionID without an
-        // x-opencode-session header; the setting carries it.
-        store.set("llm.extra_headers", "{\"x-opencode-session\":\"session-abc\"}");
+        store.set("llm.extra_headers", "{\"x-opencode-session\":\"session-abc\",\"x-custom\":\"value\"}");
 
         provider.getClient()
             .generateChatCompletion(testMessages(), 16, 0.0)
@@ -118,6 +126,7 @@ class LlmClientProviderSettingsRefreshTest {
         RecordedRequest request = server1.takeRequest(10, TimeUnit.SECONDS);
         assertThat(request).isNotNull();
         assertThat(request.getHeader("x-opencode-session")).isEqualTo("session-abc");
+        assertThat(request.getHeader("x-custom")).isEqualTo("value");
     }
 
     @Test

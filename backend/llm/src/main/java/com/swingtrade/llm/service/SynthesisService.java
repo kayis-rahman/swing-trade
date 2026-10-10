@@ -205,8 +205,8 @@ public class SynthesisService {
     private SynthesisResult parseWithFallback(String response, CompositeAnalysis composite) {
         String json = extractJson(response);
         if (json == null) {
-            logger.warn("No JSON found in LLM response for synthesis: {} was {} chars, preview: {}",
-                composite.symbol(), response.length(), preview(response));
+            logger.warn("No JSON found in LLM response for synthesis: {} was {} chars",
+                composite.symbol(), response.length());
             return fallbackSynthesis(composite);
         }
 
@@ -230,17 +230,6 @@ public class SynthesisService {
             logger.debug("Synthesis JSON parse failure stack trace", e);
             return fallbackSynthesis(composite);
         }
-    }
-
-    /**
-     * Bounded, single-line preview of a raw LLM response, so diagnosing unparseable
-     * output does not require reproducing it. Truncation mid-object and reasoning
-     * text before JSON are the two recurring causes, and both are invisible in the
-     * log without seeing the response's head.
-     */
-    private static String preview(String response) {
-        String flattened = response.replaceAll("\\s+", " ").trim();
-        return flattened.length() <= 300 ? flattened : flattened.substring(0, 300) + "...";
     }
 
     private String extractJson(String response) {

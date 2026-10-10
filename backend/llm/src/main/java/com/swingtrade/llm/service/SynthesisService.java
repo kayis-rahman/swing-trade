@@ -17,7 +17,32 @@ import java.util.Map;
 public class SynthesisService {
 
     private static final Logger logger = LoggerFactory.getLogger(SynthesisService.class);
-    private static final int MAX_TOKENS = 1024;
+    /**
+     * Completion budget for the synthesis call.
+     *
+     * <p>On the reasoning backends this pipeline actually runs against, {@code max_tokens}
+     * is a <em>combined</em> reasoning-plus-content budget — the provider reserves the
+     * reasoning text inside the same ceiling. Synthesis asks for the largest object in the
+     * pipeline (six arrays plus a narrative), so this is the budget most exposed to that
+     * reservation.</p>
+     *
+     * <p>Measured by replaying a real synthesis prompt against the deployed
+     * OpenAI-compatible reasoning backend (longcat-2.5-preview-free):</p>
+     * <pre>
+     *   max_tokens=1024 → finish_reason=length, reasoning_tokens=1023, content=0 chars
+     *   max_tokens=4096 → finish_reason=stop,   reasoning_tokens= 454, complete, parseable JSON
+     * </pre>
+     *
+     * <p>At 1024 the model spent its entire budget on reasoning and returned no object at
+     * all; anything left of it produced a partial object cut off mid-narrative (the
+     * 466-character capture) that parses to a {@code NO_RECOMMENDATION} degradation. Raising
+     * the budget is the fix — not lenient parsing, which cannot recover fields the model
+     * was never given tokens to emit. Observed reasoning spend is ~450-1023 tokens, so 4096
+     * leaves &gt;3000 tokens for the object after reasoning.</p>
+     */
+    static final int MAX_TOKENS = 4096;
+    private static final int LOCAL_MAX_TOKENS = 512;
+    private static final int PI_SSH_MAX_TOKENS = 1024;
     /** Synthesis is persisted as an evaluation input; deterministic output keeps reruns comparable. */
     private static final double TEMPERATURE = 0.0;
     // Must stay comfortably above LlmConfig's LOCAL_LLAMA_TIMEOUT (2850s) for the
@@ -74,15 +99,22 @@ public class SynthesisService {
             // same in-flight protection as sentiment — previously it didn't even
             // call ensureRunning(), and the idle monitor could stop llama-server
             // mid-synthesis.
-            LlmServerManager manager = serverManagerProvider.getManager();
+            var backend = clientProvider.getBackend();
+            LlmServerManager manager = serverManagerProvider.getManager(backend);
             if (manager != null) {
                 manager.ensureRunning();
                 manager.beginRequest();
             }
             String llmResponse;
             try {
-                llmResponse = clientProvider.getClient()
-                    .generateChatCompletion(messages, MAX_TOKENS, TEMPERATURE)
+                int maxTokens = switch (backend) {
+                    case LOCAL, OLLAMA -> LOCAL_MAX_TOKENS;
+                    case PI_SSH -> PI_SSH_MAX_TOKENS;
+                    case PI_AGENT -> 0;
+                    default -> MAX_TOKENS;
+                };
+                llmResponse = clientProvider.getClient(backend)
+                    .generateChatCompletion(messages, maxTokens, TEMPERATURE)
                     .block(llmProperties != null && llmProperties.getStageTimeout() != null
                         ? llmProperties.getStageTimeout() : Duration.ofSeconds(TIMEOUT_SECONDS));
             } finally {
@@ -174,7 +206,8 @@ public class SynthesisService {
     private SynthesisResult parseWithFallback(String response, CompositeAnalysis composite) {
         String json = extractJson(response);
         if (json == null) {
-            logger.warn("No JSON found in LLM response for synthesis");
+            logger.warn("No JSON found in LLM response for synthesis: {} was {} chars",
+                composite.symbol(), response.length());
             return fallbackSynthesis(composite);
         }
 

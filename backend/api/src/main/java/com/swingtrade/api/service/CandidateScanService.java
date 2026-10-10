@@ -165,7 +165,7 @@ public class CandidateScanService {
     }
 
     @Transactional
-    /** Manual scans discover candidates from NSE stock rows. */
+    /** Manual scans inspect every stock row; exchange-less rows default to NSE. */
     public CandidateScanRunEntity start() { return start(false, false); }
 
     /** Scheduled scans persist a handoff request for their qualified candidates. */
@@ -194,13 +194,11 @@ public class CandidateScanService {
         } else {
             List<StockEntity> stocks = stockRepository.findAllByOrderBySymbol();
             long skippedOtherExchanges = stocks.stream()
-                .filter(stock -> !"NSE".equalsIgnoreCase(stock.getExchange() == null
-                    ? "" : stock.getExchange().trim()))
+                .filter(stock -> !isNseOrExchangeUnspecified(stock))
                 .count();
             logger.info("Manual candidate scan skipped {} stock row(s) outside NSE.", skippedOtherExchanges);
             sourceSymbols = stocks.stream()
-                .filter(stock -> "NSE".equalsIgnoreCase(stock.getExchange() == null
-                    ? "" : stock.getExchange().trim()))
+                .filter(CandidateScanService::isNseOrExchangeUnspecified)
                 .map(stock -> new ScanTarget(stock.getSymbol(), stock.getExchange())).toList();
         }
 
@@ -227,7 +225,8 @@ public class CandidateScanService {
         pauses.put(run.getRunId(), new AtomicBoolean(false));
         logHistory.put(run.getRunId(), new ConcurrentLinkedDeque<>());
         publish(run.getRunId(), "RUN_STARTED", null, "INFO",
-            "Scanning " + symbols.size() + " stock symbols with up to " + maxConcurrent + " workers.");
+            "Scanning " + symbols.size() + " NSE stock symbols (missing exchange defaults to NSE) with up to "
+                + maxConcurrent + " workers.");
         Runnable scanTask = () -> execute(run.getRunId(), symbols, scheduled);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -875,6 +874,11 @@ public class CandidateScanService {
 
     @PreDestroy
     void shutdown() { executor.shutdownNow(); }
+
+    private static boolean isNseOrExchangeUnspecified(StockEntity stock) {
+        String exchange = stock.getExchange();
+        return exchange == null || exchange.isBlank() || "NSE".equalsIgnoreCase(exchange.trim());
+    }
 
     private record ScanTarget(String symbol, String exchange) { }
 

@@ -133,7 +133,7 @@ class CandidateScanServiceTest {
     class Lifecycle {
 
         @Test
-        void manualScansAllNseStockRowsRegardlessOfActivityAndSkipsOtherExchanges() {
+        void manualScansAllNseAndExchangeLessRowsRegardlessOfActivityAndSkipsOtherExchanges() {
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
             StockEntity firstStock = new StockEntity();
             firstStock.setSymbol("INFY");
@@ -153,13 +153,16 @@ class CandidateScanServiceTest {
             StockEntity sixthStock = new StockEntity();
             sixthStock.setSymbol("FOOCO");
             sixthStock.setExchange("FOO");
+            StockEntity exchangeLessStock = new StockEntity();
+            exchangeLessStock.setSymbol("UNKNOWNEXCHANGE");
             when(stockRepository.findAllByOrderBySymbol())
-                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, fifthStock, sixthStock));
+                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, fifthStock, sixthStock,
+                    exchangeLessStock));
 
             CandidateScanRunEntity scan = service.start();
 
             assertThat(scan.getScanScope()).isEqualTo("ACTIVE_STOCKS");
-            assertThat(scan.getTotalSymbols()).isEqualTo(4);
+            assertThat(scan.getTotalSymbols()).isEqualTo(5);
             assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
             assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
             verify(stockRepository).findAllByOrderBySymbol();

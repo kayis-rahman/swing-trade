@@ -80,7 +80,7 @@ class CandidateScanDataQualityTest {
             return result;
         });
 
-        assertThat(invokeScan(runId, "INFY")).isFalse();
+        assertThat(service.scanSymbol(runId, "INFY", true)).isFalse();
 
         assertThat(saved.get()).isNotNull();
         assertThat(saved.get().getDataStatus()).isEqualTo("INSUFFICIENT");

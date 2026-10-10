@@ -17,7 +17,30 @@ import java.util.Map;
 public class SynthesisService {
 
     private static final Logger logger = LoggerFactory.getLogger(SynthesisService.class);
-    private static final int MAX_TOKENS = 1024;
+    /**
+     * Completion budget for the synthesis call.
+     *
+     * <p>On the reasoning backends this pipeline actually runs against, {@code max_tokens}
+     * is a <em>combined</em> reasoning-plus-content budget — the provider reserves the
+     * reasoning text inside the same ceiling. Synthesis asks for the largest object in the
+     * pipeline (six arrays plus a narrative), so this is the budget most exposed to that
+     * reservation.</p>
+     *
+     * <p>Measured by replaying a real synthesis prompt against the deployed
+     * OpenAI-compatible reasoning backend (longcat-2.5-preview-free):</p>
+     * <pre>
+     *   max_tokens=1024 → finish_reason=length, reasoning_tokens=1023, content=0 chars
+     *   max_tokens=4096 → finish_reason=stop,   reasoning_tokens= 454, complete, parseable JSON
+     * </pre>
+     *
+     * <p>At 1024 the model spent its entire budget on reasoning and returned no object at
+     * all; anything left of it produced a partial object cut off mid-narrative (the
+     * 466-character capture) that parses to a {@code NO_RECOMMENDATION} degradation. Raising
+     * the budget is the fix — not lenient parsing, which cannot recover fields the model
+     * was never given tokens to emit. Observed reasoning spend is ~450-1023 tokens, so 4096
+     * leaves &gt;3000 tokens for the object after reasoning.</p>
+     */
+    static final int MAX_TOKENS = 4096;
     /** Synthesis is persisted as an evaluation input; deterministic output keeps reruns comparable. */
     private static final double TEMPERATURE = 0.0;
     // Must stay comfortably above LlmConfig's LOCAL_LLAMA_TIMEOUT (2850s) for the
@@ -174,7 +197,8 @@ public class SynthesisService {
     private SynthesisResult parseWithFallback(String response, CompositeAnalysis composite) {
         String json = extractJson(response);
         if (json == null) {
-            logger.warn("No JSON found in LLM response for synthesis");
+            logger.warn("No JSON found in LLM response for synthesis: {} was {} chars, preview: {}",
+                composite.symbol(), response.length(), preview(response));
             return fallbackSynthesis(composite);
         }
 
@@ -198,6 +222,17 @@ public class SynthesisService {
             logger.debug("Synthesis JSON parse failure stack trace", e);
             return fallbackSynthesis(composite);
         }
+    }
+
+    /**
+     * Bounded, single-line preview of a raw LLM response, so diagnosing unparseable
+     * output does not require reproducing it. Truncation mid-object and reasoning
+     * text before JSON are the two recurring causes, and both are invisible in the
+     * log without seeing the response's head.
+     */
+    private static String preview(String response) {
+        String flattened = response.replaceAll("\\s+", " ").trim();
+        return flattened.length() <= 300 ? flattened : flattened.substring(0, 300) + "...";
     }
 
     private String extractJson(String response) {

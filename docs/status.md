@@ -1,5 +1,24 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-10 (LLM analysis budget fix DevStack verification)
+
+- [x] LLM analysis DEGRADED fix verified through the repository DevStack. Root cause: on the
+  reasoning backends this pipeline runs against, `max_tokens` is a *combined* reasoning +
+  content budget, and the two LLM stages were requesting less budget than the model spends on
+  reasoning alone — replaying the real prompts measured
+  `max_tokens=512 → reasoning_tokens=511, content=0 chars` (sentiment) and
+  `max_tokens=1024 → reasoning_tokens=1023, content=0 chars` (synthesis). Synthesis parsed the
+  truncated object to a `NO_RECOMMENDATION` degradation. Fix: `SentimentService`
+  `DEFAULT_MAX_RESPONSE_TOKENS` 512 → 2048, `SynthesisService` `MAX_TOKENS` 1024 → 4096; the
+  `PI_SSH` budget and every parsing fallback are unchanged. Verified locally: PAPER-mode
+  orchestrator over BHARTIARTL, HDFCBANK, WIPRO, AXISBANK, INFY, SBIN — `SENTIMENT` 6/6
+  COMPLETED, `LLM_ANALYSIS` 6/6 COMPLETED, 0 degraded, run status COMPLETED.
+  Local dev-database gap also confirmed (unrelated to this fix, present before it):
+  `BACKTEST`/`PAPER_TRADE` are SKIPPED for the four symbols that have no
+  `universe_snapshots` row in the dev DB, and COMPLETED for INFY/SBIN which do.
+  Dashboard stage matrix captured with headless Chromium (installed Playwright chromium
+  build via explicit `executablePath`, no download).
+
 Last checked: 2026-10-05 (Laya dashboard settings slice DevStack verification)
 
 - [x] Laya LLM settings slice (branch `fm/swing-trade-laya-dashboard-config-v1`, commit fe3764f2) verified

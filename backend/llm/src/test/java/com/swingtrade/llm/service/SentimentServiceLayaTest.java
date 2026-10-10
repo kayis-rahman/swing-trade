@@ -87,7 +87,7 @@ class SentimentServiceLayaTest {
         when(clientProvider.getClient()).thenReturn(llmClient);
         when(promptLoader.getSystemPrompt()).thenReturn("system");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
                 .thenReturn(Mono.just("qwen-response"));
         when(sentimentAnalyzer.parseResponse(any(), eq(1)))
                 .thenReturn(new SentimentOutput(qwenSentiment, "qwen reasoning", 0.6));
@@ -144,7 +144,7 @@ class SentimentServiceLayaTest {
 
         assertThat(result.score()).isEqualTo(SentimentResult.SentimentScore.NEUTRAL);
         assertThat(result.source()).isEqualTo("LLM");
-        verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
+        verify(llmClient).generateChatCompletion(anyList(), eq(2048), eq(0.0));
         verify(classificationLogRepository, times(2)).save(any());
         verify(classificationLogRepository).save(argThatModelUsed(SentimentClassificationLogEntity.ModelUsed.LAYA, false));
         verify(classificationLogRepository).save(argThatModelUsed(SentimentClassificationLogEntity.ModelUsed.QWEN, false));
@@ -161,7 +161,7 @@ class SentimentServiceLayaTest {
 
         assertThat(result.score()).isEqualTo(SentimentResult.SentimentScore.POSITIVE);
         assertThat(result.source()).isEqualTo("LLM");
-        verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
+        verify(llmClient).generateChatCompletion(anyList(), eq(2048), eq(0.0));
         // No Laya row logged (nothing to compare), but Qwen's run is still logged.
         verify(classificationLogRepository, times(1)).save(any());
         verify(classificationLogRepository).save(argThatModelUsed(SentimentClassificationLogEntity.ModelUsed.QWEN, false));

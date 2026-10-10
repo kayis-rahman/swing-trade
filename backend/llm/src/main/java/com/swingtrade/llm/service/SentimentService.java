@@ -74,7 +74,28 @@ public class SentimentService {
     private static final int MAX_ARTICLES_FOR_LLM = 10;
     private static final int PI_MAX_ARTICLES_FOR_LLM = 6;
     private static final int PI_MAX_ARTICLE_CHARS = 450;
-    private static final int DEFAULT_MAX_RESPONSE_TOKENS = 512;
+    /**
+     * Completion budget for the sentiment call on the non-Pi backends.
+     *
+     * <p>{@code max_tokens} is a combined reasoning-plus-content budget on the reasoning
+     * backends this pipeline runs against, so the reasoning text is reserved out of the
+     * same ceiling as the JSON object. Replaying a real 4.8k-char news prompt against the
+     * deployed backend measured:</p>
+     * <pre>
+     *   max_tokens= 512 → finish_reason=length, reasoning_tokens=511, content=0 chars
+     *   max_tokens=1024 → finish_reason=stop,   reasoning_tokens=503, complete JSON
+     * </pre>
+     *
+     * <p>At 512 an empty content triggers the client's one retry at double the budget, and
+     * when it does not the truncated object that survives parses through to a plain-text
+     * {@code UNKNOWN} (the 304- and 475-char captures cut off mid-string). 2048 covers the
+     * observed ~200-510 reasoning tokens plus the whole object with room to spare.</p>
+     *
+     * <p>This is not the Pi budget: {@link #PI_MAX_RESPONSE_TOKENS} stays small because it is
+     * bounded by {@code llamacpp.context} (8192) rather than by reasoning — see
+     * {@code MAX_ARTICLE_CHARS}' budget math for why raising it needs a larger context.</p>
+     */
+    static final int DEFAULT_MAX_RESPONSE_TOKENS = 2048;
     private static final int PI_MAX_RESPONSE_TOKENS = 128;
     private static final int MAX_CONTEXT_FILINGS = 5;
     private static final int MAX_CONTEXT_CHARS = 2400;

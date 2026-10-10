@@ -25,9 +25,11 @@ import reactor.core.publisher.Mono;
 import com.swingtrade.llm.domain.EarningsData;
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.intThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -76,7 +78,7 @@ class SentimentServicePromptTest {
             {"score": "POSITIVE", "confidence": 0.8, "summary": "Strong news",
              "red_flags": [], "catalysts": []}
             """;
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
             .thenReturn(Mono.just(llmResponse));
 
         List<PersistedNewsArticle> articles = List.of(
@@ -94,7 +96,7 @@ class SentimentServicePromptTest {
                 return "system".equals(sysMsg.get("role"))
                     && sysMsg.get("content").contains("financial analyst specialising in Indian equity markets");
             }),
-            eq(512),
+            eq(2048),
             eq(0.0)
         );
     }
@@ -110,7 +112,7 @@ class SentimentServicePromptTest {
             {"score": "NEGATIVE", "confidence": 0.6, "summary": "Bad news",
              "red_flags": ["SEBI probe"], "catalysts": []}
             """;
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
             .thenReturn(Mono.just(llmResponse));
 
         List<PersistedNewsArticle> articles = List.of(
@@ -128,7 +130,7 @@ class SentimentServicePromptTest {
                 return "user".equals(userMsg.get("role"))
                     && userMsg.get("content").contains("TCS");
             }),
-            eq(512),
+            eq(2048),
             eq(0.0)
         );
     }
@@ -152,11 +154,38 @@ class SentimentServicePromptTest {
     }
 
     @Test
+    @DisplayName("Sentiment completion budget leaves room for reasoning before the JSON object")
+    void requestsABudgetReasoningCannotConsume() {
+        // Real-shape regression for the stage's truncated sentiment responses.
+        // max_tokens is a combined reasoning-plus-content budget on the reasoning
+        // backend this pipeline runs against, so the reasoning text is reserved
+        // out of the same ceiling as the JSON object. Measured by replaying a real
+        // 4.8k-char news prompt: 512 tokens gave finish_reason=length with 511
+        // reasoning tokens and 0 content chars; 1024 gave a complete object. The
+        // truncated captures in the field (304 and 475 chars, cut off mid-string)
+        // are what a partially-consumed budget looks like.
+        when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
+        when(promptLoader.getUserPrompt()).thenReturn("Analyse {symbol}. News: {newsContent}.");
+        when(llmClient.generateChatCompletion(anyList(), intThat(tokens -> tokens >= 2048), eq(0.0)))
+                .thenReturn(Mono.just("{\"score\":\"NEUTRAL\",\"confidence\":0.5,\"summary\":\"Mixed\",\"red_flags\":[],\"catalysts\":[]}"));
+        List<PersistedNewsArticle> articles = List.of(
+                new PersistedNewsArticle(1L, new NewsArticle("TCS", "Test headline", "Test URL", null, todayNoon(), "Test source", null), null));
+        when(newsIngestionService.fetchPersistedStockNewsForDecisionDate(eq("TCS"), org.mockito.ArgumentMatchers.nullable(LocalDate.class))).thenReturn(articles);
+        when(newsIngestionService.cleanNewsText(any(NewsArticle.class))).thenReturn("news content");
+
+        service.analyzeStockSentiment("TCS", LocalDate.now(ZoneId.of("Asia/Kolkata")));
+
+        verify(llmClient).generateChatCompletion(anyList(),
+                intThat(tokens -> tokens >= 2048), eq(0.0));
+        assertThat(SentimentService.DEFAULT_MAX_RESPONSE_TOKENS).isGreaterThanOrEqualTo(2048);
+    }
+
+    @Test
     @DisplayName("SentimentService excludes articles published after the decision cutoff")
     void filtersFutureArticlesBeforePrompting() {
         when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
             .thenReturn(Mono.just("{\"score\":\"NEUTRAL\",\"confidence\":0.5,\"summary\":\"Mixed\"}"));
 
         LocalDate decisionDate = LocalDate.of(2026, 9, 15);
@@ -180,7 +209,7 @@ class SentimentServicePromptTest {
         verify(llmClient).generateChatCompletion(
             argThat(msgs -> msgs.get(1).get("content").contains("old news")
                 && !msgs.get(1).get("content").contains("future news")),
-            eq(512), eq(0.0));
+            eq(2048), eq(0.0));
         org.mockito.Mockito.verify(newsIngestionService, org.mockito.Mockito.never())
             .fetchStockNews("TCS");
     }
@@ -190,7 +219,7 @@ class SentimentServicePromptTest {
     void addsStructuredMarketContext() {
         when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}\nContext: {marketContext}");
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
                 .thenReturn(Mono.just("{\"score\":\"NEUTRAL\",\"confidence\":0.5,\"summary\":\"Mixed\"}"));
         LocalDate decisionDate = LocalDate.of(2026, 9, 15);
         NewsArticle article = new NewsArticle("TCS", "Headline", "url", null,
@@ -213,7 +242,7 @@ class SentimentServicePromptTest {
                     && prompt.contains("Q1 FY27")
                     && prompt.contains("Dividend declared")
                     && prompt.length() < 3000;
-        }), eq(512), eq(0.0));
+        }), eq(2048), eq(0.0));
     }
 
     @Test
@@ -221,7 +250,7 @@ class SentimentServicePromptTest {
     void keywordFallbackPreservesHistoricalDate() {
         when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
                 .thenReturn(Mono.error(new IllegalStateException("LLM unavailable")));
 
         LocalDate decisionDate = LocalDate.of(2026, 9, 15);
@@ -242,7 +271,7 @@ class SentimentServicePromptTest {
     void emptyLlmResponseUsesKeywordFallback() {
         when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
-        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
                 .thenReturn(Mono.empty());
 
         LocalDate decisionDate = LocalDate.of(2026, 9, 15);

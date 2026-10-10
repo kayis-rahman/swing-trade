@@ -115,6 +115,7 @@ export interface CandidateScanRun {
 export interface CandidateScanResult {
   runId: string
   symbol: string
+  exchange: string
   dataStatus: 'READY' | 'INSUFFICIENT' | 'ERROR'
   candleCount: number
   signalType?: 'BUY' | 'SELL' | 'HOLD'

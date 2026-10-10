@@ -281,7 +281,7 @@ Last checked: 2026-09-27 (expanded endpoint/API and dashboard sanity verificatio
   deterministic source, ingestion, server-manager, PDF, sentiment, and utility coverage.
 
 - [x] Full backend build and integration verification completed 2026-09-17: `./gradlew
-  :api:integrationTest` passed all API integration tests against PostgreSQL in local Colima with
+  :api:integrationTest` passed all API integration tests against PostgreSQL with
   `TESTCONTAINERS_RYUK_DISABLED=true`, and `./bin/verify-changes` passed all change-aware checks.
   The custom integration task now propagates that Testcontainers setting; the duplicate V41 audit
   migration is idempotent, and test-only scheduler JPA wiring is excluded from production scans.
@@ -408,7 +408,7 @@ Self-hosted personal project — no CI gate. `dev-stack.sh` against pi-node infr
 The development database was intentionally reset on 2026-08-29 for a clean verification run, then repopulated the same day: 10 active watchlist symbols, each backfilled with 3yr/738 candles, and one full `/api/backtest/run-all` pass (see Strategy section). The current database is no longer empty: runtime verification on 2026-09-02 loaded 2 open and 8 closed paper positions/trades. The API runs in local paper-trading mode with Yahoo Finance as the active market-data client. Historical verification claims below the Strategy section still describe the earlier reset dataset and are not claims about current state.
 
 **Post-stage follow-ups verification (2026-09-15, commit `e947f7f9`)** — full backend/dashboard check from `docs/plans/2026-09-14-post-stage-follow-ups.md`:
-- Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green against a local colima Docker daemon (`DOCKER_HOST` pointed at colima's socket for this run only; the shared `pi-node` docker context was left untouched). The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
+- Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green. The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
 - Dashboard: `yarn typecheck` and `yarn test:run` (281 tests) green. `yarn build` fails at the `format:check` step on pre-existing Prettier drift in `DashboardView.vue` and `OrchestratorView.vue`, confirmed present on `main` with no dashboard files modified this session.
 - All three follow-up plan items (equity-curve status, Position decomposition, Docker-capable SELL integration test) are implementation-complete; this entry closes the plan's final "full verification recorded" checklist item.
 
@@ -602,6 +602,17 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] No gaps, invalid sessions, or duplicates in the repaired 2026-08-14 through 2026-08-25 window (reconciliation verified twice; second apply inserted/removed zero rows)
 - [x] NSE holidays set for FY27 in scheduler
 
+## Intraday stage 0 — interval data plane (2026-10-05)
+
+- [x] `ohlcv_candles` interval dimension: migration V75 adds `timeframe VARCHAR(10) NOT NULL DEFAULT 'D'` and `bar_time TIME NOT NULL DEFAULT '00:00:00'`, widens the unique constraint to `(symbol, timeframe, date, bar_time)`, and adds `idx_ohlcv_timeframe_date`. Forward-only (V1–V74 untouched), idempotent, and reversible (rollback SQL in the migration header; intraday rows must be deleted before the pre-interval constraint can be re-added). Column named `timeframe` because `interval` is a reserved keyword in H2.
+- [x] Daily-mode repository queries filter `timeframe = 'D'` implicitly — daily behaviour is unchanged even with 15-minute bars stored for the same symbol/date.
+- [x] Interval-aware market-data layer: `MarketDataClient.fetchCandles(symbol, from, to, Interval)` (default throws `UnsupportedOperationException`); Yahoo parameterizes `interval=1d/15m`, Fyers parameterizes `resolution=D/15`; the 3-arg daily path is unchanged. `Interval` enum (`D`, `15m`) carries the provider codes.
+- [x] NSE session calendar: `NseSessionCalendar` models the 09:15–15:30 normal session, 09:00–09:08 pre-open, 15:40–16:00 closing auction, and the 15:20 IST square-off cutoff, reusing the exchange holiday calendar (PARTIAL = Muhurat sessions). Tested against real NSE holiday and Muhurat dates (incl. weekend Muhurat sessions 2026-11-08, 2023-11-12, 2020-11-14).
+- [x] Bounded session-aware 15-minute ingestion: `IntradayIngestionService` (watchlist only, normal-session bar filtering, per-symbol failure isolation, idempotent upsert = restart-safe, resumption from the latest stored bar) + `IntradayIngestionScheduler` (own 15:45 IST Mon–Fri cron, holiday-skipped; EOD scheduler untouched). No live-broker, order-placement, or auth code.
+- [x] Contract tests: `OhlcvCandleIntervalContractTest` (H2) proves daily-mode queries return exactly their pre-change rows and 15-minute queries return interval-correct rows, plus the widened uniqueness contract; Yahoo/Fyers MockWebServer tests prove the interval-parameterized requests and bar-time parsing.
+- [x] Migration validated on a throwaway local PostgreSQL 16: all 51 migrations apply cleanly, daily defaults apply, 15-minute rows coexist with daily rows, `ON CONFLICT (symbol, timeframe, date, bar_time) DO NOTHING` is idempotent, duplicate daily rows fail loudly.
+- [ ] Not covered: live provider fetch (paper-only phase), dashboard, strategy/indicator changes, intraday cost model, and anything requiring the remote Docker/Testcontainers context.
+
 ## Strategy
 
 - [x] Backtest run on all 10 active stocks — run 2026-08-30 via `POST /api/backtest/run-all?exchange=NSE` against the same backfilled dev DB (10 symbols, 3yr/738 candles each). Note: the watchlist currently holds 10 active symbols, not 14 — this checklist's original "14" figure is stale relative to the current watchlist state, not a claim that 4 stocks were skipped.
@@ -635,7 +646,7 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] Stale exit price / wrong P&L — `PositionService.closePosition()` now sources exit price from `CandleStore.findLatestBySymbol()` (latest ingested OHLCV close, same source `PaperTradingMonitorService` uses), falling back to `currentPrice`/`entryPrice` only if no candle exists.
 - [x] Reviewed via Crit (2026-08-29): raw exit-reason string literals (`"SIGNAL_EXIT"`, `"manual"`, `"manual_close"`) replaced with `backend/strategy/.../ExitReason` enum (added missing `MANUAL` value; previously only used by the backtest engine, not the live path). Also fixed a pre-existing inconsistency where `PositionService` defaulted to `"manual_close"` and `PaperTradingStateService` defaulted to `"manual"` for the same case, and picked up a genuinely missing `broker → strategy` Gradle dependency along the way.
 - New tests: `PaperTradingStateServiceTest.ClosePosition.usesActualExitReason_notHardcodedManual`, `PositionServiceTest` (`ClosePosition`/`CreatePosition` groups). The pre-existing `SignalPipelineSellExitIntegrationTest` was extended with assertions for all three, compiles clean.
-- **Accepted risk (2026-08-29):** the extended integration test still can't execute here — TestContainers vs. `pi-node`'s SSH-based remote Docker context is a fundamental mismatch, not a fixable version skew (see note above). Decision: acceptable to start the pilot on unit-level verification alone; fix once Docker access to a TestContainers-compatible daemon is sorted (e.g. a local daemon or a CI runner with local Docker), not a pilot blocker.
+- **Accepted risk (2026-08-29):** the extended integration test still can't execute here — TestContainers vs. `pi-node`'s SSH-based remote Docker context is a fundamental mismatch, not a fixable version skew (see note above). Decision: acceptable to start the pilot on unit-level verification alone; fix once Docker access to a TestContainers-compatible daemon is sorted (for example, a CI runner with Docker), not a pilot blocker.
 - The former `generate-all` SELL wiring inconsistency is resolved: both signal-generation paths now share `closeHeldPositionOnSell()`.
 - The bad WIPRO test state (`realized_pnl=0.00`, `exit_reason='manual'`) is gone — the whole paper trading portfolio was reset to a clean ₹5,00,000/zero-P&L baseline (see Paper Trading section note).
 

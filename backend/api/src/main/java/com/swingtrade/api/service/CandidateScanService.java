@@ -2,6 +2,7 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
+import com.swingtrade.data.entity.StockEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.CandidateHistoryEligibilityRepository;
@@ -71,7 +72,6 @@ public class CandidateScanService {
     private static final int DEFAULT_OOS_DAYS = 252;
     private static final int DEFAULT_OOS_FOLDS = 3;
     private static final int DEFAULT_MIN_STRATEGY_BUYS = 2;
-
     private final FyersSymbolRepository symbolRepository;
     private final StockRepository stockRepository;
     private final CandidateScanRunRepository runRepository;
@@ -165,7 +165,7 @@ public class CandidateScanService {
     }
 
     @Transactional
-    /** Manual scans discover candidates across the NSE symbol master. */
+    /** Manual scans discover candidates from NSE stock rows. */
     public CandidateScanRunEntity start() { return start(false, false); }
 
     /** Scheduled scans persist a handoff request for their qualified candidates. */
@@ -184,14 +184,32 @@ public class CandidateScanService {
         maxConcurrent = configuredMaxConcurrent();
         semaphore = new Semaphore(maxConcurrent);
 
-        List<String> symbols = (watchlistOnly && watchlistService != null
-            ? watchlistService.getActiveWatchlist().stream().map(entry -> entry.getSymbol())
-            : scheduled || stockRepository == null
-                ? symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
-                    .map(s -> s.getTradingSymbol())
-                : stockRepository.findAllByOrderBySymbol().stream().map(stock -> stock.getSymbol()))
-            .map(symbol -> symbol == null ? "" : symbol.trim().toUpperCase())
-            .filter(s -> !s.isBlank() && s.matches("[A-Z0-9]+"))
+        List<ScanTarget> sourceSymbols;
+        if (watchlistOnly && watchlistService != null) {
+            sourceSymbols = watchlistService.getActiveWatchlist().stream()
+                .map(entry -> new ScanTarget(entry.getSymbol(), entry.getExchange())).toList();
+        } else if (scheduled || stockRepository == null) {
+            sourceSymbols = symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
+                .map(s -> new ScanTarget(s.getTradingSymbol(), "NSE")).toList();
+        } else {
+            List<StockEntity> stocks = stockRepository.findAllByOrderBySymbol();
+            long skippedOtherExchanges = stocks.stream()
+                .filter(stock -> !"NSE".equalsIgnoreCase(stock.getExchange() == null
+                    ? "" : stock.getExchange().trim()))
+                .count();
+            logger.info("Manual candidate scan skipped {} stock row(s) outside NSE.", skippedOtherExchanges);
+            sourceSymbols = stocks.stream()
+                .filter(stock -> "NSE".equalsIgnoreCase(stock.getExchange() == null
+                    ? "" : stock.getExchange().trim()))
+                .map(stock -> new ScanTarget(stock.getSymbol(), stock.getExchange())).toList();
+        }
+
+        List<ScanTarget> symbols = sourceSymbols.stream()
+            .map(target -> new ScanTarget(
+                target.symbol() == null ? "" : target.symbol().trim().toUpperCase(),
+                target.exchange() == null || target.exchange().isBlank()
+                    ? "NSE" : target.exchange().trim().toUpperCase()))
+            .filter(target -> !target.symbol().isBlank())
             .collect(java.util.stream.Collectors.collectingAndThen(
                 java.util.stream.Collectors.toCollection(LinkedHashSet::new), ArrayList::new));
 
@@ -209,7 +227,7 @@ public class CandidateScanService {
         pauses.put(run.getRunId(), new AtomicBoolean(false));
         logHistory.put(run.getRunId(), new ConcurrentLinkedDeque<>());
         publish(run.getRunId(), "RUN_STARTED", null, "INFO",
-            "Scanning " + symbols.size() + " NSE symbols with up to " + maxConcurrent + " workers.");
+            "Scanning " + symbols.size() + " stock symbols with up to " + maxConcurrent + " workers.");
         Runnable scanTask = () -> execute(run.getRunId(), symbols, scheduled);
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -457,17 +475,22 @@ public class CandidateScanService {
         return true;
     }
 
-    private void execute(UUID runId, List<String> symbols, boolean scheduled) {
+    private void execute(UUID runId, List<ScanTarget> symbols, boolean scheduled) {
         List<CompletableFuture<Void>> futures = symbols.stream()
-            .map(symbol -> CompletableFuture.runAsync(() -> processSymbol(runId, symbol, scheduled), executor))
+            .map(target -> CompletableFuture.runAsync(() -> processSymbol(runId, target, scheduled), executor))
             .toList();
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).whenComplete((ignored, error) -> {
             finalizeRun(runId, error);
         });
     }
 
-    private void processSymbol(UUID runId, String symbol, boolean scheduled) {
+    private void processSymbol(UUID runId, ScanTarget target, boolean scheduled) {
+        String symbol = target.symbol();
         if (isCancelled(runId)) return;
+        if (!"NSE".equals(target.exchange())) {
+            saveFailure(runId, target, new IllegalArgumentException("Unsupported exchange: " + target.exchange()));
+            return;
+        }
         boolean acquired = false;
         try {
             semaphore.acquire();
@@ -482,8 +505,8 @@ public class CandidateScanService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            logger.warn("Candidate scan failed for {}: {}", symbol, e.getMessage());
-            saveFailure(runId, symbol, e);
+            logger.warn("Candidate scan failed for {}:{}: {}", target.exchange(), symbol, e.getMessage());
+            saveFailure(runId, target, e);
         } finally {
             if (acquired) semaphore.release();
         }
@@ -500,6 +523,7 @@ public class CandidateScanService {
             run.setCompletedAt(LocalDateTime.now(MARKET_ZONE));
             if (error != null) run.setErrorMessage(error.getMessage());
             if ("COMPLETED".equals(run.getStatus()) && run.getQualifiedSymbols() == 0
+                && !"MANUAL".equals(run.getScanTrigger())
                 && "PENDING".equals(run.getOrchestrationStatus())) {
                 run.setOrchestrationStatus("NOT_REQUIRED");
             }
@@ -514,7 +538,7 @@ public class CandidateScanService {
         completeStreams(runId);
     }
 
-    private boolean scanSymbol(UUID runId, String symbol, boolean scheduled) {
+    boolean scanSymbol(UUID runId, String symbol, boolean scheduled) {
         int backfillYears = configuredBackfillYears();
         int candles = (int) candleStore.countBySymbol(symbol);
         boolean fetched = false;
@@ -771,16 +795,16 @@ public class CandidateScanService {
             minTotalReturn);
     }
 
-    private void saveFailure(UUID runId, String symbol, Exception error) {
+    private void saveFailure(UUID runId, ScanTarget target, Exception error) {
         CandidateScanResultEntity result = new CandidateScanResultEntity();
         result.setRunId(runId);
-        result.setSymbol(symbol);
+        result.setSymbol(target.symbol());
         result.setDataStatus("ERROR");
         result.setReason("Scan failed");
         result.setErrorMessage(error.getMessage());
         resultRepository.save(result);
         increment(runId, true, false);
-        publish(runId, "SYMBOL_FAILED", symbol, "ERROR", "Scan failed: " + error.getMessage());
+        publish(runId, "SYMBOL_FAILED", target.symbol(), "ERROR", "Scan failed: " + error.getMessage());
     }
 
     private synchronized void increment(UUID runId, boolean failed, boolean qualified) {
@@ -851,6 +875,8 @@ public class CandidateScanService {
 
     @PreDestroy
     void shutdown() { executor.shutdownNow(); }
+
+    private record ScanTarget(String symbol, String exchange) { }
 
     public record ScanLogEvent(
         String eventType,

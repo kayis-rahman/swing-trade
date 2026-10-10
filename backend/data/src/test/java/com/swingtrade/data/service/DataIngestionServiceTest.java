@@ -88,7 +88,7 @@ class DataIngestionServiceTest {
         dataIngestionService.processSingleStock("RELIANCE", date);
 
         verify(mockClient).fetchCandle("RELIANCE", date);
-        verify(candleRepository, Mockito.never()).insertIfAbsent(anyString(), eq(date), any(), any(), any(), any(), eq(100L), any());
+        verify(candleRepository, Mockito.never()).insertIfAbsent(anyString(), eq("D"), eq(date), any(), any(), any(), any(), any(), eq(100L), any());
     }
 
     @Test
@@ -292,7 +292,7 @@ class DataIngestionServiceTest {
         CandleData invalid = CandleData.of("RELIANCE", monday.plusDays(1), bd("12"), bd("10"), bd("9"), bd("11"), 100);
         when(mockClient.fetchCandles("RELIANCE", monday, monday.plusDays(1)))
             .thenReturn(List.of(valid, invalid));
-        when(candleRepository.insertIfAbsent(eq("RELIANCE"), eq(monday), any(), any(), any(), any(), eq(100L), any()))
+        when(candleRepository.insertIfAbsent(eq("RELIANCE"), eq("D"), eq(monday), any(), any(), any(), any(), any(), eq(100L), any()))
             .thenReturn(1);
         when(txTemplate.execute(any())).thenAnswer(invocation ->
             ((org.springframework.transaction.support.TransactionCallback<Integer>) invocation.getArgument(0))
@@ -304,7 +304,7 @@ class DataIngestionServiceTest {
         assert outcome.savedRows() == 1;
         assert outcome.invalidRows() == 1;
         assert outcome.sourceOutcome().equals("DATA_RECEIVED");
-        verify(candleRepository).insertIfAbsent(eq("RELIANCE"), eq(monday), any(), any(), any(), any(), eq(100L), any());
+        verify(candleRepository).insertIfAbsent(eq("RELIANCE"), eq("D"), eq(monday), any(), any(), any(), any(), any(), eq(100L), any());
 
         when(mockClient.fetchCandles("RELIANCE", monday, monday)).thenThrow(new IllegalStateException("down"));
         assert dataIngestionService.processStockDataWithOutcome("RELIANCE", monday, monday)
@@ -332,7 +332,7 @@ class DataIngestionServiceTest {
         LocalDate date = LocalDate.of(2026, 1, 5);
         CandleData valid = CandleData.of("RELIANCE", date, bd("10"), bd("12"), bd("9"), bd("11"), 100);
         when(mockClient.fetchCandles("RELIANCE", date, date)).thenReturn(List.of(valid));
-        when(candleRepository.insertIfAbsent(eq("RELIANCE"), eq(date), any(), any(), any(), any(), eq(100L), any()))
+        when(candleRepository.insertIfAbsent(eq("RELIANCE"), eq("D"), eq(date), any(), any(), any(), any(), any(), eq(100L), any()))
             .thenReturn(0);
         when(txTemplate.execute(any())).thenAnswer(invocation ->
             ((org.springframework.transaction.support.TransactionCallback<Integer>) invocation.getArgument(0))

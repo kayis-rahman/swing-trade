@@ -34,6 +34,27 @@ public interface MarketDataClient {
     Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate);
 
     /**
+     * Fetches OHLCV candles for a stock at a specific interval/timeframe.
+     *
+     * <p>This is the interval-aware path for the intraday data plane. The default
+     * implementation throws {@link UnsupportedOperationException} so a provider
+     * without interval support fails loudly instead of silently returning daily
+     * bars mislabeled as intraday — providers that support intervals (Yahoo, Fyers)
+     * override this method.
+     *
+     * @param symbol the stock symbol
+     * @param startDate start date (inclusive)
+     * @param endDate end date (inclusive)
+     * @param interval the requested candle interval
+     * @return list of candle data carrying the interval and bar start time
+     */
+    default Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate,
+                                              Interval interval) {
+        throw new UnsupportedOperationException(
+            "Market data provider " + getClass().getSimpleName() + " does not support interval " + interval);
+    }
+
+    /**
      * Fetches the most recent candle for a stock.
      *
      * @param symbol the stock symbol

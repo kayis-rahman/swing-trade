@@ -28,6 +28,7 @@ class RateLimitedMarketDataClientTest {
         SearchResult searchResult = mock(SearchResult.class);
         when(delegate.fetchCandle("TCS", DATE)).thenReturn(candle);
         when(delegate.fetchCandles("TCS", DATE, DATE)).thenReturn(List.of(candle));
+        when(delegate.fetchCandles("TCS", "BSE", DATE, DATE)).thenReturn(List.of(candle));
         when(delegate.fetchLatestCandle("TCS")).thenReturn(candle);
         when(delegate.fetchPriceBand("TCS", DATE)).thenReturn(band);
         when(delegate.fetchInstrumentDetails("TCS")).thenReturn(instrument);
@@ -40,6 +41,7 @@ class RateLimitedMarketDataClientTest {
 
         assertThat(client.fetchCandle("TCS", DATE)).isEqualTo(candle);
         assertThat(client.fetchCandles("TCS", DATE, DATE)).containsExactly(candle);
+        assertThat(client.fetchCandles("TCS", "BSE", DATE, DATE)).containsExactly(candle);
         assertThat(client.fetchLatestCandle("TCS")).isEqualTo(candle);
         assertThat(client.fetchPriceBand("TCS", DATE)).isEqualTo(band);
         assertThat(client.fetchInstrumentDetails("TCS")).isEqualTo(instrument);
@@ -52,6 +54,7 @@ class RateLimitedMarketDataClientTest {
 
         verify(delegate).fetchCandle("TCS", DATE);
         verify(delegate).fetchCandles("TCS", DATE, DATE);
+        verify(delegate).fetchCandles("TCS", "BSE", DATE, DATE);
         verify(delegate).fetchLatestCandle("TCS");
         verify(delegate).fetchPriceBand("TCS", DATE);
         verify(delegate).fetchInstrumentDetails("TCS");

@@ -60,8 +60,13 @@ final class RateLimitedMarketDataClient implements MarketDataClient {
         acquire(); return delegate.fetchCandles(symbol, startDate, endDate);
     }
     @Override public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate,
-                                                      com.swingtrade.data.service.Interval interval) {
+                                                      Interval interval) {
         acquire(); return delegate.fetchCandles(symbol, startDate, endDate, interval);
+    }
+    @Override public Iterable<CandleData> fetchCandles(String symbol, String exchange,
+                                                        LocalDate startDate, LocalDate endDate) {
+        acquire(); return delegate.fetchCandles(symbol, exchange, startDate, endDate);
+    }
     }
     @Override public CandleData fetchLatestCandle(String symbol) {
         acquire(); return delegate.fetchLatestCandle(symbol);

@@ -40,4 +40,5 @@ class StockStoreImplTest {
         store.save(STOCK);
         verify(repository).save(any(StockEntity.class));
     }
+
 }

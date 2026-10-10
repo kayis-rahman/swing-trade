@@ -72,8 +72,6 @@ public class CandidateScanService {
     private static final int DEFAULT_OOS_DAYS = 252;
     private static final int DEFAULT_OOS_FOLDS = 3;
     private static final int DEFAULT_MIN_STRATEGY_BUYS = 2;
-    record ScanTarget(String symbol, String exchange) { }
-
     private final FyersSymbolRepository symbolRepository;
     private final StockRepository stockRepository;
     private final CandidateScanRunRepository runRepository;
@@ -877,6 +875,8 @@ public class CandidateScanService {
 
     @PreDestroy
     void shutdown() { executor.shutdownNow(); }
+
+    private record ScanTarget(String symbol, String exchange) { }
 
     public record ScanLogEvent(
         String eventType,

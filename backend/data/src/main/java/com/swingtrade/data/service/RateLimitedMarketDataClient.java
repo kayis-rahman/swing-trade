@@ -67,7 +67,6 @@ final class RateLimitedMarketDataClient implements MarketDataClient {
                                                         LocalDate startDate, LocalDate endDate) {
         acquire(); return delegate.fetchCandles(symbol, exchange, startDate, endDate);
     }
-    }
     @Override public CandleData fetchLatestCandle(String symbol) {
         acquire(); return delegate.fetchLatestCandle(symbol);
     }

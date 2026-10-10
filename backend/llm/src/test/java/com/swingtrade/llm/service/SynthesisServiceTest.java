@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.intThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Unit tests for SynthesisService testing BeanOutputConverter integration,
@@ -51,6 +52,7 @@ class SynthesisServiceTest {
     @BeforeEach
     void setUp() {
         when(promptLoader.getSystemPrompt()).thenReturn("You are a financial analyst.");
+        lenient().when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
 
         service = new SynthesisService(llmClientProvider, promptLoader, serverManagerProvider, evaluationService);
 
@@ -88,7 +90,7 @@ class SynthesisServiceTest {
                       "bearishFactors": ["valuation concerns"]
                     }
                     """;
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(validJson));
 
@@ -121,7 +123,7 @@ class SynthesisServiceTest {
                       "bearishFactors": ["high debt"]
                     }
                     """;
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(responseWithReasoning));
 
@@ -137,7 +139,7 @@ class SynthesisServiceTest {
         @Test
         void shouldReturnFallbackWhenLlmReturnsEmpty() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(""));
 
@@ -161,7 +163,7 @@ class SynthesisServiceTest {
                     + "alignment (1000.20 / 1061.42 / 1092.95), a bearish RSI of 30.0, and a price 40.9% away from "
                     + "its 52-week high. [BACKTEST] further reinforces the negative outlook with a 25% win rate, "
                     + "a profit factor of 0.68, and";
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(capturedTruncatedResponse));
 
@@ -175,7 +177,7 @@ class SynthesisServiceTest {
         @Test
         void shouldReturnFallbackWhenLlmReturnsNull() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.empty());
 
@@ -190,7 +192,7 @@ class SynthesisServiceTest {
         @Test
         void shouldReturnFallbackOnLlmError() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.error(new RuntimeException("LLM unavailable")));
 
@@ -227,7 +229,7 @@ class SynthesisServiceTest {
         @Test
         void shouldRequestACompletionBudgetReasoningCannotConsume() {
             when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
 
@@ -241,7 +243,7 @@ class SynthesisServiceTest {
         @Test
         void shouldBoundCompletionBudgetForLocalContextWindows() {
             when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
 
@@ -251,9 +253,21 @@ class SynthesisServiceTest {
         }
 
         @Test
+        void shouldNotClaimATokenLimitForPiAgent() {
+            when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.PI_AGENT);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
+            when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
+                    .thenReturn(Mono.just("{}"));
+
+            service.synthesize(composite);
+
+            verify(llmClient).generateChatCompletion(anyList(), eq(0), eq(0.0));
+        }
+
+        @Test
         void shouldIncludeStockSymbolInPrompt() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
 
@@ -271,7 +285,7 @@ class SynthesisServiceTest {
         @Test
         void shouldIncludeAnalysisDateInPrompt() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
 

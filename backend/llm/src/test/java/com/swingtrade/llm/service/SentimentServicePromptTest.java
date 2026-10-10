@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class SentimentServicePromptTest {
@@ -59,9 +60,10 @@ class SentimentServicePromptTest {
                 org.mockito.Mockito.mock(com.swingtrade.core.metrics.LlmMetrics.class),
                 org.mockito.Mockito.mock(com.swingtrade.core.metrics.SentimentMetrics.class),
                 pdfExtractionService, 0.75);
-        when(serverManagerProvider.getManager()).thenReturn(serverManager);
+        lenient().when(serverManagerProvider.getManager(any(LlmBackendSelector.Backend.class))).thenReturn(serverManager);
         doNothing().when(serverManager).ensureRunning();
-        when(clientProvider.getClient()).thenReturn(llmClient);
+        lenient().when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+        lenient().when(clientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
         when(appSettingsStore.get("llamacpp.model")).thenReturn(Optional.of("Qwen3-4B-Instruct"));
     }
 
@@ -178,7 +180,6 @@ class SentimentServicePromptTest {
 
         verify(llmClient).generateChatCompletion(anyList(),
                 intThat(tokens -> tokens >= 2048), eq(0.0));
-        assertThat(SentimentService.DEFAULT_MAX_RESPONSE_TOKENS).isGreaterThanOrEqualTo(2048);
     }
 
     @Test
@@ -197,6 +198,24 @@ class SentimentServicePromptTest {
         service.analyzeStockSentiment("TCS", LocalDate.now(ZoneId.of("Asia/Kolkata")));
 
         verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
+    }
+
+    @Test
+    @DisplayName("Sentiment does not claim a token cap for Pi Agent")
+    void leavesPiAgentCompletionBudgetUnbounded() {
+        when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.PI_AGENT);
+        when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
+        when(promptLoader.getUserPrompt()).thenReturn("Analyse {symbol}. News: {newsContent}.");
+        when(llmClient.generateChatCompletion(anyList(), eq(0), eq(0.0)))
+                .thenReturn(Mono.just("{\"score\":\"NEUTRAL\",\"confidence\":0.5,\"summary\":\"Mixed\",\"red_flags\":[],\"catalysts\":[]}"));
+        List<PersistedNewsArticle> articles = List.of(
+                new PersistedNewsArticle(1L, new NewsArticle("TCS", "Test headline", "Test URL", null, todayNoon(), "Test source", null), null));
+        when(newsIngestionService.fetchPersistedStockNewsForDecisionDate(eq("TCS"), org.mockito.ArgumentMatchers.nullable(LocalDate.class))).thenReturn(articles);
+        when(newsIngestionService.cleanNewsText(any(NewsArticle.class))).thenReturn("news content");
+
+        service.analyzeStockSentiment("TCS", LocalDate.now(ZoneId.of("Asia/Kolkata")));
+
+        verify(llmClient).generateChatCompletion(anyList(), eq(0), eq(0.0));
     }
 
     @Test

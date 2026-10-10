@@ -34,6 +34,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class SentimentServiceCoverageTest {
@@ -53,6 +54,8 @@ class SentimentServiceCoverageTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+        lenient().when(clientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
         service = new SentimentService(
                 clientProvider, serverManagerProvider, promptLoader, sentimentAnalyzer,
                 newsIngestionService, sentimentStore, stockStore, appSettingsStore,
@@ -105,7 +108,6 @@ class SentimentServiceCoverageTest {
         when(promptLoader.getSystemPrompt()).thenReturn("system");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
         when(newsIngestionService.fetchStructuredFilings(any())).thenReturn(List.of());
-        when(clientProvider.getClient()).thenReturn(llmClient);
         when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
                 .thenReturn(Mono.error(new IllegalStateException("provider unavailable")));
         doThrow(new IllegalStateException("database unavailable"))
@@ -124,7 +126,6 @@ class SentimentServiceCoverageTest {
     @Test
     void usesPiLimitsForArticleCountAndResponseTokens() {
         when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.PI_SSH);
-        when(clientProvider.getClient()).thenReturn(llmClient);
         when(promptLoader.getSystemPrompt()).thenReturn("system");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
         when(sentimentAnalyzer.parseResponse(any(), eq(6)))

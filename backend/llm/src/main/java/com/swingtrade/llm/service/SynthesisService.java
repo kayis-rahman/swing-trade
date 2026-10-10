@@ -99,20 +99,21 @@ public class SynthesisService {
             // same in-flight protection as sentiment — previously it didn't even
             // call ensureRunning(), and the idle monitor could stop llama-server
             // mid-synthesis.
-            LlmServerManager manager = serverManagerProvider.getManager();
+            var backend = clientProvider.getBackend();
+            LlmServerManager manager = serverManagerProvider.getManager(backend);
             if (manager != null) {
                 manager.ensureRunning();
                 manager.beginRequest();
             }
             String llmResponse;
             try {
-                var backend = clientProvider.getBackend();
-                int maxTokens = backend == null ? MAX_TOKENS : switch (backend) {
+                int maxTokens = switch (backend) {
                     case LOCAL, OLLAMA -> LOCAL_MAX_TOKENS;
                     case PI_SSH -> PI_SSH_MAX_TOKENS;
+                    case PI_AGENT -> 0;
                     default -> MAX_TOKENS;
                 };
-                llmResponse = clientProvider.getClient()
+                llmResponse = clientProvider.getClient(backend)
                     .generateChatCompletion(messages, maxTokens, TEMPERATURE)
                     .block(llmProperties != null && llmProperties.getStageTimeout() != null
                         ? llmProperties.getStageTimeout() : Duration.ofSeconds(TIMEOUT_SECONDS));

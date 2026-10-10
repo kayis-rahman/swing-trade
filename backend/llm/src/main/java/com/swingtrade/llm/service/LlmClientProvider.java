@@ -65,7 +65,10 @@ public class LlmClientProvider {
      * selected by the backend selector.
      */
     public LlmClient getClient() {
-        LlmBackendSelector.Backend backend = selector.resolve();
+        return getClient(selector.resolve());
+    }
+
+    public LlmClient getClient(LlmBackendSelector.Backend backend) {
         if (backend == LlmBackendSelector.Backend.PI_SSH) {
             logger.info("Using native llama.cpp HTTP client for PI_SSH backend");
             return llamaCppClient;

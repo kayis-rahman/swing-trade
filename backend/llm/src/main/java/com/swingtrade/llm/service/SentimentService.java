@@ -253,7 +253,8 @@ public class SentimentService {
 
             logger.info("Found {} articles for {}: {}", articles.size(), stockSymbol, stockSymbol);
 
-            boolean piBackend = clientProvider.getBackend() == LlmBackendSelector.Backend.PI_SSH;
+            var backend = clientProvider.getBackend();
+            boolean piBackend = backend == LlmBackendSelector.Backend.PI_SSH;
             int maxArticleChars = piBackend ? PI_MAX_ARTICLE_CHARS : MAX_ARTICLE_CHARS;
             int maxArticles = piBackend ? PI_MAX_ARTICLES_FOR_LLM : MAX_ARTICLES_FOR_LLM;
 
@@ -304,7 +305,7 @@ public class SentimentService {
             // Perform sentiment analysis
             SentimentOutput analysisResult;
             try {
-                analysisResult = performSentimentAnalysis(stockSymbol, date, newsContent, auditRequestId);
+                analysisResult = performSentimentAnalysis(stockSymbol, date, newsContent, auditRequestId, backend);
             } catch (Exception llmEx) {
                 logger.warn("LLM unavailable for {}, falling back to keyword analysis: {}", stockSymbol, LlmErrorUtils.describeError(llmEx));
                 // Build a simple result from headlines
@@ -324,8 +325,7 @@ public class SentimentService {
             }
 
             // Build and cache result
-            var selectedBackend = clientProvider.getBackend();
-            String provider = selectedBackend == null ? "unknown" : selectedBackend.getKey();
+            String provider = backend == null ? "unknown" : backend.getKey();
             SentimentResult result = buildSentimentResult(stockSymbol, date, analysisResult,
                     articleIds.size(), articleIds, provider, auditRequestId);
 
@@ -396,7 +396,8 @@ public class SentimentService {
      * @return sentiment analysis result
      */
     private SentimentOutput performSentimentAnalysis(String stockSymbol, LocalDate analysisDate,
-                                                     List<String> newsContent, String requestId) {
+                                                     List<String> newsContent, String requestId,
+                                                     LlmBackendSelector.Backend backend) {
         logger.debug("Performing LLM sentiment analysis for {} with {} articles", stockSymbol, newsContent.size());
 
         if (newsContent.isEmpty()) {
@@ -432,13 +433,13 @@ public class SentimentService {
                 Map.of("role", "user", "content", formattedUser)
         );
 
-        var backend = clientProvider.getBackend();
-        int maxResponseTokens = backend == null ? DEFAULT_MAX_RESPONSE_TOKENS : switch (backend) {
+        int maxResponseTokens = switch (backend) {
             case PI_SSH -> PI_MAX_RESPONSE_TOKENS;
             case LOCAL, OLLAMA -> LOCAL_MAX_RESPONSE_TOKENS;
+            case PI_AGENT -> 0;
             default -> DEFAULT_MAX_RESPONSE_TOKENS;
         };
-        String provider = backend != null ? backend.getKey() : "unknown";
+        String provider = backend.getKey();
         String modelVersion = configuredModel(provider);
         String promptHash = computePromptHash();
         OffsetDateTime startedAt = OffsetDateTime.now(ZoneOffset.UTC);
@@ -447,12 +448,12 @@ public class SentimentService {
         String llmResponse;
         long llmStart = System.currentTimeMillis();
         try {
-            LlmServerManager manager = serverManagerProvider.getManager();
+            LlmServerManager manager = serverManagerProvider.getManager(backend);
             if (manager != null) {
                 manager.ensureRunning();
                 manager.beginRequest();
             }
-            LlmClient client = clientProvider.getClient();
+            LlmClient client = clientProvider.getClient(backend);
             try {
                 llmResponse = client.generateChatCompletion(messages, maxResponseTokens, 0.0)
                         .block(stageTimeout());

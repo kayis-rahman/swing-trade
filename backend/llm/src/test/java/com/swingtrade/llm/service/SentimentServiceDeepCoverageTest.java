@@ -40,6 +40,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class SentimentServiceDeepCoverageTest {
@@ -63,6 +64,8 @@ class SentimentServiceDeepCoverageTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+        lenient().when(clientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
         service = new SentimentService(
                 clientProvider, serverManagerProvider, promptLoader, sentimentAnalyzer,
                 newsIngestionService, sentimentStore, stockStore, appSettingsStore,
@@ -196,7 +199,6 @@ class SentimentServiceDeepCoverageTest {
         when(promptLoader.getSystemPrompt()).thenReturn("system");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
         when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
-        when(clientProvider.getClient()).thenReturn(llmClient);
         when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
                 .thenReturn(Mono.just("response"));
         when(sentimentAnalyzer.parseResponse(any(), anyInt()))

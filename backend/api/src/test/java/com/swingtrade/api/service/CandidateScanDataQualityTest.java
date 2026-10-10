@@ -19,8 +19,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -110,7 +108,7 @@ class CandidateScanDataQualityTest {
             return result;
         });
 
-        assertThat(invokeScan(runId, "SMALL")).isFalse();
+        assertThat(service.scanSymbol(runId, "SMALL", true)).isFalse();
 
         assertThat(saved.get().getDataStatus()).isEqualTo("INSUFFICIENT");
         assertThat(saved.get().getCandleCount()).isEqualTo(12);
@@ -132,26 +130,11 @@ class CandidateScanDataQualityTest {
         when(candles.findAllBySymbolOrderByDateDesc("TRANSIENT")).thenReturn(List.of());
         when(results.save(any(CandidateScanResultEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThat(invokeScan(runId, "TRANSIENT")).isFalse();
+        assertThat(service.scanSymbol(runId, "TRANSIENT", true)).isFalse();
 
         assertThat(run.getFailedSymbols()).isEqualTo(1);
         assertThat(run.getCompletedSymbols()).isZero();
         verify(results).save(any(CandidateScanResultEntity.class));
-    }
-
-    private boolean invokeScan(UUID runId, String symbol) {
-        try {
-            Method method = CandidateScanService.class.getDeclaredMethod(
-                "scanSymbol", UUID.class, String.class, boolean.class);
-            method.setAccessible(true);
-            return (boolean) method.invoke(service, runId, symbol, true);
-        } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException runtime) throw runtime;
-            throw new AssertionError(cause);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
     }
 
     private static CandidateScanRunEntity runningRun(UUID runId) {

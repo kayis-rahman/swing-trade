@@ -538,7 +538,7 @@ public class CandidateScanService {
         completeStreams(runId);
     }
 
-    private boolean scanSymbol(UUID runId, String symbol, boolean scheduled) {
+    boolean scanSymbol(UUID runId, String symbol, boolean scheduled) {
         int backfillYears = configuredBackfillYears();
         int candles = (int) candleStore.countBySymbol(symbol);
         boolean fetched = false;

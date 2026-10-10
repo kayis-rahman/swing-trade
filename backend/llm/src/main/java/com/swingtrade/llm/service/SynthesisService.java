@@ -41,6 +41,8 @@ public class SynthesisService {
      * leaves &gt;3000 tokens for the object after reasoning.</p>
      */
     static final int MAX_TOKENS = 4096;
+    private static final int LOCAL_MAX_TOKENS = 512;
+    private static final int PI_SSH_MAX_TOKENS = 1024;
     /** Synthesis is persisted as an evaluation input; deterministic output keeps reruns comparable. */
     private static final double TEMPERATURE = 0.0;
     // Must stay comfortably above LlmConfig's LOCAL_LLAMA_TIMEOUT (2850s) for the
@@ -104,8 +106,14 @@ public class SynthesisService {
             }
             String llmResponse;
             try {
+                var backend = clientProvider.getBackend();
+                int maxTokens = backend == null ? MAX_TOKENS : switch (backend) {
+                    case LOCAL, OLLAMA -> LOCAL_MAX_TOKENS;
+                    case PI_SSH -> PI_SSH_MAX_TOKENS;
+                    default -> MAX_TOKENS;
+                };
                 llmResponse = clientProvider.getClient()
-                    .generateChatCompletion(messages, MAX_TOKENS, TEMPERATURE)
+                    .generateChatCompletion(messages, maxTokens, TEMPERATURE)
                     .block(llmProperties != null && llmProperties.getStageTimeout() != null
                         ? llmProperties.getStageTimeout() : Duration.ofSeconds(TIMEOUT_SECONDS));
             } finally {

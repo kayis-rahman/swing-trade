@@ -226,6 +226,7 @@ class SynthesisServiceTest {
          */
         @Test
         void shouldRequestACompletionBudgetReasoningCannotConsume() {
+            when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
             when(llmClientProvider.getClient()).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
@@ -235,6 +236,18 @@ class SynthesisServiceTest {
             verify(llmClient).generateChatCompletion(anyList(),
                     intThat(tokens -> tokens >= 2048), eq(0.0));
             assertThat(SynthesisService.MAX_TOKENS).isGreaterThanOrEqualTo(2048);
+        }
+
+        @Test
+        void shouldBoundCompletionBudgetForLocalContextWindows() {
+            when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
+            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
+                    .thenReturn(Mono.just("{}"));
+
+            service.synthesize(composite);
+
+            verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
         }
 
         @Test

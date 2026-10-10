@@ -164,6 +164,7 @@ class SentimentServicePromptTest {
         // reasoning tokens and 0 content chars; 1024 gave a complete object. The
         // truncated captures in the field (304 and 475 chars, cut off mid-string)
         // are what a partially-consumed budget looks like.
+        when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
         when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
         when(promptLoader.getUserPrompt()).thenReturn("Analyse {symbol}. News: {newsContent}.");
         when(llmClient.generateChatCompletion(anyList(), intThat(tokens -> tokens >= 2048), eq(0.0)))
@@ -178,6 +179,24 @@ class SentimentServicePromptTest {
         verify(llmClient).generateChatCompletion(anyList(),
                 intThat(tokens -> tokens >= 2048), eq(0.0));
         assertThat(SentimentService.DEFAULT_MAX_RESPONSE_TOKENS).isGreaterThanOrEqualTo(2048);
+    }
+
+    @Test
+    @DisplayName("Sentiment completion budget fits local model context windows")
+    void boundsLocalCompletionBudget() {
+        when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
+        when(promptLoader.getSystemPrompt()).thenReturn("System prompt");
+        when(promptLoader.getUserPrompt()).thenReturn("Analyse {symbol}. News: {newsContent}.");
+        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
+                .thenReturn(Mono.just("{\"score\":\"NEUTRAL\",\"confidence\":0.5,\"summary\":\"Mixed\",\"red_flags\":[],\"catalysts\":[]}"));
+        List<PersistedNewsArticle> articles = List.of(
+                new PersistedNewsArticle(1L, new NewsArticle("TCS", "Test headline", "Test URL", null, todayNoon(), "Test source", null), null));
+        when(newsIngestionService.fetchPersistedStockNewsForDecisionDate(eq("TCS"), org.mockito.ArgumentMatchers.nullable(LocalDate.class))).thenReturn(articles);
+        when(newsIngestionService.cleanNewsText(any(NewsArticle.class))).thenReturn("news content");
+
+        service.analyzeStockSentiment("TCS", LocalDate.now(ZoneId.of("Asia/Kolkata")));
+
+        verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
     }
 
     @Test

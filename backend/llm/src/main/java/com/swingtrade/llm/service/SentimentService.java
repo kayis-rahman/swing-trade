@@ -75,7 +75,7 @@ public class SentimentService {
     private static final int PI_MAX_ARTICLES_FOR_LLM = 6;
     private static final int PI_MAX_ARTICLE_CHARS = 450;
     /**
-     * Completion budget for the sentiment call on the non-Pi backends.
+     * Completion budget for the sentiment call on remote reasoning backends.
      *
      * <p>{@code max_tokens} is a combined reasoning-plus-content budget on the reasoning
      * backends this pipeline runs against, so the reasoning text is reserved out of the
@@ -96,6 +96,7 @@ public class SentimentService {
      * {@code MAX_ARTICLE_CHARS}' budget math for why raising it needs a larger context.</p>
      */
     static final int DEFAULT_MAX_RESPONSE_TOKENS = 2048;
+    private static final int LOCAL_MAX_RESPONSE_TOKENS = 512;
     private static final int PI_MAX_RESPONSE_TOKENS = 128;
     private static final int MAX_CONTEXT_FILINGS = 5;
     private static final int MAX_CONTEXT_CHARS = 2400;
@@ -432,8 +433,11 @@ public class SentimentService {
         );
 
         var backend = clientProvider.getBackend();
-        int maxResponseTokens = backend == LlmBackendSelector.Backend.PI_SSH
-                ? PI_MAX_RESPONSE_TOKENS : DEFAULT_MAX_RESPONSE_TOKENS;
+        int maxResponseTokens = backend == null ? DEFAULT_MAX_RESPONSE_TOKENS : switch (backend) {
+            case PI_SSH -> PI_MAX_RESPONSE_TOKENS;
+            case LOCAL, OLLAMA -> LOCAL_MAX_RESPONSE_TOKENS;
+            default -> DEFAULT_MAX_RESPONSE_TOKENS;
+        };
         String provider = backend != null ? backend.getKey() : "unknown";
         String modelVersion = configuredModel(provider);
         String promptHash = computePromptHash();

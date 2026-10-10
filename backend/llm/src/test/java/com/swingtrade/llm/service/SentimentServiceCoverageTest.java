@@ -106,7 +106,7 @@ class SentimentServiceCoverageTest {
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
         when(newsIngestionService.fetchStructuredFilings(any())).thenReturn(List.of());
         when(clientProvider.getClient()).thenReturn(llmClient);
-        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
                 .thenReturn(Mono.error(new IllegalStateException("provider unavailable")));
         doThrow(new IllegalStateException("database unavailable"))
                 .when(sentimentStore).saveOrUpdate(any());

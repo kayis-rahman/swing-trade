@@ -122,7 +122,7 @@ class SentimentServiceDeepCoverageTest {
         verify(newsIngestionService, never()).cleanNewsText(afterCutoff);
         verify(newsIngestionService, never()).cleanNewsText(beforeLookback);
         verify(newsIngestionService, never()).cleanNewsText(undated);
-        verify(llmClient).generateChatCompletion(anyList(), eq(2048), eq(0.0));
+        verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
     }
 
     @Test
@@ -197,7 +197,7 @@ class SentimentServiceDeepCoverageTest {
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
         when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
         when(clientProvider.getClient()).thenReturn(llmClient);
-        when(llmClient.generateChatCompletion(anyList(), eq(2048), eq(0.0)))
+        when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))
                 .thenReturn(Mono.just("response"));
         when(sentimentAnalyzer.parseResponse(any(), anyInt()))
                 .thenReturn(new SentimentOutput(SentimentType.POSITIVE, "good", 0.8));

@@ -149,6 +149,26 @@ class SynthesisServiceTest {
         }
 
         @Test
+        void shouldReturnFallbackForCapturedTruncatedJsonResponse() {
+            String capturedTruncatedResponse = "{\n"
+                    + "  \"narrative\": \"The overall outlook for INFY is bearish, driven primarily by "
+                    + "strongly negative technical indicators and poor backtest performance. [TECHNICAL] shows a "
+                    + "SELL signal with a score of -100/100 and 100% confidence, characterized by bearish EMA "
+                    + "alignment (1000.20 / 1061.42 / 1092.95), a bearish RSI of 30.0, and a price 40.9% away from "
+                    + "its 52-week high. [BACKTEST] further reinforces the negative outlook with a 25% win rate, "
+                    + "a profit factor of 0.68, and";
+            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
+                    .thenReturn(Mono.just(capturedTruncatedResponse));
+
+            SynthesisResult result = service.synthesize(composite);
+
+            assertThat(result.success()).isFalse();
+            assertThat(result.recommendation()).isNull();
+            assertThat(result.confidence()).isEqualTo(0.0);
+        }
+
+        @Test
         void shouldReturnFallbackWhenLlmReturnsNull() {
             // Arrange
             when(llmClientProvider.getClient()).thenReturn(llmClient);

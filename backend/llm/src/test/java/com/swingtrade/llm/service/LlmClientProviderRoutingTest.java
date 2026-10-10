@@ -11,6 +11,8 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import com.swingtrade.llm.client.LlamaCppClient;
 import com.swingtrade.llm.client.LlmClient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -130,6 +132,18 @@ class LlmClientProviderRoutingTest {
 
             // Assert
             assertThat(client).isNotNull();
+        }
+
+        @Test
+        @DisplayName("uses the captured backend without resolving settings again")
+        void usesSuppliedBackendWithoutResolvingAgain() {
+            stubModel(LlmBackendSelector.Backend.OPENAI, openAiModel);
+
+            LlmClient client = provider.getClient(LlmBackendSelector.Backend.OPENAI);
+
+            assertThat(client).isNotNull();
+            verify(settingsAwareChatModels).resolve(LlmBackendSelector.Backend.OPENAI);
+            verify(selector, never()).resolve();
         }
     }
 }

@@ -26,7 +26,10 @@ public class LlmServerManagerProvider {
      * Returns null for OPENAI, OLLAMA, or LAYA (no server to manage).
      */
     public LlmServerManager getManager() {
-        var backend = selector.resolve();
+        return getManager(selector.resolve());
+    }
+
+    public LlmServerManager getManager(LlmBackendSelector.Backend backend) {
         return switch (backend) {
             case LOCAL -> localServerManager;
             case PI_SSH -> piServerManager;

@@ -1,5 +1,26 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-10 (LLM analysis budget fix DevStack verification)
+
+- [x] LLM analysis DEGRADED fix verified through the repository DevStack. Root cause: on the
+  reasoning backends this pipeline runs against, `max_tokens` is a *combined* reasoning +
+  content budget, and the two LLM stages were requesting less budget than the model spends on
+  reasoning alone — replaying the real prompts measured
+  `max_tokens=512 → reasoning_tokens=511, content=0 chars` (sentiment) and
+  `max_tokens=1024 → reasoning_tokens=1023, content=0 chars` (synthesis). Synthesis parsed the
+  truncated object to a `NO_RECOMMENDATION` degradation. Fix: remote reasoning budgets are
+  2048 for sentiment and 4096 for synthesis; `LOCAL`/`OLLAMA` use bounded 512-token budgets,
+  while `PI_SSH` uses 128 for sentiment and 1024 for synthesis. Parsing fallbacks are unchanged.
+  Verified locally: PAPER-mode orchestrator over BHARTIARTL, HDFCBANK, WIPRO, AXISBANK, INFY,
+  SBIN — `DATA_FETCH`, `SIGNAL`, `NEWS`, `SENTIMENT`, and `LLM_ANALYSIS` all COMPLETED 6/6;
+  `LLM_ANALYSIS` had 0 degraded results and the run status was COMPLETED. `BACKTEST` and
+  dependent `PAPER_TRADE` completed for INFY/SBIN. They were SKIPPED for BHARTIARTL, HDFCBANK,
+  WIPRO, and AXISBANK because the backtest found no included historical universe membership on
+  2023-08-29; `PAPER_TRADE` was skipped because its backtest did not complete. This is the
+  orchestrator's existing historical-membership eligibility behavior, unrelated to the LLM fix.
+  Dashboard stage matrix captured with headless Chromium (installed Playwright chromium
+  build via explicit `executablePath`, no download).
+
 Last checked: 2026-10-05 (Laya dashboard settings slice DevStack verification)
 
 - [x] Laya LLM settings slice (branch `fm/swing-trade-laya-dashboard-config-v1`, commit fe3764f2) verified

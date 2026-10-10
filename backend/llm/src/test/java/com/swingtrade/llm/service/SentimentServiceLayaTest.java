@@ -38,6 +38,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Covers {@code SentimentService}'s Laya local pre-filter branching, added
@@ -64,6 +65,8 @@ class SentimentServiceLayaTest {
     @BeforeEach
     void setUp() {
         layaProperties = new LayaProperties();
+        lenient().when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+        lenient().when(clientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
     }
 
     private SentimentService newService() {
@@ -84,7 +87,6 @@ class SentimentServiceLayaTest {
         when(newsIngestionService.cleanNewsText(article)).thenReturn("Company reports record profit");
         when(newsIngestionService.fetchStructuredFilings(any())).thenReturn(List.of());
         when(clientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
-        when(clientProvider.getClient()).thenReturn(llmClient);
         when(promptLoader.getSystemPrompt()).thenReturn("system");
         when(promptLoader.getUserPrompt()).thenReturn("News: {newsContent}");
         when(llmClient.generateChatCompletion(anyList(), eq(512), eq(0.0)))

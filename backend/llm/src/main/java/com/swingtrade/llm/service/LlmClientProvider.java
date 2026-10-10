@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
@@ -65,7 +64,10 @@ public class LlmClientProvider {
      * selected by the backend selector.
      */
     public LlmClient getClient() {
-        LlmBackendSelector.Backend backend = selector.resolve();
+        return getClient(selector.resolve());
+    }
+
+    public LlmClient getClient(LlmBackendSelector.Backend backend) {
         if (backend == LlmBackendSelector.Backend.PI_SSH) {
             logger.info("Using native llama.cpp HTTP client for PI_SSH backend");
             return llamaCppClient;

@@ -20,8 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.intThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 /**
  * Unit tests for SynthesisService testing BeanOutputConverter integration,
@@ -47,6 +52,7 @@ class SynthesisServiceTest {
     @BeforeEach
     void setUp() {
         when(promptLoader.getSystemPrompt()).thenReturn("You are a financial analyst.");
+        lenient().when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
 
         service = new SynthesisService(llmClientProvider, promptLoader, serverManagerProvider, evaluationService);
 
@@ -84,7 +90,7 @@ class SynthesisServiceTest {
                       "bearishFactors": ["valuation concerns"]
                     }
                     """;
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(validJson));
 
@@ -117,7 +123,7 @@ class SynthesisServiceTest {
                       "bearishFactors": ["high debt"]
                     }
                     """;
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(responseWithReasoning));
 
@@ -133,7 +139,7 @@ class SynthesisServiceTest {
         @Test
         void shouldReturnFallbackWhenLlmReturnsEmpty() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(""));
 
@@ -157,7 +163,7 @@ class SynthesisServiceTest {
                     + "alignment (1000.20 / 1061.42 / 1092.95), a bearish RSI of 30.0, and a price 40.9% away from "
                     + "its 52-week high. [BACKTEST] further reinforces the negative outlook with a 25% win rate, "
                     + "a profit factor of 0.68, and";
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just(capturedTruncatedResponse));
 
@@ -171,7 +177,7 @@ class SynthesisServiceTest {
         @Test
         void shouldReturnFallbackWhenLlmReturnsNull() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.empty());
 
@@ -186,7 +192,7 @@ class SynthesisServiceTest {
         @Test
         void shouldReturnFallbackOnLlmError() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.error(new RuntimeException("LLM unavailable")));
 
@@ -205,10 +211,62 @@ class SynthesisServiceTest {
     @DisplayName("Prompt building")
     class PromptBuildingTests {
 
+        /**
+         * Real-shape regression for the DEGRADED LLM_ANALYSIS stage.
+         *
+         * <p>On the OpenAI-compatible reasoning backend this pipeline runs on
+         * (longcat-2.5-preview-free), replaying a real synthesis prompt measured:</p>
+         * <pre>
+         *   max_tokens=1024 -&gt; finish_reason=length, reasoning_tokens=1023, content=0 chars
+         *   max_tokens=4096 -&gt; finish_reason=stop,   reasoning_tokens= 454, complete parseable JSON
+         * </pre>
+         * <p>{@code max_tokens} is a combined reasoning-plus-content budget, so a budget the
+         * reasoning can absorb whole starves the object entirely, and a partially-consumed
+         * one cuts the JSON off mid-narrative — the 466-char partial capture behind the
+         * NO_RECOMMENDATION degradations. The budget must clear the observed reasoning
+         * spend plus the whole object, not merely the object.</p>
+         */
+        @Test
+        void shouldRequestACompletionBudgetReasoningCannotConsume() {
+            when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.OPENAI);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
+            when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
+                    .thenReturn(Mono.just("{}"));
+
+            service.synthesize(composite);
+
+            verify(llmClient).generateChatCompletion(anyList(),
+                    intThat(tokens -> tokens >= 2048), eq(0.0));
+        }
+
+        @Test
+        void shouldBoundCompletionBudgetForLocalContextWindows() {
+            when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.LOCAL);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
+            when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
+                    .thenReturn(Mono.just("{}"));
+
+            service.synthesize(composite);
+
+            verify(llmClient).generateChatCompletion(anyList(), eq(512), eq(0.0));
+        }
+
+        @Test
+        void shouldNotClaimATokenLimitForPiAgent() {
+            when(llmClientProvider.getBackend()).thenReturn(LlmBackendSelector.Backend.PI_AGENT);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
+            when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
+                    .thenReturn(Mono.just("{}"));
+
+            service.synthesize(composite);
+
+            verify(llmClient).generateChatCompletion(anyList(), eq(0), eq(0.0));
+        }
+
         @Test
         void shouldIncludeStockSymbolInPrompt() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
 
@@ -226,7 +284,7 @@ class SynthesisServiceTest {
         @Test
         void shouldIncludeAnalysisDateInPrompt() {
             // Arrange
-            when(llmClientProvider.getClient()).thenReturn(llmClient);
+            when(llmClientProvider.getClient(any(LlmBackendSelector.Backend.class))).thenReturn(llmClient);
             when(llmClient.generateChatCompletion(any(), anyInt(), anyDouble()))
                     .thenReturn(Mono.just("{}"));
 
@@ -236,7 +294,7 @@ class SynthesisServiceTest {
             // Assert
             org.mockito.Mockito.verify(llmClient).generateChatCompletion(
                     org.mockito.ArgumentMatchers.anyList(),
-                    org.mockito.ArgumentMatchers.eq(1024),
+                    org.mockito.ArgumentMatchers.eq(SynthesisService.MAX_TOKENS),
                     eq(0.0)
             );
         }

@@ -237,7 +237,6 @@ class SynthesisServiceTest {
 
             verify(llmClient).generateChatCompletion(anyList(),
                     intThat(tokens -> tokens >= 2048), eq(0.0));
-            assertThat(SynthesisService.MAX_TOKENS).isGreaterThanOrEqualTo(2048);
         }
 
         @Test

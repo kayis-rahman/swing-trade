@@ -1,2 +1,0 @@
-ALTER TABLE candidate_scan_results
-    ADD COLUMN IF NOT EXISTS exchange VARCHAR(8) NOT NULL DEFAULT 'NSE';

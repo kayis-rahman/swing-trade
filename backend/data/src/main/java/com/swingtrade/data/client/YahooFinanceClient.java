@@ -237,28 +237,23 @@ public class YahooFinanceClient implements MarketDataClient {
      */
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate) {
-        return fetchCandles(symbol, "NSE", startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
+        // The daily path stays the default: identical request shape to the pre-interval client.
+        return fetchCandles(symbol, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
     }
 
-    @Override
-    public Iterable<CandleData> fetchCandles(String symbol, String exchange,
-                                              LocalDate startDate, LocalDate endDate) {
-        return fetchCandles(symbol, exchange, startDate, endDate, com.swingtrade.data.service.Interval.DAILY);
-    }
-
-    /** Interval-aware fetch for a provider-specific exchange and bar interval. */
+    /**
+     * Interval-aware fetch. Yahoo's chart API takes the interval as a request parameter
+     * ({@code 1d} for daily, {@code 15m} for fifteen-minute bars); the response parser
+     * stamps each bar with its start time, except daily bars which are normalized to
+     * 00:00 so daily identity stays {@code (symbol, date)}.
+     */
     @Override
     public Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate,
                                              com.swingtrade.data.service.Interval interval) {
-        return fetchCandles(symbol, "NSE", startDate, endDate, interval);
-    }
-
-    public Iterable<CandleData> fetchCandles(String symbol, String exchange, LocalDate startDate,
-                                             LocalDate endDate, com.swingtrade.data.service.Interval interval) {
         List<CandleData> candles = new ArrayList<>();
 
         try {
-            String yfinanceSymbol = formatSymbolForYahoo(symbol, exchange);
+            String yfinanceSymbol = formatSymbolForYahoo(symbol);
 
             long period1 = startDate.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC);
             long period2 = endDate.atStartOfDay().toEpochSecond(java.time.ZoneOffset.UTC) + 86400;
@@ -610,15 +605,11 @@ public class YahooFinanceClient implements MarketDataClient {
     }
 
     private String formatSymbolForYahoo(String symbol) {
-        return formatSymbolForYahoo(symbol, "NSE");
-    }
-
-    private String formatSymbolForYahoo(String symbol, String exchange) {
         if ("NIFTY50".equalsIgnoreCase(symbol) || "NIFTY 50".equalsIgnoreCase(symbol)) {
             return "^NSEI";
         }
         if (symbol.endsWith(".NS") || symbol.endsWith(".BO")) return symbol;
-        return symbol + ("BSE".equalsIgnoreCase(exchange) ? ".BO" : ".NS");
+        return symbol + ".NS";
     }
 
     private BigDecimal parseBigDecimal(JsonNode node) {

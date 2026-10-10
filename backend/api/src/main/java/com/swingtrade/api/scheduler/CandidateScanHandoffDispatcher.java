@@ -34,8 +34,7 @@ public class CandidateScanHandoffDispatcher {
     public void dispatchPendingHandoffs() {
         synchronized (dispatchLock) {
             for (CandidateScanRunEntity scan : runs.findByStatusAndOrchestrationStatus("COMPLETED", "PENDING")) {
-                boolean manualScan = "MANUAL".equals(scan.getScanTrigger());
-                if (!manualScan && scan.getQualifiedSymbols() == 0) {
+                if (scan.getQualifiedSymbols() == 0) {
                     markNotRequired(scan);
                     continue;
                 }
@@ -65,22 +64,15 @@ public class CandidateScanHandoffDispatcher {
                 }
                 if (orchestrator.findActiveRun().isPresent()) return;
                 try {
-                    JobRun job;
-                    if (manualScan) {
-                        // Manual discovery scans the full stock universe; orchestration remains
-                        // scoped to the active watchlist via the orchestrator's default request.
-                        job = orchestrator.startRun(JobRun.TriggerType.MANUAL, scan.getRunId(), RunRequest.NONE);
-                    } else {
-                        var symbols = results.findByRunIdOrderBySymbolAsc(scan.getRunId()).stream()
-                            .filter(result -> result.isQualified() && result.isActivated())
-                            .map(result -> result.getSymbol()).toList();
-                        if (symbols.isEmpty()) {
-                            markNotRequired(scan);
-                            continue;
-                        }
-                        job = orchestrator.startRun(JobRun.TriggerType.SCHEDULED, scan.getRunId(),
-                            new RunRequest(symbols, null, null, null, null));
+                    var symbols = results.findByRunIdOrderBySymbolAsc(scan.getRunId()).stream()
+                        .filter(result -> result.isQualified() && result.isActivated())
+                        .map(result -> result.getSymbol()).toList();
+                    if (symbols.isEmpty()) {
+                        markNotRequired(scan);
+                        continue;
                     }
+                    JobRun job = orchestrator.startRun(JobRun.TriggerType.SCHEDULED, scan.getRunId(),
+                        new RunRequest(symbols, null, null, null, null));
                     scan.setOrchestrationJobRunId(job.runId());
                     scan.setOrchestrationStatus("STARTED");
                     scan.setOrchestrationError(null);

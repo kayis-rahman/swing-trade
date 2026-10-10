@@ -2,13 +2,10 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
-import com.swingtrade.data.entity.StockEntity;
+import com.swingtrade.data.entity.FyersSymbolEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.FyersSymbolRepository;
-import com.swingtrade.data.repository.StockRepository;
-import com.swingtrade.data.repository.CandidateHistoryEligibilityRepository;
-import com.swingtrade.data.service.WatchlistService;
 import com.swingtrade.data.service.AppSettingsService;
 import com.swingtrade.data.service.DataIngestionService;
 import com.swingtrade.domain.store.CandleStore;
@@ -26,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,9 +38,6 @@ class CandidateScanServiceTest {
     private CandidateScanRunRepository runRepository;
     private CandidateScanResultRepository resultRepository;
     private FyersSymbolRepository symbolRepository;
-    private StockRepository stockRepository;
-    private WatchlistService watchlistService;
-    private DataIngestionService ingestionService;
     private AppSettingsService settingsService;
     private CandidateScanService service;
 
@@ -53,23 +46,16 @@ class CandidateScanServiceTest {
         runRepository = mock(CandidateScanRunRepository.class);
         resultRepository = mock(CandidateScanResultRepository.class);
         symbolRepository = mock(FyersSymbolRepository.class);
-        stockRepository = mock(StockRepository.class);
-        watchlistService = mock(WatchlistService.class);
-        ingestionService = mock(DataIngestionService.class);
         settingsService = mock(AppSettingsService.class);
         service = new CandidateScanService(
             symbolRepository,
-            stockRepository,
             runRepository,
             resultRepository,
-            mock(CandidateHistoryEligibilityRepository.class),
-            ingestionService,
-            watchlistService,
+            mock(DataIngestionService.class),
             settingsService,
             mock(CandleStore.class),
             mock(PriceActionSignalEngine.class),
             mock(BacktestEngine.class),
-            mock(CandidateStrategyEvaluator.class),
             3,
             0,
             3);
@@ -133,58 +119,20 @@ class CandidateScanServiceTest {
     class Lifecycle {
 
         @Test
-        void manualScansAllNseStockRowsRegardlessOfActivityAndSkipsOtherExchanges() {
+        void manualScansUseTheNseSymbolMasterInsteadOfTheActiveWatchlist() {
+            FyersSymbolEntity first = new FyersSymbolEntity();
+            first.setTradingSymbol("INFY");
+            FyersSymbolEntity second = new FyersSymbolEntity();
+            second.setTradingSymbol("TCS");
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            StockEntity firstStock = new StockEntity();
-            firstStock.setSymbol("INFY");
-            firstStock.setExchange("NSE");
-            StockEntity secondStock = new StockEntity();
-            secondStock.setSymbol("TCS");
-            secondStock.setExchange("NSE");
-            StockEntity thirdStock = new StockEntity();
-            thirdStock.setSymbol("M&M");
-            thirdStock.setExchange("NSE");
-            StockEntity fourthStock = new StockEntity();
-            fourthStock.setSymbol("BAJAJ-AUTO");
-            fourthStock.setExchange("NSE");
-            StockEntity fifthStock = new StockEntity();
-            fifthStock.setSymbol("BSECO");
-            fifthStock.setExchange("BSE");
-            StockEntity sixthStock = new StockEntity();
-            sixthStock.setSymbol("FOOCO");
-            sixthStock.setExchange("FOO");
-            when(stockRepository.findAllByOrderBySymbol())
-                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, fifthStock, sixthStock));
+            when(symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE"))
+                .thenReturn(List.of(first, second));
 
             CandidateScanRunEntity scan = service.start();
 
-            assertThat(scan.getScanScope()).isEqualTo("ACTIVE_STOCKS");
-            assertThat(scan.getTotalSymbols()).isEqualTo(4);
-            assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
-            assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
-            verify(stockRepository).findAllByOrderBySymbol();
-            verify(watchlistService, never()).getAllWatchlist();
-        }
-
-        @Test
-        void completedManualScanWithNoQualifiedSymbolsKeepsItsHandoffPending() {
-            AtomicReference<CandidateScanRunEntity> savedRun = new AtomicReference<>();
-            when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of());
-            org.mockito.Mockito.doAnswer(invocation -> {
-                CandidateScanRunEntity run = invocation.getArgument(0);
-                savedRun.set(run);
-                return run;
-            }).when(runRepository).save(any());
-            when(runRepository.findByRunId(any()))
-                .thenAnswer(invocation -> Optional.ofNullable(savedRun.get()));
-
-            CandidateScanRunEntity scan = service.start();
-
-            org.mockito.Mockito.verify(runRepository, org.mockito.Mockito.timeout(1000).atLeast(2)).save(scan);
-            assertThat(scan.getStatus()).isEqualTo("COMPLETED");
-            assertThat(scan.getQualifiedSymbols()).isZero();
-            assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
+            assertThat(scan.getScanScope()).isEqualTo("NSE_BROAD");
+            assertThat(scan.getTotalSymbols()).isEqualTo(2);
+            verify(symbolRepository).findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE");
         }
 
         @Test

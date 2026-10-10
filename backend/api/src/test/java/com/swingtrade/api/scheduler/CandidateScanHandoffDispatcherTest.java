@@ -50,30 +50,6 @@ class CandidateScanHandoffDispatcherTest {
             eq(new RunRequest(List.of("INFY"), null, null, null, null)));
     }
 
-    @Test
-    void manualScanHandoffUsesTheOrchestratorDefaultWatchlistScope() {
-        CandidateScanRunRepository runs = mock(CandidateScanRunRepository.class);
-        JobRunRepository jobs = mock(JobRunRepository.class);
-        CandidateScanResultRepository results = mock(CandidateScanResultRepository.class);
-        JobOrchestratorService orchestrator = mock(JobOrchestratorService.class);
-        CandidateScanRunEntity scan = new CandidateScanRunEntity();
-        scan.setRunId(UUID.randomUUID());
-        scan.setStatus("COMPLETED");
-        scan.setScanTrigger("MANUAL");
-        scan.setOrchestrationStatus("PENDING");
-        scan.setQualifiedSymbols(0);
-        when(runs.findByStatusAndOrchestrationStatus("COMPLETED", "PENDING")).thenReturn(List.of(scan));
-        when(jobs.findFirstByCandidateScanRunIdOrderByStartedAtDesc(scan.getRunId())).thenReturn(Optional.empty());
-        when(orchestrator.findActiveRun()).thenReturn(Optional.empty());
-        when(orchestrator.startRun(JobRun.TriggerType.MANUAL, scan.getRunId(), RunRequest.NONE))
-            .thenReturn(new JobRun(UUID.randomUUID(), JobRun.TriggerType.MANUAL, JobRun.Status.RUNNING,
-                LocalDateTime.now(), null, 10, 0, 0, null));
-
-        new CandidateScanHandoffDispatcher(runs, jobs, results, orchestrator).dispatchPendingHandoffs();
-
-        verify(orchestrator).startRun(JobRun.TriggerType.MANUAL, scan.getRunId(), RunRequest.NONE);
-    }
-
     private static CandidateScanResultEntity result(UUID runId, String symbol, boolean qualified, boolean activated) {
         CandidateScanResultEntity result = new CandidateScanResultEntity();
         result.setRunId(runId);

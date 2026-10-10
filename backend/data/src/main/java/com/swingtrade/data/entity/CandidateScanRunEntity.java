@@ -28,8 +28,6 @@ public class CandidateScanRunEntity {
     /** Explicit provenance for the symbol universe; null is retained for legacy rows. */
     @Column(name = "scan_scope", length = 16)
     private String scanScope;
-    @Column(name = "scan_trigger", length = 16)
-    private String scanTrigger;
     @Column(name = "completed_symbols", nullable = false)
     private int completedSymbols;
     @Column(name = "failed_symbols", nullable = false)
@@ -56,8 +54,6 @@ public class CandidateScanRunEntity {
     public void setTotalSymbols(int value) { this.totalSymbols = value; }
     public String getScanScope() { return scanScope; }
     public void setScanScope(String value) { this.scanScope = value; }
-    public String getScanTrigger() { return scanTrigger; }
-    public void setScanTrigger(String value) { this.scanTrigger = value; }
     public int getCompletedSymbols() { return completedSymbols; }
     public void setCompletedSymbols(int value) { this.completedSymbols = value; }
     public int getFailedSymbols() { return failedSymbols; }

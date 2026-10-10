@@ -99,8 +99,7 @@ export interface CandidateScanRun {
   runId: string
   status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
   totalSymbols: number
-  scanScope?: 'WATCHLIST' | 'NSE_BROAD' | 'ACTIVE_STOCKS'
-  scanTrigger?: 'MANUAL' | 'SCHEDULED'
+  scanScope?: 'WATCHLIST' | 'NSE_BROAD'
   completedSymbols: number
   failedSymbols: number
   qualifiedSymbols: number
@@ -115,7 +114,6 @@ export interface CandidateScanRun {
 export interface CandidateScanResult {
   runId: string
   symbol: string
-  exchange: string
   dataStatus: 'READY' | 'INSUFFICIENT' | 'ERROR'
   candleCount: number
   signalType?: 'BUY' | 'SELL' | 'HOLD'

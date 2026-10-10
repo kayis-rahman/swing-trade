@@ -33,11 +33,6 @@ public interface MarketDataClient {
      */
     Iterable<CandleData> fetchCandles(String symbol, LocalDate startDate, LocalDate endDate);
 
-    default Iterable<CandleData> fetchCandles(String symbol, String exchange,
-                                               LocalDate startDate, LocalDate endDate) {
-        return fetchCandles(symbol, startDate, endDate);
-    }
-
     /**
      * Fetches OHLCV candles for a stock at a specific interval/timeframe.
      *

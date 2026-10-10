@@ -27,7 +27,6 @@ describe('CandidateExplorerView', () => {
   }
 
   beforeEach(() => {
-    vi.useRealTimers()
     vi.clearAllMocks()
     api.getCandidateScanSettings.mockResolvedValue(defaultSettings)
     api.openCandidateScanStream.mockReturnValue(null)
@@ -53,7 +52,7 @@ describe('CandidateExplorerView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Find the next pilot symbol')
-    expect(wrapper.text()).toContain('Scan full universe')
+    expect(wrapper.text()).toContain('Scan NSE universe')
     expect(wrapper.text()).toContain('scope unavailable for legacy run')
     await wrapper.get('button[data-test="scan-toggle"]').trigger('click')
     await flushPromises()
@@ -62,99 +61,6 @@ describe('CandidateExplorerView', () => {
     expect(wrapper.text()).toContain('Cancel scan')
     expect(wrapper.text()).toContain('RUNNING')
     expect(wrapper.text()).toContain('active watchlist symbols')
-  })
-
-  it('labels the manual candidate universe and watchlist orchestration separately', async () => {
-    const completed = {
-      runId: 'run-manual',
-      status: 'COMPLETED',
-      totalSymbols: 59,
-      completedSymbols: 59,
-      failedSymbols: 0,
-      qualifiedSymbols: 0,
-      scanScope: 'ACTIVE_STOCKS',
-      scanTrigger: 'MANUAL',
-      orchestrationStatus: 'STARTED',
-      startedAt: '2026-08-31T00:00:00',
-    }
-    api.getCandidateScanHistory.mockResolvedValue([completed])
-    api.getCandidateScan.mockResolvedValue(completed)
-    api.getCandidateScanResults.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
-
-    const wrapper = mount(CandidateExplorerView)
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('59')
-    expect(wrapper.text()).toContain('all active stock records')
-    expect(wrapper.text()).toContain('watchlist orchestration started')
-  })
-
-  it('refreshes a completed manual scan while watchlist orchestration is pending', async () => {
-    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
-    const started = {
-      runId: 'run-manual-pending',
-      status: 'RUNNING',
-      totalSymbols: 59,
-      completedSymbols: 0,
-      failedSymbols: 0,
-      qualifiedSymbols: 0,
-      scanScope: 'ACTIVE_STOCKS',
-      scanTrigger: 'MANUAL',
-      orchestrationStatus: 'PENDING',
-      startedAt: '2026-08-31T00:00:00',
-    }
-    const completedPending = {
-      ...started,
-      status: 'COMPLETED',
-      completedSymbols: 59,
-    }
-    const completedStarted = {
-      ...completedPending,
-      orchestrationStatus: 'STARTED',
-    }
-    api.getCandidateScanHistory.mockResolvedValue([])
-    api.startCandidateScan.mockResolvedValue(started)
-    api.getCandidateScan
-      .mockResolvedValueOnce(completedPending)
-      .mockResolvedValueOnce(completedStarted)
-    api.getCandidateScanResults.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
-
-    const wrapper = mount(CandidateExplorerView)
-    await flushPromises()
-    await wrapper.get('button[data-test="scan-toggle"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('watchlist orchestration pending')
-    await vi.advanceTimersByTimeAsync(2000)
-    await flushPromises()
-
-    expect(api.getCandidateScan).toHaveBeenCalledTimes(2)
-    expect(wrapper.text()).toContain('watchlist orchestration started')
-    vi.useRealTimers()
-  })
-
-  it('labels scheduled candidate orchestration separately from watchlist runs', async () => {
-    const completed = {
-      runId: 'run-scheduled',
-      status: 'COMPLETED',
-      totalSymbols: 2650,
-      completedSymbols: 2650,
-      failedSymbols: 0,
-      qualifiedSymbols: 4,
-      scanScope: 'NSE_BROAD',
-      scanTrigger: 'SCHEDULED',
-      orchestrationStatus: 'STARTED',
-      startedAt: '2026-08-31T00:00:00',
-    }
-    api.getCandidateScanHistory.mockResolvedValue([completed])
-    api.getCandidateScan.mockResolvedValue(completed)
-    api.getCandidateScanResults.mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
-
-    const wrapper = mount(CandidateExplorerView)
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('candidate orchestration started')
-    expect(wrapper.text()).not.toContain('watchlist orchestration started')
   })
 
   it('renders qualified candidates and activation state', async () => {
@@ -183,7 +89,6 @@ describe('CandidateExplorerView', () => {
         {
           runId: 'run-2',
           symbol: 'JSWSTEEL',
-          exchange: 'NSE',
           dataStatus: 'READY',
           candleCount: 738,
           signalType: 'BUY',

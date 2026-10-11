@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -77,49 +78,52 @@ public class IntradayPaperExecutionService {
         }
 
         IntradayCostModel costModel = new IntradayCostModel();
-        IntradayBacktestResult replay = new IntradayBacktestEngine(sessions, costModel, config)
-            .run(symbol, bars, strategy, params);
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions, costModel, config);
+        IntradayBacktestResult replay = requestedAsOf == null
+            ? engine.run(symbol, bars, strategy, params)
+            : engine.runAsOf(symbol, bars, strategy, params, sessionDate, asOf);
         List<IntradayPaperSessionResult.PaperOrderRecord> orders = new ArrayList<>(replay.trades().size() * 2);
-        List<IntradayPaperSessionResult.PaperPositionRecord> positions = new ArrayList<>(replay.trades().size());
+        List<IntradayPaperSessionResult.PaperPositionRecord> positions = new ArrayList<>(replay.trades().size() + 1);
         List<IntradayPaperSessionResult.PaperTradeRecord> paperTrades = new ArrayList<>(replay.trades().size());
         int maxConcurrent = 0;
         BigDecimal realizedPnl = BigDecimal.ZERO;
         BigDecimal unrealizedPnl = BigDecimal.ZERO;
-        var barsByTime = new java.util.HashMap<LocalTime, IntradayBar>();
-        bars.forEach(bar -> { if (expectedBarStarts.contains(bar.sessionTime())) barsByTime.put(bar.sessionTime(), bar); });
-        IntradayBar markBar = barsByTime.get(asOf);
         for (int index = 0; index < replay.trades().size(); index++) {
             IntradayBacktestTrade trade = replay.trades().get(index);
-            if (trade.entryTime().toLocalTime().isAfter(asOf)) continue;
             String positionId = runId + "-position-" + (index + 1);
             String entryOrderId = runId + "-order-" + (index * 2 + 1);
             String exitOrderId = runId + "-order-" + (index * 2 + 2);
             orders.add(new IntradayPaperSessionResult.PaperOrderRecord(entryOrderId, symbol, "BUY",
                 trade.entryTime(), trade.entryPrice(), trade.quantity(), FILLED, EXECUTION_MODE, "NEXT_BAR_OPEN"));
-            boolean closed = !trade.exitTime().toLocalTime().isAfter(asOf);
-            if (closed) {
-                orders.add(new IntradayPaperSessionResult.PaperOrderRecord(exitOrderId, symbol, "SELL",
-                    trade.exitTime(), trade.exitPrice(), trade.quantity(), FILLED, EXECUTION_MODE, trade.exitReason()));
-                positions.add(new IntradayPaperSessionResult.PaperPositionRecord(positionId, symbol,
-                    entryOrderId, exitOrderId, trade.entryTime(), trade.exitTime(), trade.entryPrice(),
-                    trade.exitPrice(), trade.exitPrice(), trade.quantity(), "CLOSED", trade.costs(), trade.pnl(),
-                    BigDecimal.ZERO, trade.exitReason(), false));
-                paperTrades.add(new IntradayPaperSessionResult.PaperTradeRecord(positionId, entryOrderId,
-                    exitOrderId, trade.strategy(), trade.entryTime(), trade.exitTime(), trade.entryPrice(),
-                    trade.exitPrice(), trade.quantity(), trade.costs(), trade.pnl(), trade.exitReason()));
-                realizedPnl = realizedPnl.add(trade.pnl());
-            } else {
-                BigDecimal currentPrice = markBar.close();
-                BigDecimal estimatedSellFill = costModel.sellFill(currentPrice);
-                BigDecimal estimatedCosts = costModel.roundTripCost(trade.entryPrice(),
-                    estimatedSellFill, trade.quantity());
-                BigDecimal openPnl = estimatedSellFill.subtract(trade.entryPrice())
-                    .multiply(BigDecimal.valueOf(trade.quantity())).subtract(estimatedCosts);
-                positions.add(new IntradayPaperSessionResult.PaperPositionRecord(positionId, symbol,
-                    entryOrderId, null, trade.entryTime(), null, trade.entryPrice(), null, currentPrice,
-                    trade.quantity(), "OPEN", estimatedCosts, BigDecimal.ZERO, openPnl, "OPEN", false));
-                unrealizedPnl = unrealizedPnl.add(openPnl);
-            }
+            orders.add(new IntradayPaperSessionResult.PaperOrderRecord(exitOrderId, symbol, "SELL",
+                trade.exitTime(), trade.exitPrice(), trade.quantity(), FILLED, EXECUTION_MODE, trade.exitReason()));
+            positions.add(new IntradayPaperSessionResult.PaperPositionRecord(positionId, symbol,
+                entryOrderId, exitOrderId, trade.entryTime(), trade.exitTime(), trade.entryPrice(),
+                trade.exitPrice(), trade.exitPrice(), trade.quantity(), "CLOSED", trade.costs(), trade.pnl(),
+                BigDecimal.ZERO, trade.exitReason(), false));
+            paperTrades.add(new IntradayPaperSessionResult.PaperTradeRecord(positionId, entryOrderId,
+                exitOrderId, trade.strategy(), trade.entryTime(), trade.exitTime(), trade.entryPrice(),
+                trade.exitPrice(), trade.quantity(), trade.costs(), trade.pnl(), trade.exitReason()));
+            realizedPnl = realizedPnl.add(trade.pnl());
+            maxConcurrent = 1;
+        }
+        if (replay.openPosition() != null) {
+            var open = replay.openPosition();
+            String positionId = runId + "-position-" + (replay.trades().size() + 1);
+            String entryOrderId = runId + "-order-" + (replay.trades().size() * 2 + 1);
+            ZonedDateTime entryTime = replay.openPositionEntryTime();
+            BigDecimal currentPrice = bars.stream().filter(bar -> bar.sessionTime().equals(asOf))
+                .findFirst().orElseThrow().open();
+            BigDecimal estimatedSellFill = costModel.sellFill(currentPrice);
+            BigDecimal estimatedCosts = costModel.roundTripCost(open.entryPrice(), estimatedSellFill, open.quantity());
+            BigDecimal openPnl = estimatedSellFill.subtract(open.entryPrice())
+                .multiply(BigDecimal.valueOf(open.quantity())).subtract(estimatedCosts);
+            orders.add(new IntradayPaperSessionResult.PaperOrderRecord(entryOrderId, symbol, "BUY",
+                entryTime, open.entryPrice(), open.quantity(), FILLED, EXECUTION_MODE, "NEXT_BAR_OPEN"));
+            positions.add(new IntradayPaperSessionResult.PaperPositionRecord(positionId, symbol,
+                entryOrderId, null, entryTime, null, open.entryPrice(), null, currentPrice,
+                open.quantity(), "OPEN", estimatedCosts, BigDecimal.ZERO, openPnl, "OPEN", false));
+            unrealizedPnl = openPnl;
             maxConcurrent = 1;
         }
         return new IntradayPaperSessionResult(runId, EXECUTION_MODE, "COMPLETED", symbol, sessionDate,

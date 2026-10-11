@@ -68,6 +68,7 @@
             aria-label="Replay as of bar time"
             class="mt-1 w-full rounded-md border bg-bg-primary px-3 py-2 text-sm text-text-primary"
           >
+            <option value="">End of session</option>
             <option v-for="time in sessionBarTimes" :key="time" :value="time">{{ time }}</option>
           </select>
         </label>
@@ -211,7 +212,7 @@
             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               Market state
             </p>
-            <p class="mt-2 text-sm font-semibold text-text-primary">As of {{ resultAsOfBarTime }} IST</p>
+            <p class="mt-2 text-sm font-semibold text-text-primary">As of {{ resultAsOfLabel }}</p>
           </div>
           <div class="px-4 py-4 sm:px-5">
             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
@@ -467,7 +468,7 @@ import { formatCurrency, formatSignedCurrency } from '../utils/format'
 const form = reactive({
   symbol: 'TCS',
   sessionDate: '2026-10-09',
-  asOfBarTime: '15:15',
+  asOfBarTime: '',
   strategyType: 'INTRADAY_ORB',
   initialCapital: 10_000,
   quantity: 10,
@@ -477,7 +478,7 @@ const form = reactive({
 
 const loading = ref(false)
 const result = ref<IntradayPaperSessionResult | null>(null)
-const resultAsOfBarTime = ref<string | null>(null)
+const resultAsOfLabel = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
 const sessionBarTimes = Array.from({ length: 25 }, (_, index) => {
   const totalMinutes = 9 * 60 + 15 + index * 15
@@ -494,6 +495,7 @@ const squareOffLabel = computed(() => {
   if (!result.value) return 'Not run'
   if (result.value.status === 'INCOMPLETE_DATA') return 'Not run · incomplete data'
   if (result.value.status === 'BLOCKED_KILL_SWITCH') return 'Blocked · kill switch'
+  if (openPositions.value.length > 0) return 'Open · awaiting exit'
   if (result.value.trades.some((trade) => trade.exitReason === 'FORCED_SQUARE_OFF')) {
     return 'Forced · 15:15 bar proxy'
   }
@@ -523,16 +525,16 @@ function shortId(value: string): string {
 }
 
 async function runSession() {
-  const submittedAsOfBarTime = form.asOfBarTime
+  const submittedAsOfLabel = form.asOfBarTime ? `${form.asOfBarTime} IST` : 'end of session'
   loading.value = true
   result.value = null
-  resultAsOfBarTime.value = null
+  resultAsOfLabel.value = null
   errorMessage.value = null
   try {
     result.value = await runIntradayPaperSession({
       symbol: form.symbol.trim().toUpperCase(),
       sessionDate: form.sessionDate,
-      asOfBarTime: form.asOfBarTime,
+      ...(form.asOfBarTime ? { asOfBarTime: form.asOfBarTime } : {}),
       strategyType: form.strategyType,
       riskConfig: {
         initialCapital: form.initialCapital,
@@ -541,7 +543,7 @@ async function runSession() {
         maxDailyLoss: form.maxDailyLoss,
       },
     })
-    resultAsOfBarTime.value = submittedAsOfBarTime
+    resultAsOfLabel.value = submittedAsOfLabel
   } catch (error) {
     errorMessage.value = formatAppError(error, {
       title: 'Couldn’t load the paper session',
@@ -556,7 +558,7 @@ async function runSession() {
 function loadSeededSession() {
   form.symbol = 'TCS'
   form.sessionDate = '2026-10-09'
-  form.asOfBarTime = '15:15'
+  form.asOfBarTime = ''
   form.strategyType = 'INTRADAY_ORB'
   form.initialCapital = 10_000
   form.quantity = 10

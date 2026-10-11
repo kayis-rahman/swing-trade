@@ -132,6 +132,29 @@ class IntradayPaperExecutionServiceTest {
     }
 
     @Test
+    void selectedBarUsesOnlyItsOpenUntilTheNextAsOfTime() {
+        List<IntradayBar> bars = fixtureBars();
+        var strategy = new IntradayOpeningRangeBreakoutStrategy();
+        var params = IntradayBacktestEngine.defaultParams();
+
+        IntradayPaperSessionResult atEntryBarOpen = service.runSession("TCS", DAY, bars, strategy, params,
+            config(1, "1000"), LocalTime.of(10, 0));
+        assertThat(atEntryBarOpen.positions()).singleElement().satisfies(position -> {
+            assertThat(position.status()).isEqualTo("OPEN");
+            assertThat(position.currentPrice()).isEqualByComparingTo("102");
+            assertThat(position.exitTime()).isNull();
+        });
+
+        IntradayPaperSessionResult afterEntryBarComplete = service.runSession("TCS", DAY, bars, strategy, params,
+            config(1, "1000"), LocalTime.of(10, 15));
+        assertThat(afterEntryBarComplete.positions()).singleElement().satisfies(position -> {
+            assertThat(position.status()).isEqualTo("CLOSED");
+            assertThat(position.exitTime().toLocalTime()).isEqualTo(LocalTime.of(10, 0));
+            assertThat(position.exitReason()).isEqualTo("TARGET_HIT");
+        });
+    }
+
+    @Test
     void receivedBarCountExcludesOutOfSessionStarts() {
         List<IntradayBar> bars = new java.util.ArrayList<>(fixtureBars());
         bars.add(barAt("15:30", "100", "100", "100", "100"));

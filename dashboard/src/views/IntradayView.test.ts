@@ -131,7 +131,6 @@ describe('IntradayView paper cockpit', () => {
     expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith({
       symbol: 'TCS',
       sessionDate: '2026-10-09',
-      asOfBarTime: '15:15',
       strategyType: 'INTRADAY_ORB',
       riskConfig: {
         initialCapital: 10_000,
@@ -159,8 +158,8 @@ describe('IntradayView paper cockpit', () => {
     const wrapper = await mountView()
     const selector = wrapper.find('[aria-label="Replay as of bar time"]')
 
-    expect(selector.findAll('option')).toHaveLength(25)
-    expect(selector.findAll('option').map((option) => option.attributes('value'))).toEqual([
+    expect(selector.findAll('option')).toHaveLength(26)
+    expect(selector.findAll('option').slice(1).map((option) => option.attributes('value'))).toEqual([
       '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00', '11:15',
       '11:30', '11:45', '12:00', '12:15', '12:30', '12:45', '13:00', '13:15', '13:30',
       '13:45', '14:00', '14:15', '14:30', '14:45', '15:00', '15:15',
@@ -176,6 +175,49 @@ describe('IntradayView paper cockpit', () => {
     expect(wrapper.text()).toContain('As of 10:00 IST')
     await selector.setValue('10:15')
     expect(wrapper.text()).toContain('As of 10:00 IST')
+    wrapper.unmount()
+  })
+
+  it('labels an open as-of position as open instead of flat', async () => {
+    const result = completedSession()
+    result.positions = [{
+      ...result.positions[0],
+      exitOrderId: null,
+      exitTime: null,
+      exitPrice: null,
+      status: 'OPEN',
+      realizedPnl: 0,
+      unrealizedPnl: -12,
+      exitReason: 'OPEN',
+    }]
+    result.orders = result.orders.slice(0, 1)
+    result.trades = []
+    result.openPositionsAtEnd = 1
+    result.netPnl = -12
+    apiMocks.runIntradayPaperSession.mockResolvedValue(result)
+    const wrapper = await mountView()
+
+    await buttonByText(wrapper, /load seeded session/i).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Open · awaiting exit')
+    expect(wrapper.text()).not.toContain('Flat · no position opened')
+    wrapper.unmount()
+  })
+
+  it('uses the full-session replay when the as-of selector is left at its default', async () => {
+    apiMocks.runIntradayPaperSession.mockResolvedValue(completedSession())
+    const wrapper = await mountView()
+
+    await buttonByText(wrapper, /load seeded session/i).trigger('click')
+    await flushPromises()
+
+    expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith(expect.objectContaining({
+      symbol: 'TCS',
+      sessionDate: '2026-10-09',
+    }))
+    expect(apiMocks.runIntradayPaperSession.mock.calls[0][0]).not.toHaveProperty('asOfBarTime')
+    expect(wrapper.text()).toContain('As of end of session')
     wrapper.unmount()
   })
 

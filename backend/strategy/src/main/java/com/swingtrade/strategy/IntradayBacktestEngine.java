@@ -88,8 +88,9 @@ public final class IntradayBacktestEngine {
                     : targetHit
                         ? ExitDecision.exit(ExitReason.TARGET_HIT, position.target().max(bar.open()), "Intraday target")
                         : strategy.evaluateExit(context, i, position, params);
-                boolean cutoff = !bar.sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF);
-                boolean cutoffBar = bar.sessionTime().equals(SQUARE_OFF_BAR);
+                boolean cutoff = forceFinalSquareOff
+                    && !bar.sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF);
+                boolean cutoffBar = forceFinalSquareOff && bar.sessionTime().equals(SQUARE_OFF_BAR);
                 boolean sessionEnd = forceFinalSquareOff && i + 1 == bars.size()
                     || i + 1 < bars.size() && !bars.get(i + 1).sessionDate().equals(date);
                 if (exit.exit() || cutoff || cutoffBar || sessionEnd) {

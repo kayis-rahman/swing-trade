@@ -118,15 +118,20 @@ class IntradayPaperExecutionServiceTest {
         assertThat(whileOpen.netPnl()).isEqualByComparingTo(expectedOpenPnl);
         assertThat(whileOpen.finalCapital()).isEqualByComparingTo(whileOpen.initialCapital().add(expectedOpenPnl));
 
-        IntradayPaperSessionResult afterExit = service.runSession("TCS", DAY, bars, strategy, params,
+        IntradayPaperSessionResult atSquareOffBarStart = service.runSession("TCS", DAY, bars, strategy, params,
             config(1, "1000"), LocalTime.of(15, 15));
         IntradayPaperSessionResult defaultEndOfSession = service.runSession("TCS", DAY, bars, strategy, params,
             config(1, "1000"));
-        assertThat(afterExit.positions()).singleElement().satisfies(position ->
-            assertThat(position.status()).isEqualTo("CLOSED"));
-        assertThat(afterExit.openPositionsAtEnd()).isZero();
-        assertThat(defaultEndOfSession.netPnl()).isEqualByComparingTo(afterExit.netPnl());
-        assertThat(defaultEndOfSession.positions()).containsExactlyElementsOf(afterExit.positions());
+        assertThat(atSquareOffBarStart.positions()).singleElement().satisfies(position ->
+            assertThat(position.status()).isEqualTo("OPEN"));
+        assertThat(atSquareOffBarStart.openPositionsAtEnd()).isEqualTo(1);
+        assertThat(atSquareOffBarStart.trades()).isEmpty();
+        assertThat(defaultEndOfSession.positions()).singleElement().satisfies(position -> {
+            assertThat(position.status()).isEqualTo("CLOSED");
+            assertThat(position.exitReason()).isEqualTo("FORCED_SQUARE_OFF");
+        });
+        assertThat(defaultEndOfSession.netPnl()).isEqualByComparingTo(defaultEndOfSession.trades().getFirst().pnl());
+        assertThat(defaultEndOfSession.openPositionsAtEnd()).isZero();
         assertThat(defaultEndOfSession.orders()).hasSize(2);
         assertThat(defaultEndOfSession.trades()).hasSize(1);
     }
@@ -193,6 +198,8 @@ class IntradayPaperExecutionServiceTest {
 
         assertThat(result.status()).isEqualTo("BLOCKED_KILL_SWITCH");
         assertThat(result.killSwitchActive()).isTrue();
+        assertThat(result.expectedBars()).isEqualTo(25);
+        assertThat(result.receivedBars()).isEqualTo(25);
         assertThat(result.orders()).isEmpty();
         assertThat(result.positions()).isEmpty();
         assertThat(result.liveBrokerCalls()).isZero();

@@ -55,10 +55,6 @@ public class IntradayPaperExecutionService {
             throw new IllegalArgumentException("Paper intraday execution accepts one session date per run");
         }
         String runId = UUID.randomUUID().toString();
-        if (killSwitch.isActive()) {
-            return emptyResult(runId, "BLOCKED_KILL_SWITCH", symbol, sessionDate, strategy.type(), true,
-                0, 0, config);
-        }
         if (!sessions.isTradingSession(sessionDate)) {
             throw new IllegalArgumentException("The requested date is not an NSE trading session");
         }
@@ -66,6 +62,10 @@ public class IntradayPaperExecutionService {
         bars.forEach(bar -> providedBarStarts.add(bar.sessionTime()));
         Set<java.time.LocalTime> expectedBarStarts = new HashSet<>(sessions.expectedBarStartTimes(sessionDate));
         int receivedExpectedBars = (int) providedBarStarts.stream().filter(expectedBarStarts::contains).count();
+        if (killSwitch.isActive()) {
+            return emptyResult(runId, "BLOCKED_KILL_SWITCH", symbol, sessionDate, strategy.type(), true,
+                expectedBarStarts.size(), receivedExpectedBars, config);
+        }
         if (!providedBarStarts.containsAll(expectedBarStarts)) {
             return emptyResult(runId, "INCOMPLETE_DATA", symbol, sessionDate, strategy.type(), false,
                 expectedBarStarts.size(), receivedExpectedBars, config);

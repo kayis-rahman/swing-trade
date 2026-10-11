@@ -34,12 +34,12 @@ Content-Type: application/json
 
 `riskConfig` is optional and defaults to `IntradayBacktestConfig.defaults()`. The response reports `mode: PAPER_SCAN_AS_OF`, universe and coverage counts, `candidateCount`, `liveBrokerCalls: 0`, excluded symbols, and one summary row per symbol/strategy. It contains no generated broker order IDs.
 
-The dashboard exposes the action in **Paper trading → Intraday paper**. Select a session date and as-of bar, then choose **Scan watchlist at selected time**. “Use in replay form” only copies a candidate's symbol/strategy into the single-session form; the operator must still run the replay separately.
+The dashboard exposes the action in **Paper trading → Intraday paper**. Select a session date and as-of bar, then choose **Scan watchlist at selected time**. “Use in replay form” copies a candidate's symbol and strategy, plus the scan session date and normalized `HH:mm` cutoff, into the single-session form; the operator must still run the replay separately.
 
 ## Limits and tests
 
 - `intraday.scan.max-watchlist-symbols` (environment override `INTRADAY_SCAN_MAX_WATCHLIST_SYMBOLS`) defaults to 20.
 - Backend coverage: `IntradayPaperScanServiceTest`, `IntradayPaperScanControllerTest`.
-- Dashboard coverage: `dashboard/src/api/intraday.test.ts`, `dashboard/src/views/IntradayView.test.ts`.
+- Dashboard coverage: `dashboard/src/api/intraday.test.ts`, `dashboard/src/views/IntradayView.test.ts`, and the Playwright acceptance flow in `dashboard/tests/e2e/views/intraday-view.spec.ts`.
 - Run backend checks from `backend/`: `gradle :broker:test :api:test --offline --no-daemon`.
 - Run dashboard checks from `dashboard/`: `yarn vitest run --maxWorkers=2`.

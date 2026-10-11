@@ -292,7 +292,7 @@ describe('IntradayView paper cockpit', () => {
     apiMocks.scanIntradayPaperWatchlist.mockResolvedValue({
       mode: 'PAPER_SCAN_AS_OF',
       sessionDate: '2026-10-09',
-      asOfBarTime: '10:00',
+      asOfBarTime: '10:00:00',
       universe: 'ACTIVE_NSE_WATCHLIST',
       watchlistSize: 2,
       scannedSymbols: 2,
@@ -348,6 +348,14 @@ describe('IntradayView paper cockpit', () => {
     expect(wrapper.get('[aria-label="Paper session strategy"]').element).toHaveProperty(
       'value',
       'INTRADAY_VWAP_PULLBACK'
+    )
+    expect(wrapper.get('[aria-label="Paper session date"]').element).toHaveProperty(
+      'value',
+      '2026-10-09'
+    )
+    expect(wrapper.get('[aria-label="Replay as of bar time"]').element).toHaveProperty(
+      'value',
+      '10:00'
     )
     expect(wrapper.text()).toContain('no provider calls')
     wrapper.unmount()

@@ -55,14 +55,8 @@ public class IntradayPaperExecutionService {
             throw new IllegalArgumentException("Paper intraday execution accepts one session date per run");
         }
         String runId = UUID.randomUUID().toString();
-        if (!sessions.isTradingSession(sessionDate)) {
-            throw new IllegalArgumentException("The requested date is not an NSE trading session");
-        }
-        List<LocalTime> sessionTimes = sessions.expectedBarStartTimes(sessionDate);
+        List<LocalTime> sessionTimes = validateSession(sessionDate, requestedAsOf);
         LocalTime asOf = requestedAsOf == null ? sessionTimes.getLast() : requestedAsOf;
-        if (!sessionTimes.contains(asOf)) {
-            throw new IllegalArgumentException("As-of time must be an expected NSE session bar start");
-        }
         Set<java.time.LocalTime> expectedBarStarts = sessionTimes.stream()
             .filter(time -> requestedAsOf == null || !time.isAfter(asOf))
             .collect(java.util.stream.Collectors.toCollection(HashSet::new));
@@ -133,6 +127,17 @@ public class IntradayPaperExecutionService {
             maxConcurrent, (int) positions.stream().filter(position -> position.status().equals("OPEN")).count(), 0,
             replay.initialCapital(), replay.initialCapital().add(realizedPnl).add(unrealizedPnl),
             realizedPnl.add(unrealizedPnl), orders, positions, paperTrades);
+    }
+
+    public List<LocalTime> validateSession(LocalDate sessionDate, LocalTime requestedAsOf) {
+        if (!sessions.isTradingSession(sessionDate)) {
+            throw new IllegalArgumentException("The requested date is not an NSE trading session");
+        }
+        List<LocalTime> sessionTimes = sessions.expectedBarStartTimes(sessionDate);
+        if (requestedAsOf != null && !sessionTimes.contains(requestedAsOf)) {
+            throw new IllegalArgumentException("As-of time must be an expected NSE session bar start");
+        }
+        return sessionTimes;
     }
 
     private static IntradayPaperSessionResult emptyResult(String runId, String status, String symbol,

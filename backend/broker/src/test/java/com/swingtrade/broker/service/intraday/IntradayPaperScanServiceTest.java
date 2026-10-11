@@ -1,9 +1,12 @@
 package com.swingtrade.broker.service.intraday;
 
+import com.swingtrade.broker.risk.KillSwitchService;
 import com.swingtrade.data.entity.OhlcvCandleEntity;
 import com.swingtrade.data.entity.WatchlistEntity;
 import com.swingtrade.data.repository.OhlcvCandleRepository;
 import com.swingtrade.data.repository.WatchlistRepository;
+import com.swingtrade.data.service.MarketCalendar;
+import com.swingtrade.data.service.NseSessionCalendar;
 import com.swingtrade.strategy.IntradayBacktestConfig;
 import com.swingtrade.strategy.IntradayBar;
 import com.swingtrade.strategy.IntradayOpeningRangeBreakoutStrategy;
@@ -94,6 +97,36 @@ class IntradayPaperScanServiceTest {
             .isInstanceOf(IllegalStateException.class).hasMessageContaining("scan limit is 1");
         verify(candles, never()).findBySymbolAndIntervalAndDateRange(anyString(), anyString(),
             any(LocalDate.class), any(LocalDate.class), any(Pageable.class));
+    }
+
+    @Test
+    void rejectsNonTradingDateWhenWatchlistIsEmpty() {
+        WatchlistRepository watchlist = mock(WatchlistRepository.class);
+        IntradayPaperExecutionService execution = executionService(false);
+        IntradayPaperScanService service = new IntradayPaperScanService(watchlist,
+            mock(OhlcvCandleRepository.class), new StrategyTypeRegistry(List.of()), execution, 10);
+
+        assertThatThrownBy(() -> service.scan(LocalDate.of(2026, 10, 10), AS_OF, null))
+            .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("not an NSE trading session");
+        verify(watchlist, never()).findByIsActiveTrueOrderBySymbolAsc();
+    }
+
+    @Test
+    void rejectsUnexpectedAsOfTimeWhenWatchlistIsEmpty() {
+        WatchlistRepository watchlist = mock(WatchlistRepository.class);
+        IntradayPaperExecutionService execution = executionService(true);
+        IntradayPaperScanService service = new IntradayPaperScanService(watchlist,
+            mock(OhlcvCandleRepository.class), new StrategyTypeRegistry(List.of()), execution, 10);
+
+        assertThatThrownBy(() -> service.scan(DAY, LocalTime.of(10, 7), null))
+            .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("expected NSE session bar start");
+        verify(watchlist, never()).findByIsActiveTrueOrderBySymbolAsc();
+    }
+
+    private static IntradayPaperExecutionService executionService(boolean tradingDay) {
+        MarketCalendar marketCalendar = mock(MarketCalendar.class);
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(tradingDay);
+        return new IntradayPaperExecutionService(new NseSessionCalendar(marketCalendar), mock(KillSwitchService.class));
     }
 
     private static WatchlistEntity symbol(String value, String exchange) {

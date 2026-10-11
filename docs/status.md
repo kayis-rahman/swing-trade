@@ -13,7 +13,7 @@ Last checked: 2026-10-10 (I3 paper intraday session execution local verification
   can outweigh a target exit at small size. The local ledger/report are in
   `firstmate/data/swing-trade-intraday-i3-paper-risk-v1/`. No live credentials, broker requests,
   staging deployment, or CI were used. The synchronous response is not yet a durable session-history
-  store; I3 is not committed or opened as a PR.
+  store.
 
 Last checked: 2026-10-10 (LLM analysis budget fix DevStack verification)
 

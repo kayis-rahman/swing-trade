@@ -1,5 +1,20 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-10 (I3 paper intraday session execution local verification)
+
+- [x] I3 backend slice implemented on `fm/swing-trade-intraday-i3-paper-risk-v1`: a paper-only
+  session endpoint replays stored 15-minute bars, gates runs on the kill switch, applies the
+  intraday daily-loss/trade-count controls, emits linked simulated order/closed-position/trade
+  records, and reports zero live-broker calls. Intraday strategies are registered for API use.
+  `./bin/verify-changes` passed selected backend checks, including strategy, broker and API tests;
+  tests cover kill-switch refusal, risk limits, one-position-at-a-time output, same-session closure,
+  forced 15:15 square-off, and 15-minute-only API loading. The deterministic target-hit fixture
+  produced ₹47.57 costs and -₹27.6802601000 net P&L on a 10-share trade, demonstrating that fees
+  can outweigh a target exit at small size. The local ledger/report are in
+  `firstmate/data/swing-trade-intraday-i3-paper-risk-v1/`. No live credentials, broker requests,
+  staging deployment, or CI were used. The synchronous response is not yet a durable session-history
+  store; I3 is not committed or opened as a PR.
+
 Last checked: 2026-10-10 (LLM analysis budget fix DevStack verification)
 
 - [x] LLM analysis DEGRADED fix verified through the repository DevStack. Root cause: on the

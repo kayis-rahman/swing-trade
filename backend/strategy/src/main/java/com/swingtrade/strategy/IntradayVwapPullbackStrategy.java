@@ -3,8 +3,10 @@ package com.swingtrade.strategy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Set;
+import org.springframework.stereotype.Component;
 
 /** Long-only session VWAP pullback/reclaim strategy; VWAP resets on each trading date. */
+@Component
 public final class IntradayVwapPullbackStrategy implements SignalStrategy {
     public static final String TYPE = "INTRADAY_VWAP_PULLBACK";
     @Override public String type() { return TYPE; }

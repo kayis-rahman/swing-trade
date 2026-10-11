@@ -2,8 +2,10 @@ package com.swingtrade.strategy;
 
 import java.math.BigDecimal;
 import java.util.Set;
+import org.springframework.stereotype.Component;
 
 /** Long-only RSI(2) mean reversion, entering below 10 and exiting on recovery above 60. */
+@Component
 public final class IntradayRsi2Strategy implements SignalStrategy {
     public static final String TYPE = "INTRADAY_RSI2";
     private static final BigDecimal ENTRY = BigDecimal.TEN;

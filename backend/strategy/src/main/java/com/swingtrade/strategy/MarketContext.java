@@ -1,7 +1,6 @@
 package com.swingtrade.strategy;
 
 import com.swingtrade.domain.OhlcvCandle;
-import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBar;
 import org.ta4j.core.BaseBarSeries;

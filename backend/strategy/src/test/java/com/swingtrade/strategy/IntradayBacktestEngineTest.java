@@ -294,6 +294,12 @@ class IntradayBacktestEngineTest {
         return bars;
     }
 
+    private static IntradayBar bar(LocalDate date, String time, String open, String high,
+                                   String low, String close, long volume) {
+        return new IntradayBar(ZonedDateTime.of(date, LocalTime.parse(time), IST), new BigDecimal(open),
+            new BigDecimal(high), new BigDecimal(low), new BigDecimal(close), volume);
+    }
+
     private static final class AlwaysBuyOneBarStrategy implements SignalStrategy {
         @Override public String type() { return "TEST_ALWAYS_BUY"; }
         @Override public ParamSchema paramSchema() { return new ParamSchema(List.of()); }
@@ -338,9 +344,4 @@ class IntradayBacktestEngineTest {
         }
     }
 
-    private static IntradayBar bar(LocalDate date, String time, String open, String high,
-                                   String low, String close, long volume) {
-        return new IntradayBar(ZonedDateTime.of(date, LocalTime.parse(time), IST), new BigDecimal(open),
-            new BigDecimal(high), new BigDecimal(low), new BigDecimal(close), volume);
-    }
 }

@@ -52,7 +52,11 @@ public final class IntradayBacktestEngine {
             IntradayBar bar = bars.get(i);
             LocalDate date = bar.sessionDate();
             if (position != null && position.entryDate().equals(date)) {
-                ExitDecision exit = strategy.evaluateExit(context, i, position, params);
+                ExitDecision exit = bar.low().compareTo(position.stopLoss()) <= 0
+                    ? ExitDecision.exit(ExitReason.STOP_LOSS, position.stopLoss(), "Intraday stop")
+                    : bar.high().compareTo(position.target()) >= 0
+                        ? ExitDecision.exit(ExitReason.TARGET_HIT, position.target(), "Intraday target")
+                        : strategy.evaluateExit(context, i, position, params);
                 boolean cutoff = !bar.sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF);
                 boolean cutoffBar = bar.sessionTime().equals(LocalTime.of(15, 15));
                 boolean sessionEnd = i + 1 == bars.size() || !bars.get(i + 1).sessionDate().equals(date);

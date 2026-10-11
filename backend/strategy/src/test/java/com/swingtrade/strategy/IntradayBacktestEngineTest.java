@@ -43,10 +43,10 @@ class IntradayBacktestEngineTest {
         assertThat(result.trades()).hasSize(1);
         IntradayBacktestTrade trade = result.trades().getFirst();
         assertThat(trade.entryPrice()).isEqualByComparingTo("102");
-        assertThat(trade.exitPrice()).isEqualByComparingTo("105");
+        assertThat(trade.exitPrice()).isEqualByComparingTo("104.04");
         assertThat(trade.costs()).isEqualByComparingTo("47.57");
-        assertThat(trade.pnl()).isEqualByComparingTo("-17.57");
-        assertThat(result.netPnl()).isEqualByComparingTo("-17.57");
+        assertThat(trade.pnl()).isEqualByComparingTo("-27.17");
+        assertThat(result.netPnl()).isEqualByComparingTo("-27.17");
     }
 
     @Test
@@ -88,6 +88,34 @@ class IntradayBacktestEngineTest {
         assertThat(result.trades()).hasSize(1);
         assertThat(result.trades().getFirst().exitReason()).isEqualTo("FORCED_SQUARE_OFF");
         assertThat(result.trades().getFirst().exitPrice()).isEqualByComparingTo("103");
+    }
+
+    @Test
+    void barrierExitsUseIntrabarExtremesAndPreferStopWhenBothAreHit() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+
+        IntradayBacktestTrade stop = tradeForExitBar("101", "98", "100");
+        IntradayBacktestTrade target = tradeForExitBar("103", "99.5", "100");
+        IntradayBacktestTrade both = tradeForExitBar("103", "98", "100");
+
+        assertThat(stop.exitReason()).isEqualTo("STOP_LOSS");
+        assertThat(stop.exitPrice()).isEqualByComparingTo("99");
+        assertThat(target.exitReason()).isEqualTo("TARGET_HIT");
+        assertThat(target.exitPrice()).isEqualByComparingTo("102");
+        assertThat(both.exitReason()).isEqualTo("STOP_LOSS");
+        assertThat(both.exitPrice()).isEqualByComparingTo("99");
+    }
+
+    private IntradayBacktestTrade tradeForExitBar(String high, String low, String close) {
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "09:30", "100", high, low, close, 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions,
+            new IntradayCostModel(BigDecimal.ZERO, BigDecimal.ZERO),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+        return engine.run("TEST", bars, new AlwaysBuyAndHoldStrategy(), IntradayBacktestEngine.defaultParams())
+            .trades().getFirst();
     }
 
     @Test
@@ -147,6 +175,19 @@ class IntradayBacktestEngineTest {
             return index > position.entryIndex()
                 ? ExitDecision.exit(ExitReason.SIGNAL_EXIT, ctx.view(index).close(), "fixture exit")
                 : ExitDecision.hold();
+        }
+    }
+
+    private static final class AlwaysBuyAndHoldStrategy implements SignalStrategy {
+        @Override public String type() { return "TEST_ALWAYS_BUY_HOLD"; }
+        @Override public ParamSchema paramSchema() { return new ParamSchema(List.of()); }
+        @Override public Set<IndicatorKey> requiredIndicators(StrategyParamsView params) { return Set.of(); }
+        @Override public int warmupBars(StrategyParamsView params) { return 1; }
+        @Override public StrategyDecision evaluateEntry(MarketContext ctx, int index, StrategyParamsView params) {
+            return new StrategyDecision(SignalType.BUY, BigDecimal.ONE, List.of(), null, null, "fixture");
+        }
+        @Override public ExitDecision evaluateExit(MarketContext ctx, int index, OpenPosition position, StrategyParamsView params) {
+            return ExitDecision.hold();
         }
     }
 

@@ -42,6 +42,22 @@ class EodIngestionSchedulerTest {
     }
 
     @Test
+    void skipsScheduledIngestionWhenDisabled() {
+        EodIngestionScheduler scheduler = new EodIngestionScheduler(
+                dataIngestionService, watchlistRepository, holidayService);
+        scheduler.eodIngestionEnabled = false;
+        scheduler.clock = java.time.Clock.fixed(
+                java.time.Instant.parse("2026-09-16T11:00:00Z"), java.time.ZoneId.of("Asia/Kolkata"));
+
+        scheduler.ingestLatestForAll();
+
+        verify(watchlistRepository, never()).findByIsActiveTrueOrderBySymbolAsc();
+        verify(holidayService, never()).isMarketClosed(org.mockito.ArgumentMatchers.any());
+        verify(dataIngestionService, never()).processSingleStock(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void backfillsNiftyBenchmarkHistoryAtStartupWhenAbsent() {
         when(dataIngestionService.getExistingDataWindow(EodIngestionScheduler.NIFTY_50_SYMBOL))
                 .thenReturn(new DataIngestionService.DataWindow(null, null));

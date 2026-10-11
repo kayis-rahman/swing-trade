@@ -57,7 +57,7 @@ public class IntradayPaperController {
                 candle.getVolume() == null ? 0 : candle.getVolume())).toList();
             IntradayPaperSessionResult result = execution.runSession(
                 request.symbol().trim().toUpperCase(), request.sessionDate(), bars,
-                strategy.get(), StrategyParamsView.of(Map.of()), request.resolvedRiskConfig());
+                strategy.get(), StrategyParamsView.of(Map.of()), request.resolvedRiskConfig(), request.asOfBarTime());
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

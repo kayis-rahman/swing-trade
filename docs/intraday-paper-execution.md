@@ -12,6 +12,7 @@ Content-Type: application/json
   "symbol": "TCS",
   "sessionDate": "2026-10-09",
   "strategyType": "INTRADAY_ORB",
+  "asOfBarTime": "10:00",
   "riskConfig": {
     "initialCapital": 100000,
     "quantity": 1,
@@ -21,10 +22,12 @@ Content-Type: application/json
 }
 ```
 
-`riskConfig` is optional and defaults to the intraday backtest configuration. The independent intraday replay applies the per-session realized-loss and trade-count limits, enforces one open position at a time, and force-flattens at the NSE 15:20 cutoff using the 15:15 bar-open proxy. An active kill switch rejects the session before any simulated order is created.
+`riskConfig` is optional and defaults to the intraday backtest configuration. The independent intraday replay applies the per-session realized-loss and trade-count limits, enforces one open position at a time, and honors the kill switch before creating simulated orders. By default, a full-session replay force-flattens at the NSE 15:20 cutoff using the 15:15 bar-open proxy. An optional `asOfBarTime` must be one of the expected NSE bar starts; that replay uses completed bars before the selected time plus that bar's open, and can return an open position without applying the full-session square-off.
 
 The run requires every expected 15-minute bar start for the requested NSE session. If any are missing, it returns `INCOMPLETE_DATA` with zero orders, positions, or trades; it does not simulate fills or force an exit on partial data.
 
-The response is the auditable paper ledger for that run: simulated entry/exit orders, linked closed position records, the underlying trades, costs, realized P&L, session status, and explicit `liveBrokerCalls: 0`. Order fills are derived from replay bars; the service has no `BrokerClient` or live broker dependency. The result is returned synchronously and is not yet a durable session-history store. No live credentials, authentication, broker requests, or orders are used.
+The response is the auditable paper ledger for that run: simulated entry/exit orders, linked open or closed position records, trade records carrying their position and entry/exit order IDs, costs, realized and unrealized P&L, session status, and explicit `liveBrokerCalls: 0`. Order fills are derived from replay bars; the service has no `BrokerClient` or live broker dependency. The result is returned synchronously and is not yet a durable session-history store. No live credentials, authentication, broker requests, or orders are used.
+
+The Vue operator surface is available at `/intraday`. It displays session completeness/state, strategy outcomes, open and closed paper positions, cost totals, net-of-cost P&L, square-off state, and linked audit IDs. The “Load seeded session” action replays the TCS sample session and is useful for a local paper-mode demonstration.
 
 Local verification uses deterministic 15-minute fixtures in broker/API tests; live Yahoo or broker calls are not part of the I3 tests.

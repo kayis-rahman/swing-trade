@@ -39,7 +39,7 @@ public final class IntradayRsi2Strategy implements SignalStrategy {
     private BigDecimal sessionRsi2(MarketContext.View view, int index) {
         BigDecimal gains = BigDecimal.ZERO;
         BigDecimal losses = BigDecimal.ZERO;
-        for (int i = index - 1; i < index + 1; i++) {
+        for (int i = index - 1; i >= index - 2; i--) {
             BigDecimal change = view.close(i + 1).subtract(view.close(i));
             if (change.signum() > 0) gains = gains.add(change);
             else losses = losses.add(change.abs());

@@ -21,6 +21,11 @@ const router = createRouter({
       component: () => import('../views/PositionsView.vue'),
     },
     {
+      path: '/intraday',
+      name: 'Intraday paper',
+      component: () => import('../views/IntradayView.vue'),
+    },
+    {
       path: '/symbols/:symbol',
       name: 'SymbolDetail',
       component: () => import('../views/SymbolDetailView.vue'),

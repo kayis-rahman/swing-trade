@@ -28,6 +28,32 @@ public final class IntradayBacktestEngine {
 
     public IntradayBacktestResult run(String symbol, List<IntradayBar> input,
                                       SignalStrategy strategy, StrategyParamsView params) {
+        return run(symbol, input, strategy, params, true);
+    }
+
+    public IntradayBacktestResult runAsOf(String symbol, List<IntradayBar> input,
+                                          SignalStrategy strategy, StrategyParamsView params,
+                                          LocalDate sessionDate, LocalTime asOf) {
+        if (input == null || sessionDate == null || asOf == null
+                || !calendar.expectedBarStartTimes(sessionDate).contains(asOf)) {
+            throw new IllegalArgumentException("As-of time must be an expected session bar start");
+        }
+        List<IntradayBar> visibleBars = input.stream()
+            .filter(bar -> sessionDate.equals(bar.sessionDate()) && !bar.sessionTime().isAfter(asOf)
+                && calendar.expectedBarStartTimes(sessionDate).contains(bar.sessionTime()))
+            .map(bar -> bar.sessionTime().equals(asOf)
+                ? new IntradayBar(bar.timestamp(), bar.open(), bar.open(), bar.open(), bar.open(), 0)
+                : bar)
+            .toList();
+        if (visibleBars.stream().noneMatch(bar -> bar.sessionTime().equals(asOf))) {
+            throw new IllegalArgumentException("The selected as-of bar is missing");
+        }
+        return run(symbol, visibleBars, strategy, params, false);
+    }
+
+    private IntradayBacktestResult run(String symbol, List<IntradayBar> input,
+                                       SignalStrategy strategy, StrategyParamsView params,
+                                       boolean forceFinalSquareOff) {
         if (symbol == null || symbol.isBlank() || input == null || strategy == null || params == null) {
             throw new IllegalArgumentException("Symbol, bars, strategy and params are required");
         }
@@ -35,7 +61,8 @@ public final class IntradayBacktestEngine {
                 && calendar.isWithinNormalSession(bar.sessionDate(), bar.sessionTime())
                 && calendar.expectedBarStartTimes(bar.sessionDate()).contains(bar.sessionTime()))
             .sorted(Comparator.comparing(IntradayBar::timestamp)).toList();
-        if (bars.isEmpty()) return new IntradayBacktestResult(config.initialCapital(), config.initialCapital(), BigDecimal.ZERO, List.of());
+        if (bars.isEmpty()) return new IntradayBacktestResult(config.initialCapital(), config.initialCapital(),
+            BigDecimal.ZERO, List.of(), null, null);
         for (int i = 1; i < bars.size(); i++) {
             if (!bars.get(i).timestamp().isAfter(bars.get(i - 1).timestamp())) {
                 throw new IllegalArgumentException("Bars must have unique, increasing timestamps");
@@ -61,9 +88,11 @@ public final class IntradayBacktestEngine {
                     : targetHit
                         ? ExitDecision.exit(ExitReason.TARGET_HIT, position.target().max(bar.open()), "Intraday target")
                         : strategy.evaluateExit(context, i, position, params);
-                boolean cutoff = !bar.sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF);
-                boolean cutoffBar = bar.sessionTime().equals(SQUARE_OFF_BAR);
-                boolean sessionEnd = i + 1 == bars.size() || !bars.get(i + 1).sessionDate().equals(date);
+                boolean cutoff = forceFinalSquareOff
+                    && !bar.sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF);
+                boolean cutoffBar = forceFinalSquareOff && bar.sessionTime().equals(SQUARE_OFF_BAR);
+                boolean sessionEnd = forceFinalSquareOff && i + 1 == bars.size()
+                    || i + 1 < bars.size() && !bars.get(i + 1).sessionDate().equals(date);
                 if (exit.exit() || cutoff || cutoffBar || sessionEnd) {
                     // The cutoff is 15:20 inside the 15:15–15:30 bar; open is the reproducible
                     // bar-only proxy for the cutoff fill, avoiding a close after the cutoff.
@@ -103,7 +132,8 @@ public final class IntradayBacktestEngine {
             }
         }
         return new IntradayBacktestResult(config.initialCapital(), capital,
-            capital.subtract(config.initialCapital()), trades);
+            capital.subtract(config.initialCapital()), trades, position,
+            position == null ? null : bars.get(entryAt).timestamp());
     }
 
     public static StrategyParamsView defaultParams() { return StrategyParamsView.of(Map.of()); }

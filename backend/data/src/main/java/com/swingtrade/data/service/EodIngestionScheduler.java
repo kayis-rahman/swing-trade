@@ -46,6 +46,9 @@ public class EodIngestionScheduler implements ApplicationRunner {
     @Value("${benchmark.backfill.on-startup:true}")
     boolean benchmarkBackfillOnStartup = true;
 
+    @Value("${data.eod.ingestion.enabled:true}")
+    boolean eodIngestionEnabled = true;
+
     public EodIngestionScheduler(DataIngestionService dataIngestionService, WatchlistRepository watchlistRepository, NseHolidayService holidayService) {
         this.dataIngestionService = dataIngestionService;
         this.watchlistRepository = watchlistRepository;
@@ -87,6 +90,10 @@ public class EodIngestionScheduler implements ApplicationRunner {
 
     @Scheduled(cron = "0 30 16 * * MON-FRI", zone = "Asia/Kolkata")
     public void ingestLatestForAll() {
+        if (!eodIngestionEnabled) {
+            logger.info("EOD ingestion scheduler disabled");
+            return;
+        }
         LocalDate today = LocalDate.now(clock);
         LocalDate yesterday = today.minusDays(1);
 

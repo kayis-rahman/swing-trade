@@ -20,6 +20,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,19 +38,19 @@ class IntradayPaperControllerTest {
         when(repository.findBySymbolAndIntervalAndDateRange("TCS", "15m", DAY, DAY, Pageable.unpaged()))
             .thenReturn(List.of(candle));
         IntradayPaperSessionResult expected = new IntradayPaperSessionResult("run-1", "PAPER_SIMULATION",
-            "COMPLETED", "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
+            "COMPLETED", "TCS", DAY, 25, 25, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
             0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
-        when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults())))
+        when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), nullable(LocalTime.class)))
             .thenReturn(expected);
         IntradayPaperController controller = new IntradayPaperController(repository, registry, execution);
 
         var response = controller.runSession(new IntradayPaperSessionRequest(
-            "tcs", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, null));
+            "tcs", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, null, LocalTime.of(10, 0)));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isSameAs(expected);
         verify(repository).findBySymbolAndIntervalAndDateRange("TCS", "15m", DAY, DAY, Pageable.unpaged());
-        verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()));
+        verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), eq(LocalTime.of(10, 0)));
     }
 
     @Test
@@ -72,9 +73,9 @@ class IntradayPaperControllerTest {
         IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
         StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
         IntradayPaperSessionResult incomplete = new IntradayPaperSessionResult("run-2", "PAPER_SIMULATION",
-            "INCOMPLETE_DATA", "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
+            "INCOMPLETE_DATA", "TCS", DAY, 25, 0, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
             0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
-        when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults())))
+        when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), nullable(LocalTime.class)))
             .thenReturn(incomplete);
         IntradayPaperController controller = new IntradayPaperController(repository, registry, execution);
 
@@ -83,7 +84,7 @@ class IntradayPaperControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().status()).isEqualTo("INCOMPLETE_DATA");
-        verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()));
+        verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), eq(null));
     }
 
     private static OhlcvCandleEntity candle() {

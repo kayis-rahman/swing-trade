@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":data"))
 
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.ta4j:ta4j-core:0.16")

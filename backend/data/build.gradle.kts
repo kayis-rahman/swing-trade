@@ -53,6 +53,13 @@ dependencies {
 }
 
 tasks {
+    register<JavaExec>("intradayDataReadiness") {
+        group = "verification"
+        description = "Sample Yahoo daily and 15-minute coverage for the fixed I0 watchlist"
+        classpath = sourceSets.main.get().runtimeClasspath
+        mainClass.set("com.swingtrade.data.service.IntradayDataReadinessCommand")
+    }
+
     compileJava {
         options.compilerArgs.add("-proc:none")
     }

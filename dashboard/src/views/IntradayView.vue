@@ -726,7 +726,8 @@ function useCandidate(candidate: IntradayPaperScanRow) {
   form.symbol = candidate.symbol
   form.strategyType = candidate.strategy
   form.sessionDate = scanResult.value?.sessionDate ?? form.sessionDate
-  form.asOfBarTime = scanResult.value?.asOfBarTime ?? form.asOfBarTime
+  const scanAsOfBarTime = scanResult.value?.asOfBarTime
+  form.asOfBarTime = scanAsOfBarTime ? scanAsOfBarTime.slice(0, 5) : form.asOfBarTime
 }
 
 async function runSession() {

@@ -58,9 +58,17 @@ public class IntradayPaperExecutionService {
         if (!sessions.isTradingSession(sessionDate)) {
             throw new IllegalArgumentException("The requested date is not an NSE trading session");
         }
+        List<LocalTime> sessionTimes = sessions.expectedBarStartTimes(sessionDate);
+        LocalTime asOf = requestedAsOf == null ? sessionTimes.getLast() : requestedAsOf;
+        if (!sessionTimes.contains(asOf)) {
+            throw new IllegalArgumentException("As-of time must be an expected NSE session bar start");
+        }
+        Set<java.time.LocalTime> expectedBarStarts = sessionTimes.stream()
+            .filter(time -> requestedAsOf == null || !time.isAfter(asOf))
+            .collect(java.util.stream.Collectors.toCollection(HashSet::new));
         Set<java.time.LocalTime> providedBarStarts = new HashSet<>();
-        bars.forEach(bar -> providedBarStarts.add(bar.sessionTime()));
-        Set<java.time.LocalTime> expectedBarStarts = new HashSet<>(sessions.expectedBarStartTimes(sessionDate));
+        bars.stream().filter(bar -> requestedAsOf == null || !bar.sessionTime().isAfter(asOf))
+            .forEach(bar -> providedBarStarts.add(bar.sessionTime()));
         int receivedExpectedBars = (int) providedBarStarts.stream().filter(expectedBarStarts::contains).count();
         if (killSwitch.isActive()) {
             return emptyResult(runId, "BLOCKED_KILL_SWITCH", symbol, sessionDate, strategy.type(), true,
@@ -69,12 +77,6 @@ public class IntradayPaperExecutionService {
         if (!providedBarStarts.containsAll(expectedBarStarts)) {
             return emptyResult(runId, "INCOMPLETE_DATA", symbol, sessionDate, strategy.type(), false,
                 expectedBarStarts.size(), receivedExpectedBars, config);
-        }
-
-        List<LocalTime> sessionTimes = sessions.expectedBarStartTimes(sessionDate);
-        LocalTime asOf = requestedAsOf == null ? sessionTimes.getLast() : requestedAsOf;
-        if (!expectedBarStarts.contains(asOf)) {
-            throw new IllegalArgumentException("As-of time must be an expected NSE session bar start");
         }
 
         IntradayCostModel costModel = new IntradayCostModel();

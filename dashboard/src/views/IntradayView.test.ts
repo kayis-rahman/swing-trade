@@ -3,8 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError } from '../errors/appError'
 import type { IntradayPaperSessionResult } from '../api/intraday'
 
-const apiMocks = vi.hoisted(() => ({ runIntradayPaperSession: vi.fn() }))
+const routeMock = vi.hoisted(() => ({ query: {} as Record<string, unknown> }))
+const apiMocks = vi.hoisted(() => ({
+  runIntradayPaperSession: vi.fn(),
+  scanIntradayPaperWatchlist: vi.fn(),
+}))
 vi.mock('../api/intraday', () => apiMocks)
+vi.mock('vue-router', () => ({ useRoute: () => routeMock }))
 
 function completedSession(): IntradayPaperSessionResult {
   const entryTime = '2026-10-09T10:00:00+05:30[Asia/Kolkata]'
@@ -109,7 +114,56 @@ function deferred<T>() {
 
 describe('IntradayView paper cockpit', () => {
   beforeEach(() => {
+    routeMock.query = {}
     apiMocks.runIntradayPaperSession.mockReset()
+    apiMocks.scanIntradayPaperWatchlist.mockReset()
+  })
+
+  it('prefills only an activated explorer symbol and requires explicit intraday replay choices', async () => {
+    routeMock.query = { source: 'candidate-explorer', symbol: 'JSWSTEEL' }
+    apiMocks.runIntradayPaperSession.mockResolvedValue(completedSession())
+    const wrapper = await mountView()
+
+    expect(
+      (wrapper.get('[aria-label="Paper session symbol"]').element as HTMLInputElement).value
+    ).toBe('JSWSTEEL')
+    expect(
+      (wrapper.get('[aria-label="Paper session date"]').element as HTMLInputElement).value
+    ).toBe('')
+    expect(
+      (wrapper.get('[aria-label="Paper session strategy"]').element as HTMLSelectElement).value
+    ).toBe('')
+    expect(
+      (wrapper.get('[aria-label="Replay as of bar time"]').element as HTMLSelectElement).value
+    ).toBe('__SELECT_AS_OF__')
+    expect(apiMocks.runIntradayPaperSession).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain(
+      'daily swing strategy outcomes do not select an intraday strategy'
+    )
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(apiMocks.runIntradayPaperSession).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Choose an intraday session date, strategy, and cutoff')
+
+    await wrapper.get('[aria-label="Paper session date"]').setValue('2026-10-09')
+    await wrapper.get('[aria-label="Paper session strategy"]').setValue('INTRADAY_RSI2')
+    await wrapper.get('[aria-label="Replay as of bar time"]').setValue('09:30')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith({
+      symbol: 'JSWSTEEL',
+      sessionDate: '2026-10-09',
+      asOfBarTime: '09:30',
+      strategyType: 'INTRADAY_RSI2',
+      riskConfig: {
+        initialCapital: 10_000,
+        quantity: 10,
+        maxTradesPerDay: 1,
+        maxDailyLoss: 1_000,
+      },
+    })
   })
 
   it('shows a neutral empty state before a session is run', async () => {
@@ -159,10 +213,37 @@ describe('IntradayView paper cockpit', () => {
     const selector = wrapper.find('[aria-label="Replay as of bar time"]')
 
     expect(selector.findAll('option')).toHaveLength(26)
-    expect(selector.findAll('option').slice(1).map((option) => option.attributes('value'))).toEqual([
-      '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00', '11:15',
-      '11:30', '11:45', '12:00', '12:15', '12:30', '12:45', '13:00', '13:15', '13:30',
-      '13:45', '14:00', '14:15', '14:30', '14:45', '15:00', '15:15',
+    expect(
+      selector
+        .findAll('option')
+        .slice(1)
+        .map((option) => option.attributes('value'))
+    ).toEqual([
+      '09:15',
+      '09:30',
+      '09:45',
+      '10:00',
+      '10:15',
+      '10:30',
+      '10:45',
+      '11:00',
+      '11:15',
+      '11:30',
+      '11:45',
+      '12:00',
+      '12:15',
+      '12:30',
+      '12:45',
+      '13:00',
+      '13:15',
+      '13:30',
+      '13:45',
+      '14:00',
+      '14:15',
+      '14:30',
+      '14:45',
+      '15:00',
+      '15:15',
     ])
 
     await selector.setValue('10:00')
@@ -180,16 +261,18 @@ describe('IntradayView paper cockpit', () => {
 
   it('labels an open as-of position as open instead of flat', async () => {
     const result = completedSession()
-    result.positions = [{
-      ...result.positions[0],
-      exitOrderId: null,
-      exitTime: null,
-      exitPrice: null,
-      status: 'OPEN',
-      realizedPnl: 0,
-      unrealizedPnl: -12,
-      exitReason: 'OPEN',
-    }]
+    result.positions = [
+      {
+        ...result.positions[0],
+        exitOrderId: null,
+        exitTime: null,
+        exitPrice: null,
+        status: 'OPEN',
+        realizedPnl: 0,
+        unrealizedPnl: -12,
+        exitReason: 'OPEN',
+      },
+    ]
     result.orders = result.orders.slice(0, 1)
     result.trades = []
     result.openPositionsAtEnd = 1
@@ -205,6 +288,80 @@ describe('IntradayView paper cockpit', () => {
     wrapper.unmount()
   })
 
+  it('scans the active watchlist at the selected as-of time and loads a candidate into the replay form', async () => {
+    apiMocks.scanIntradayPaperWatchlist.mockResolvedValue({
+      mode: 'PAPER_SCAN_AS_OF',
+      sessionDate: '2026-10-09',
+      asOfBarTime: '10:00',
+      universe: 'ACTIVE_NSE_WATCHLIST',
+      watchlistSize: 2,
+      scannedSymbols: 2,
+      candidateCount: 1,
+      liveBrokerCalls: 0,
+      excludedSymbols: ['BSECO'],
+      results: [
+        {
+          symbol: 'INFY',
+          strategy: 'INTRADAY_VWAP_PULLBACK',
+          status: 'CANDIDATE',
+          expectedBars: 25,
+          receivedBars: 25,
+          completedTrades: 0,
+          netPnl: -2.5,
+          openEntryPrice: 100,
+          openEntryTime: '2026-10-09T10:00:00+05:30',
+        },
+        {
+          symbol: 'TCS',
+          strategy: 'INTRADAY_ORB',
+          status: 'INCOMPLETE_DATA',
+          expectedBars: 25,
+          receivedBars: 24,
+          completedTrades: 0,
+          netPnl: 0,
+          openEntryPrice: null,
+          openEntryTime: null,
+        },
+      ],
+    })
+    const wrapper = await mountView()
+    await wrapper.find('[aria-label="Replay as of bar time"]').setValue('10:00')
+    await buttonByText(wrapper, /scan watchlist at selected time/i).trigger('click')
+    await flushPromises()
+
+    expect(apiMocks.scanIntradayPaperWatchlist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionDate: '2026-10-09',
+        asOfBarTime: '10:00',
+        riskConfig: expect.objectContaining({ quantity: 10 }),
+      })
+    )
+    expect(wrapper.text()).toContain('1 open setups')
+    expect(wrapper.text()).toContain('INFY')
+    expect(wrapper.text()).toContain('INCOMPLETE DATA')
+    expect(wrapper.text()).toContain('Excluded non-NSE watchlist entries: BSECO')
+    await buttonByText(wrapper, /use in replay form/i).trigger('click')
+    expect(wrapper.get('[aria-label="Paper session symbol"]').element).toHaveProperty(
+      'value',
+      'INFY'
+    )
+    expect(wrapper.get('[aria-label="Paper session strategy"]').element).toHaveProperty(
+      'value',
+      'INTRADAY_VWAP_PULLBACK'
+    )
+    expect(wrapper.text()).toContain('no provider calls')
+    wrapper.unmount()
+  })
+
+  it('disables watchlist scan until an as-of bar is selected', async () => {
+    const wrapper = await mountView()
+    expect(
+      buttonByText(wrapper, /scan watchlist at selected time/i).attributes('disabled')
+    ).toBeDefined()
+    expect(apiMocks.scanIntradayPaperWatchlist).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('uses the full-session replay when the as-of selector is left at its default', async () => {
     apiMocks.runIntradayPaperSession.mockResolvedValue(completedSession())
     const wrapper = await mountView()
@@ -212,10 +369,12 @@ describe('IntradayView paper cockpit', () => {
     await buttonByText(wrapper, /load seeded session/i).trigger('click')
     await flushPromises()
 
-    expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith(expect.objectContaining({
-      symbol: 'TCS',
-      sessionDate: '2026-10-09',
-    }))
+    expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        symbol: 'TCS',
+        sessionDate: '2026-10-09',
+      })
+    )
     expect(apiMocks.runIntradayPaperSession.mock.calls[0][0]).not.toHaveProperty('asOfBarTime')
     expect(wrapper.text()).toContain('As of end of session')
     wrapper.unmount()

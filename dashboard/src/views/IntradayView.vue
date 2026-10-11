@@ -19,22 +19,46 @@
       </div>
     </header>
 
+    <div
+      v-if="isCandidateHandoff"
+      class="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-xs text-text-secondary"
+      role="status"
+    >
+      Candidate {{ form.symbol }} is prefilled from Candidate Explorer and already auto-added to the
+      wishlist. Choose the intraday session date, strategy, and cutoff below; daily swing strategy
+      outcomes do not select an intraday strategy. The paper replay starts only when you explicitly
+      submit this form.
+    </div>
+
     <section class="card-panel p-4 sm:p-5" aria-labelledby="session-form-heading">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 id="session-form-heading" class="text-sm font-semibold text-text-primary">
             Session replay
           </h2>
-          <p class="mt-1 text-xs text-text-muted">Only complete NSE sessions are executable.</p>
+          <p class="mt-1 text-xs text-text-muted">
+            Full-session replay needs complete NSE coverage; as-of replay needs bars through the
+            selected time.
+          </p>
         </div>
-        <button
-          type="button"
-          :disabled="loading"
-          class="rounded-md border border-brand/30 bg-brand-subtle px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:opacity-50"
-          @click="loadSeededSession"
-        >
-          Load seeded session
-        </button>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            :disabled="loading || scanning"
+            class="rounded-md border border-brand/30 bg-brand-subtle px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/15 disabled:opacity-50"
+            @click="loadSeededSession"
+          >
+            Load seeded session
+          </button>
+          <button
+            type="button"
+            :disabled="loading || scanning || !canScanWatchlist"
+            class="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-xs font-semibold text-info hover:bg-info/15 disabled:cursor-not-allowed disabled:opacity-50"
+            @click="scanWatchlist"
+          >
+            {{ scanning ? 'Scanning watchlist…' : 'Scan watchlist at selected time' }}
+          </button>
+        </div>
       </div>
 
       <form
@@ -68,6 +92,9 @@
             aria-label="Replay as of bar time"
             class="mt-1 w-full rounded-md border bg-bg-primary px-3 py-2 text-sm text-text-primary"
           >
+            <option v-if="isCandidateHandoff" :value="AS_OF_SELECTION_REQUIRED" disabled>
+              Select cutoff or end of session
+            </option>
             <option value="">End of session</option>
             <option v-for="time in sessionBarTimes" :key="time" :value="time">{{ time }}</option>
           </select>
@@ -79,6 +106,7 @@
             aria-label="Paper session strategy"
             class="mt-1 w-full rounded-md border bg-bg-primary px-3 py-2 text-sm text-text-primary"
           >
+            <option value="" disabled>Select an intraday strategy</option>
             <option value="INTRADAY_ORB">Opening range breakout</option>
             <option value="INTRADAY_VWAP_PULLBACK">VWAP pullback</option>
             <option value="INTRADAY_RSI2">RSI(2) reversal</option>
@@ -131,7 +159,110 @@
         <span>Capital: {{ formatCurrency(form.initialCapital, { prefix: '₹' }) }}</span>
         <span>Max trades/session: {{ form.maxTradesPerDay }}</span>
         <span>Cost model: ₹20/order + NSE charges + slippage</span>
+        <span class="text-info"
+          >Scanner needs an as-of time; blank means full-session replay only.</span
+        >
       </div>
+
+      <section
+        v-if="scanError || scanResult"
+        class="mt-5 border-t border-border-subtle pt-4"
+        aria-live="polite"
+      >
+        <p v-if="scanError" role="alert" class="mb-3 text-sm text-danger">{{ scanError }}</p>
+        <template v-if="scanResult">
+          <div class="mb-3 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-semibold text-text-primary">
+                Watchlist scan · {{ scanResult.sessionDate }} · {{ scanResult.asOfBarTime }} IST
+              </h3>
+              <p class="mt-1 text-xs text-text-muted">
+                {{ scanResult.candidateCount }} open setups from {{ scanResult.scannedSymbols }} of
+                {{ scanResult.watchlistSize }} active watchlist symbols ·
+                {{ scanResult.results.length }} strategy checks.
+              </p>
+              <p class="mt-1 text-[11px] text-text-muted">
+                Historical as-of replay over stored bars; no provider calls, no durable scan
+                history, no live broker calls.
+              </p>
+            </div>
+            <span
+              class="rounded border border-brand/25 bg-brand-subtle px-2 py-1 font-mono text-[10px] text-brand"
+              >{{ scanResult.liveBrokerCalls }} live broker calls</span
+            >
+          </div>
+          <p v-if="scanResult.excludedSymbols.length" class="mb-3 text-xs text-warning">
+            Excluded non-NSE watchlist entries: {{ scanResult.excludedSymbols.join(', ') }}
+          </p>
+          <p
+            v-if="scanResult.results.length === 0"
+            class="rounded-md border border-border-subtle p-3 text-xs text-text-muted"
+          >
+            No active NSE watchlist symbols are available for this scan.
+          </p>
+          <p
+            v-else-if="scanResult.candidateCount === 0"
+            class="mb-3 rounded-md border border-border-subtle p-3 text-xs text-text-muted"
+          >
+            No open setup was found at this as-of time. Incomplete bar coverage and kill-switch
+            blocks remain visible in the table.
+          </p>
+          <div
+            v-if="scanResult.results.length"
+            class="overflow-x-auto rounded-md border border-border-subtle"
+          >
+            <table class="w-full min-w-[680px] text-left text-xs">
+              <thead class="bg-bg-elevated text-[10px] uppercase tracking-wide text-text-muted">
+                <tr>
+                  <th class="px-3 py-2">Symbol</th>
+                  <th class="px-3 py-2">Strategy</th>
+                  <th class="px-3 py-2">Outcome</th>
+                  <th class="px-3 py-2">Bars</th>
+                  <th class="px-3 py-2 text-right">Trades / net</th>
+                  <th class="px-3 py-2">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border-subtle/60">
+                <tr v-for="row in scanResult.results" :key="`${row.symbol}-${row.strategy}`">
+                  <td class="px-3 py-2 font-semibold text-text-primary">{{ row.symbol }}</td>
+                  <td class="px-3 py-2 text-text-secondary">{{ strategyLabel(row.strategy) }}</td>
+                  <td class="px-3 py-2">
+                    <span
+                      :class="
+                        row.status === 'CANDIDATE'
+                          ? 'text-brand'
+                          : row.status === 'INCOMPLETE_DATA'
+                            ? 'text-warning'
+                            : row.status === 'BLOCKED_KILL_SWITCH'
+                              ? 'text-danger'
+                              : 'text-text-muted'
+                      "
+                      >{{ row.status.replace(/_/g, ' ') }}</span
+                    >
+                  </td>
+                  <td class="px-3 py-2 font-mono text-text-muted">
+                    {{ row.receivedBars }}/{{ row.expectedBars }}
+                  </td>
+                  <td class="px-3 py-2 text-right font-mono text-text-secondary">
+                    {{ row.completedTrades }} /
+                    {{ formatSignedCurrency(row.netPnl, { prefix: '₹' }) }}
+                  </td>
+                  <td class="px-3 py-2">
+                    <button
+                      v-if="row.status === 'CANDIDATE'"
+                      type="button"
+                      class="rounded border border-brand/30 px-2 py-1 text-brand hover:bg-brand-subtle"
+                      @click="useCandidate(row)"
+                    >
+                      Use in replay form</button
+                    ><span v-else class="text-text-muted">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </section>
     </section>
 
     <ErrorMessage
@@ -284,8 +415,8 @@
                 {{ timeLabel(position.entryTime) }}
               </p>
               <p class="mt-1 text-xs text-text-muted">
-                Mark {{ formatCurrency(position.currentPrice, { prefix: '₹' }) }} ·
-                unrealized {{ formatSignedCurrency(position.unrealizedPnl, { prefix: '₹' }) }}
+                Mark {{ formatCurrency(position.currentPrice, { prefix: '₹' }) }} · unrealized
+                {{ formatSignedCurrency(position.unrealizedPnl, { prefix: '₹' }) }}
               </p>
             </article>
           </div>
@@ -457,14 +588,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import ErrorMessage from '../components/ErrorMessage.vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue'
 import StatusBadge from '../components/StatusBadge.vue'
-import { runIntradayPaperSession, type IntradayPaperSessionResult } from '../api/intraday'
+import {
+  runIntradayPaperSession,
+  scanIntradayPaperWatchlist,
+  type IntradayPaperScanResult,
+  type IntradayPaperScanRow,
+  type IntradayPaperSessionResult,
+} from '../api/intraday'
 import { formatAppError } from '../errors/appError'
 import { formatCurrency, formatSignedCurrency } from '../utils/format'
 
+const route = useRoute()
+const AS_OF_SELECTION_REQUIRED = '__SELECT_AS_OF__'
 const form = reactive({
   symbol: 'TCS',
   sessionDate: '2026-10-09',
@@ -476,7 +616,16 @@ const form = reactive({
   maxDailyLoss: 1_000,
 })
 
+const isCandidateHandoff = computed(
+  () => route.query.source === 'candidate-explorer' && typeof route.query.symbol === 'string'
+)
+const canScanWatchlist = computed(() =>
+  Boolean(form.sessionDate && form.asOfBarTime && form.asOfBarTime !== AS_OF_SELECTION_REQUIRED)
+)
 const loading = ref(false)
+const scanning = ref(false)
+const scanResult = ref<IntradayPaperScanResult | null>(null)
+const scanError = ref<string | null>(null)
 const result = ref<IntradayPaperSessionResult | null>(null)
 const resultAsOfLabel = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
@@ -484,6 +633,28 @@ const sessionBarTimes = Array.from({ length: 25 }, (_, index) => {
   const totalMinutes = 9 * 60 + 15 + index * 15
   return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
 })
+watch(
+  () => [route.query.source, route.query.symbol] as const,
+  ([source, candidateSymbol]) => {
+    if (
+      source !== 'candidate-explorer' ||
+      typeof candidateSymbol !== 'string' ||
+      !/^[A-Z0-9.-]{1,10}$/i.test(candidateSymbol)
+    ) {
+      return
+    }
+    form.symbol = candidateSymbol.toUpperCase()
+    form.sessionDate = ''
+    form.asOfBarTime = AS_OF_SELECTION_REQUIRED
+    form.strategyType = ''
+    scanResult.value = null
+    result.value = null
+    resultAsOfLabel.value = null
+    errorMessage.value = null
+  },
+  { immediate: true }
+)
+
 const openPositions = computed(
   () => result.value?.positions.filter((position) => position.status === 'OPEN') ?? []
 )
@@ -524,7 +695,49 @@ function shortId(value: string): string {
   return value.length > 18 ? `${value.slice(0, 8)}…${value.slice(-5)}` : value
 }
 
+async function scanWatchlist() {
+  if (!canScanWatchlist.value) return
+  scanning.value = true
+  scanError.value = null
+  scanResult.value = null
+  try {
+    scanResult.value = await scanIntradayPaperWatchlist({
+      sessionDate: form.sessionDate,
+      asOfBarTime: form.asOfBarTime,
+      riskConfig: {
+        initialCapital: form.initialCapital,
+        quantity: form.quantity,
+        maxTradesPerDay: form.maxTradesPerDay,
+        maxDailyLoss: form.maxDailyLoss,
+      },
+    })
+  } catch (error) {
+    scanError.value = formatAppError(error, {
+      title: 'Couldn’t scan the active watchlist',
+      operation: 'mutation',
+      retryLabel: 'Retry',
+    }).message
+  } finally {
+    scanning.value = false
+  }
+}
+
+function useCandidate(candidate: IntradayPaperScanRow) {
+  form.symbol = candidate.symbol
+  form.strategyType = candidate.strategy
+  form.sessionDate = scanResult.value?.sessionDate ?? form.sessionDate
+  form.asOfBarTime = scanResult.value?.asOfBarTime ?? form.asOfBarTime
+}
+
 async function runSession() {
+  if (
+    isCandidateHandoff.value &&
+    (!form.sessionDate || !form.strategyType || form.asOfBarTime === AS_OF_SELECTION_REQUIRED)
+  ) {
+    errorMessage.value =
+      'Choose an intraday session date, strategy, and cutoff (or End of session) before replay.'
+    return
+  }
   const submittedAsOfLabel = form.asOfBarTime ? `${form.asOfBarTime} IST` : 'end of session'
   loading.value = true
   result.value = null

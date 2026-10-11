@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { runIntradayPaperSession } from './intraday'
+import { runIntradayPaperSession, scanIntradayPaperWatchlist } from './intraday'
 
 const fetchMock = vi.fn<typeof fetch>()
 
@@ -56,6 +56,53 @@ describe('runIntradayPaperSession', () => {
     await expect(runIntradayPaperSession(request)).resolves.toEqual(result)
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/intraday/paper/sessions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(request),
+      })
+    )
+  })
+
+  it('posts an as-of watchlist scan request and returns ephemeral candidate summaries', async () => {
+    const request = {
+      sessionDate: '2026-10-09',
+      asOfBarTime: '10:00',
+      riskConfig: { initialCapital: 10000, quantity: 10, maxTradesPerDay: 1, maxDailyLoss: 1000 },
+    }
+    const result = {
+      mode: 'PAPER_SCAN_AS_OF',
+      sessionDate: '2026-10-09',
+      asOfBarTime: '10:00',
+      universe: 'ACTIVE_NSE_WATCHLIST',
+      watchlistSize: 2,
+      scannedSymbols: 2,
+      candidateCount: 1,
+      liveBrokerCalls: 0,
+      excludedSymbols: [],
+      results: [
+        {
+          symbol: 'TCS',
+          strategy: 'INTRADAY_ORB',
+          status: 'CANDIDATE',
+          expectedBars: 25,
+          receivedBars: 25,
+          completedTrades: 0,
+          netPnl: -2,
+          openEntryPrice: 100,
+          openEntryTime: '2026-10-09T10:00:00+05:30',
+        },
+      ],
+    }
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    )
+
+    await expect(scanIntradayPaperWatchlist(request)).resolves.toEqual(result)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/intraday/paper/scans',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(request),

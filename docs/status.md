@@ -1,5 +1,37 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-11 (candidate-to-intraday handoff local verification)
+
+- [x] Added the captain-approved Candidate Explorer → Intraday paper handoff on
+  `fm/swing-trade-intraday-scanner-v1`: activated results preserve existing automatic wishlist
+  promotion; selecting one prefills only its symbol; the operator explicitly chooses session date,
+  intraday strategy, and as-of/full-session mode before replay. Existing paper risk controls and
+  response-only ledger behavior are unchanged. `./bin/verify-changes` passed (backend API tests;
+  dashboard formatting, typecheck, 61 Vitest files / 375 tests, lint, production build). A local
+  Playwright flow used a qualified/activated TCS candidate fixture, verified no auto-run, then ran
+  the explicit replay against the local seeded API: 4/4 cutoff bars, `PAPER_SIMULATION`, zero live
+  broker calls, and no browser errors. Evidence is outside the repo at
+  `firstmate/data/swing-trade-intraday-scanner-local-v1/candidate-handoff-report.md` and its
+  adjacent screenshot/JSON/script. Captain review URL: http://127.0.0.1:3003/candidate-explorer.
+  No commit, push, or PR; awaiting captain review.
+
+Last checked: 2026-10-11 (intraday paper scanner local captain review)
+
+- [x] Implemented the historical as-of active-watchlist scanner and dashboard handoff on
+  `fm/swing-trade-intraday-scanner-v1`; no PR or push created. It evaluates all registered
+  intraday strategies against stored bars only, bounds the NSE watchlist, reports cutoff-specific
+  bar coverage, persists no scan/session history, and makes zero provider/broker calls. As-of
+  replays now require coverage only through the selected bar; full-session runs still require all
+  expected bars. `./bin/verify-changes` passed (backend suite; dashboard formatting, typecheck,
+  61 Vitest files / 374 tests, lint, production build). Isolated local API + dashboard checks
+  passed, including a partial 4-bar TCS prefix producing a paper-only candidate at 10:00 IST
+  with 0 live broker calls. Headless browser acceptance confirmed scan results and the candidate
+  handoff; screenshot/report artifacts are outside the repo at
+  `firstmate/data/swing-trade-intraday-scanner-local-v1/`. Captain review URL:
+  http://127.0.0.1:3003/intraday. Local-only stack uses a unique throwaway DB project, loopback
+  bindings, and disabled scheduling; no shared/stage infrastructure was changed. Awaiting captain
+  review before considering any PR.
+
 Last checked: 2026-10-11 (I4/I5 local review approved; pipeline authorized)
 
 - [x] Combined I4/I5 implementation is ready for captain review on

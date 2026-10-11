@@ -99,11 +99,15 @@ class IntradayPaperExecutionServiceTest {
 
         IntradayPaperSessionResult beforeEntry = service.runSession("TCS", DAY, bars, strategy, params,
             config(1, "1000"), LocalTime.of(9, 45));
+        assertThat(beforeEntry.expectedBars()).isEqualTo(3);
+        assertThat(beforeEntry.receivedBars()).isEqualTo(3);
         assertThat(beforeEntry.positions()).isEmpty();
 
         IntradayPaperSessionResult whileOpen = service.runSession("TCS", DAY, bars, strategy, params,
             config(1, "1000"), LocalTime.of(10, 0));
         var openPosition = whileOpen.positions().getFirst();
+        assertThat(whileOpen.expectedBars()).isEqualTo(4);
+        assertThat(whileOpen.receivedBars()).isEqualTo(4);
         assertThat(openPosition.status()).isEqualTo("OPEN");
         assertThat(openPosition.exitOrderId()).isNull();
         assertThat(openPosition.realizedPnl()).isZero();
@@ -134,6 +138,23 @@ class IntradayPaperExecutionServiceTest {
         assertThat(defaultEndOfSession.openPositionsAtEnd()).isZero();
         assertThat(defaultEndOfSession.orders()).hasSize(2);
         assertThat(defaultEndOfSession.trades()).hasSize(1);
+    }
+
+    @Test
+    void asOfReplayCanUsePartialSessionBarsAndReportsCoverageOnlyThroughAsOf() {
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, breakoutBars(),
+            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(),
+            config(1, "1000"), LocalTime.of(10, 0));
+
+        assertThat(result.status()).isEqualTo("COMPLETED");
+        assertThat(result.expectedBars()).isEqualTo(4);
+        assertThat(result.receivedBars()).isEqualTo(4);
+        assertThat(result.positions()).singleElement().satisfies(position -> {
+            assertThat(position.status()).isEqualTo("OPEN");
+            assertThat(position.entryTime().toLocalTime()).isEqualTo(LocalTime.of(10, 0));
+        });
+        assertThat(result.orders()).hasSize(1);
+        assertThat(result.trades()).isEmpty();
     }
 
     @Test

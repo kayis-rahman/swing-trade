@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CandidateExplorerView from './CandidateExplorerView.vue'
 
+const router = vi.hoisted(() => ({ push: vi.fn() }))
 const api = vi.hoisted(() => ({
   startCandidateScan: vi.fn(),
   getCandidateScan: vi.fn(),
@@ -16,6 +17,7 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock('../api/candidateScan', () => api)
+vi.mock('vue-router', () => ({ useRouter: () => router }))
 
 describe('CandidateExplorerView', () => {
   const defaultSettings = {
@@ -29,6 +31,7 @@ describe('CandidateExplorerView', () => {
   beforeEach(() => {
     vi.useRealTimers()
     vi.clearAllMocks()
+    router.push.mockReset()
     api.getCandidateScanSettings.mockResolvedValue(defaultSettings)
     api.openCandidateScanStream.mockReturnValue(null)
   })
@@ -221,6 +224,12 @@ describe('CandidateExplorerView', () => {
     expect(wrapper.text()).toContain('50.0%')
     expect(wrapper.text()).toContain('breakout-v1')
     expect(wrapper.text()).toContain('SKIPPED')
+    const handoff = wrapper.get('button[aria-label="Review JSWSTEEL in intraday paper trading"]')
+    await handoff.trigger('click')
+    expect(router.push).toHaveBeenCalledWith({
+      path: '/intraday',
+      query: { source: 'candidate-explorer', symbol: 'JSWSTEEL' },
+    })
   })
 
   it('makes a cancelled partial scan distinct from a completed universe scan', async () => {

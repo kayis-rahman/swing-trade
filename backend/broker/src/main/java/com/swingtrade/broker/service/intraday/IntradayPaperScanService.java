@@ -49,6 +49,7 @@ public class IntradayPaperScanService {
         if (sessionDate == null || asOfBarTime == null) {
             throw new IllegalArgumentException("Session date and as-of bar time are required");
         }
+        execution.validateSession(sessionDate, asOfBarTime);
         List<WatchlistEntity> active = watchlist.findByIsActiveTrueOrderBySymbolAsc();
         if (active.size() > maxWatchlistSymbols) {
             throw new IllegalStateException("Active watchlist has %d symbols; intraday scan limit is %d"

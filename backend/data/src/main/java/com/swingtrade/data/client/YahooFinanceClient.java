@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 import reactor.netty.http.client.HttpClient;
@@ -58,6 +59,7 @@ public class YahooFinanceClient implements MarketDataClient {
     private final ObjectMapper objectMapper;
     private final java.time.Clock clock;
     private final MarketCalendar marketCalendar;
+    private final RequestMetrics requestMetrics = new RequestMetrics();
 
     // URI format strings — static to avoid repeated allocation
     private static final String CANDLE_URI_FMT = "/v8/finance/chart/%s?period1=%d&period2=%d&interval=%s&events=history&includePrePost=false";
@@ -103,6 +105,7 @@ public class YahooFinanceClient implements MarketDataClient {
         this.webClient = WebClient.builder()
                 .clientConnector(new org.springframework.http.client.reactive.ReactorClientHttpConnector(
                         HttpClient.create().baseUrl(baseUrl).runOn(loop)))
+                .filter(requestMetrics.filter())
                 .defaultHeader(HttpHeaders.USER_AGENT, YAHOO_USER_AGENT)
                 .build();
     }
@@ -129,6 +132,7 @@ public class YahooFinanceClient implements MarketDataClient {
                     HttpClient.create()
                         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) CONNECT_TIMEOUT.toMillis())
                         .responseTimeout(READ_TIMEOUT)))
+                .filter(requestMetrics.filter())
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .build();
@@ -163,6 +167,7 @@ public class YahooFinanceClient implements MarketDataClient {
         }
         mono = mono.retryWhen(Retry.backoff(MAX_RETRIES, RETRY_BACKOFF)
                 .scheduler(reactor.core.scheduler.Schedulers.boundedElastic())
+                .doBeforeRetry(ignored -> requestMetrics.recordRetry())
                 .filter(this::isRetryableFailure));
         if (yahooTimeout != null) {
             mono = mono.timeout(yahooTimeout);
@@ -187,6 +192,55 @@ public class YahooFinanceClient implements MarketDataClient {
                                     "Yahoo request bulkhead is full", e));
                         })
                 .block();
+    }
+
+    /** Snapshot of observable HTTP request attempts made by this client. */
+    public RequestMetricsSnapshot requestMetrics() {
+        return requestMetrics.snapshot();
+    }
+
+    public record RequestMetricsSnapshot(long attempts, long retries, long minimumAttemptSpacingMillis,
+                                         java.util.Map<Integer, Long> non2xxStatuses) {}
+
+    private static final class RequestMetrics {
+        private final AtomicLong attempts = new AtomicLong();
+        private final AtomicLong retries = new AtomicLong();
+        private final AtomicLong lastAttemptNanos = new AtomicLong();
+        private final AtomicLong minimumSpacingNanos = new AtomicLong(Long.MAX_VALUE);
+        private final java.util.concurrent.ConcurrentHashMap<Integer, AtomicLong> non2xxStatuses =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+        private ExchangeFilterFunction filter() {
+            return (request, next) -> {
+                recordAttempt();
+                return next.exchange(request).doOnNext(response -> {
+                    int status = response.statusCode().value();
+                    if (status < 200 || status >= 300) {
+                        non2xxStatuses.computeIfAbsent(status, ignored -> new AtomicLong()).incrementAndGet();
+                    }
+                });
+            };
+        }
+
+        private void recordAttempt() {
+            attempts.incrementAndGet();
+            long now = System.nanoTime();
+            long previous = lastAttemptNanos.getAndSet(now);
+            if (previous != 0) minimumSpacingNanos.accumulateAndGet(now - previous, Math::min);
+        }
+
+        private void recordRetry() {
+            retries.incrementAndGet();
+        }
+
+        private RequestMetricsSnapshot snapshot() {
+            java.util.Map<Integer, Long> statuses = new java.util.TreeMap<>();
+            non2xxStatuses.forEach((status, count) -> statuses.put(status, count.get()));
+            long minimumMillis = minimumSpacingNanos.get() == Long.MAX_VALUE
+                ? 0 : java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(minimumSpacingNanos.get());
+            return new RequestMetricsSnapshot(attempts.get(), retries.get(), minimumMillis,
+                java.util.Map.copyOf(statuses));
+        }
     }
 
     /** Retry transient DNS/connectivity failures as well as retryable HTTP responses. */

@@ -238,6 +238,10 @@ class YahooFinanceClientTest {
 
         assertThat(candles).hasSize(1);
         assertThat(mockWebServer.getRequestCount()).isEqualTo(2);
+        assertThat(client.requestMetrics().attempts()).isEqualTo(2);
+        assertThat(client.requestMetrics().retries()).isEqualTo(1);
+        assertThat(client.requestMetrics().minimumAttemptSpacingMillis()).isGreaterThanOrEqualTo(900);
+        assertThat(client.requestMetrics().non2xxStatuses()).containsEntry(429, 1L);
     }
 
     @Test

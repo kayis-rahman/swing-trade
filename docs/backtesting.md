@@ -73,8 +73,10 @@ gradle :strategy:test --tests 'com.swingtrade.strategy.IntradayBacktestEngineTes
 For a different single symbol/dataset, load its timestamped 15-minute bars as `IntradayBar` values
 and call `new IntradayBacktestEngine(nseSessionCalendar, new IntradayCostModel(),
 IntradayBacktestConfig.defaults()).run(symbol, bars, strategy, params)`; the sample test demonstrates
-the exact call and fixture format. Only normal NSE-session bars are replayed. The 15:15 bar is used
-as the available-bar proxy for the 15:20 square-off (its open is the forced exit reference); no
+the exact call and fixture format. Only normal NSE-session bars are replayed. In the default
+full-session run, the 15:15 bar is used as the available-bar proxy for the 15:20 square-off (its open
+is the forced exit reference); an as-of replay can remain open before that cutoff. See
+[Paper intraday session execution](intraday-paper-execution.md) for the as-of contract. No
 closing-auction data is admitted. Daily loss and trade-count limits apply per session. The cost model
 uses flat ₹20 brokerage per order, sell-side intraday STT, buy-side stamp duty, NSE transaction and
 SEBI charges, GST, and configurable slippage; no delivery DP charge is applied.

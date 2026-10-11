@@ -30,7 +30,7 @@ The fixture contains all 25 expected bar starts (09:15–15:15 IST) for Friday 2
 | Net-of-cost P&L | -₹27.6802601000 |
 | Live broker calls reported | 0 |
 
-The result is intentionally instructive: the fixture's positive-price target exit is net-negative after the configured brokerage, exchange, tax, and slippage costs. The cockpit shows the closed paper position and order/trade references, while its open-position panel correctly reports zero positions for a completed replay.
+The result is intentionally instructive: the fixture's positive-price target exit is net-negative after the configured brokerage, exchange, tax, and slippage costs. The cockpit shows the closed paper position and order/trade references. Completed sessions end flat by design; the as-of bar selector can show positions while a replay is in progress.
 
 A separate complete-session fixture tests forced square-off on the 15:15 bar-open proxy for the 15:20 cutoff. Risk tests verify that a ₹1 daily realized-loss limit stops further entries after a loss, a one-trade limit is obeyed, and an active kill switch emits no paper ledger. A partial session returns `INCOMPLETE_DATA` and does not synthesize fills or forced exits.
 
@@ -65,7 +65,9 @@ The dashboard selected checks also run Prettier, typecheck, lint, and a producti
 
 - Session results are synchronous API responses, not a durable session-history store. Refreshing the page requires replaying the bars again.
 - The page reports the completed historical replay state, not a live exchange feed or real-time market status.
-- The full-session simulator force-flattens every position; a completed session normally has zero open positions. The cockpit exposes the open-position state and its empty case, plus the closed position ledger.
+- Completed sessions end flat by design; the full-session simulator force-flattens every position. The cockpit's as-of selector exposes entry-to-exit open states and closed position records.
+- No Fyers measurement was made. The seeded scenario uses Yahoo data only; Fyers requires authentication and was not measured.
+- No intraday candidate scanner exists yet. Intraday runs use the watchlist only.
 - Current risk is single-symbol and caps concurrency at one position; portfolio-wide, multi-symbol exposure and capital allocation are out of scope.
 - Daily-loss control is based on realized session P&L. Partial/incomplete sessions are refused; missing expected bars do not create order or position records.
 - API authentication remains deferred for the private MVP and is required before external exposure or live broker integration.

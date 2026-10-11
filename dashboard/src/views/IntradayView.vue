@@ -38,7 +38,7 @@
       </div>
 
       <form
-        class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-8"
+        class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-9"
         @submit.prevent="runSession"
       >
         <label class="text-xs font-medium text-text-muted">
@@ -60,6 +60,16 @@
             required
             class="mt-1 w-full rounded-md border bg-bg-primary px-3 py-2 text-sm text-text-primary"
           />
+        </label>
+        <label class="text-xs font-medium text-text-muted">
+          Replay as of (IST)
+          <select
+            v-model="form.asOfBarTime"
+            aria-label="Replay as of bar time"
+            class="mt-1 w-full rounded-md border bg-bg-primary px-3 py-2 text-sm text-text-primary"
+          >
+            <option v-for="time in sessionBarTimes" :key="time" :value="time">{{ time }}</option>
+          </select>
         </label>
         <label class="text-xs font-medium text-text-muted xl:col-span-2">
           Strategy
@@ -201,7 +211,7 @@
             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               Market state
             </p>
-            <p class="mt-2 text-sm font-semibold text-text-primary">Closed · replay complete</p>
+            <p class="mt-2 text-sm font-semibold text-text-primary">As of {{ form.asOfBarTime }} IST</p>
           </div>
           <div class="px-4 py-4 sm:px-5">
             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
@@ -242,7 +252,7 @@
             <span
               class="rounded-md border border-border-subtle px-2 py-1 font-mono text-xs text-text-muted"
             >
-              {{ result.openPositionsAtEnd }} open at end
+              {{ result.openPositionsAtEnd }} open at selected time
             </span>
           </div>
           <div
@@ -271,6 +281,10 @@
               <p class="mt-2 text-xs text-text-muted">
                 Entry {{ formatCurrency(position.entryPrice, { prefix: '₹' }) }} ·
                 {{ timeLabel(position.entryTime) }}
+              </p>
+              <p class="mt-1 text-xs text-text-muted">
+                Mark {{ formatCurrency(position.currentPrice, { prefix: '₹' }) }} ·
+                unrealized {{ formatSignedCurrency(position.unrealizedPnl, { prefix: '₹' }) }}
               </p>
             </article>
           </div>
@@ -453,6 +467,7 @@ import { formatCurrency, formatSignedCurrency } from '../utils/format'
 const form = reactive({
   symbol: 'TCS',
   sessionDate: '2026-10-09',
+  asOfBarTime: '15:15',
   strategyType: 'INTRADAY_ORB',
   initialCapital: 10_000,
   quantity: 10,
@@ -463,6 +478,10 @@ const form = reactive({
 const loading = ref(false)
 const result = ref<IntradayPaperSessionResult | null>(null)
 const errorMessage = ref<string | null>(null)
+const sessionBarTimes = Array.from({ length: 25 }, (_, index) => {
+  const totalMinutes = 9 * 60 + 15 + index * 15
+  return `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`
+})
 const openPositions = computed(
   () => result.value?.positions.filter((position) => position.status === 'OPEN') ?? []
 )
@@ -510,6 +529,7 @@ async function runSession() {
     result.value = await runIntradayPaperSession({
       symbol: form.symbol.trim().toUpperCase(),
       sessionDate: form.sessionDate,
+      asOfBarTime: form.asOfBarTime,
       strategyType: form.strategyType,
       riskConfig: {
         initialCapital: form.initialCapital,
@@ -532,6 +552,7 @@ async function runSession() {
 function loadSeededSession() {
   form.symbol = 'TCS'
   form.sessionDate = '2026-10-09'
+  form.asOfBarTime = '15:15'
   form.strategyType = 'INTRADAY_ORB'
   form.initialCapital = 10_000
   form.quantity = 10

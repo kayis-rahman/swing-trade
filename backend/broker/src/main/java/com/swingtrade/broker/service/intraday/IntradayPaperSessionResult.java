@@ -48,8 +48,8 @@ public record IntradayPaperSessionResult(
     public record PaperPositionRecord(String positionId, String symbol,
                                       String entryOrderId, String exitOrderId,
                                       ZonedDateTime entryTime, ZonedDateTime exitTime,
-                                      BigDecimal entryPrice, BigDecimal exitPrice,
+                                      BigDecimal entryPrice, BigDecimal exitPrice, BigDecimal currentPrice,
                                       int quantity, String status, BigDecimal costs,
-                                      BigDecimal realizedPnl, String exitReason,
+                                      BigDecimal realizedPnl, BigDecimal unrealizedPnl, String exitReason,
                                       boolean carriedOvernight) {}
 }

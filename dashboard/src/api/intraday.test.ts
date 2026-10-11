@@ -17,6 +17,7 @@ describe('runIntradayPaperSession', () => {
     const request = {
       symbol: 'TCS',
       sessionDate: '2026-10-09',
+      asOfBarTime: '15:15',
       strategyType: 'INTRADAY_ORB',
       riskConfig: {
         initialCapital: 10000,

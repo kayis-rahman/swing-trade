@@ -92,6 +92,55 @@ class IntradayPaperExecutionServiceTest {
     }
 
     @Test
+    void asOfReplayShowsPositionOnlyBetweenItsEntryAndExitAndDefaultsToFlat() {
+        List<IntradayBar> bars = completeSession(squareOffBars());
+        var strategy = new IntradayOpeningRangeBreakoutStrategy();
+        var params = IntradayBacktestEngine.defaultParams();
+
+        IntradayPaperSessionResult beforeEntry = service.runSession("TCS", DAY, bars, strategy, params,
+            config(1, "1000"), LocalTime.of(9, 45));
+        assertThat(beforeEntry.positions()).isEmpty();
+
+        IntradayPaperSessionResult whileOpen = service.runSession("TCS", DAY, bars, strategy, params,
+            config(1, "1000"), LocalTime.of(10, 0));
+        assertThat(whileOpen.positions()).singleElement().satisfies(position -> {
+            assertThat(position.status()).isEqualTo("OPEN");
+            assertThat(position.exitOrderId()).isNull();
+            assertThat(position.realizedPnl()).isZero();
+            assertThat(position.currentPrice()).isPositive();
+            assertThat(position.unrealizedPnl()).isNotZero();
+        });
+        assertThat(whileOpen.orders()).hasSize(1);
+        assertThat(whileOpen.trades()).isEmpty();
+        assertThat(whileOpen.openPositionsAtEnd()).isEqualTo(1);
+
+        IntradayPaperSessionResult afterExit = service.runSession("TCS", DAY, bars, strategy, params,
+            config(1, "1000"), LocalTime.of(15, 15));
+        IntradayPaperSessionResult defaultEndOfSession = service.runSession("TCS", DAY, bars, strategy, params,
+            config(1, "1000"));
+        assertThat(afterExit.positions()).singleElement().satisfies(position ->
+            assertThat(position.status()).isEqualTo("CLOSED"));
+        assertThat(afterExit.openPositionsAtEnd()).isZero();
+        assertThat(defaultEndOfSession.netPnl()).isEqualByComparingTo(afterExit.netPnl());
+        assertThat(defaultEndOfSession.positions()).containsExactlyElementsOf(afterExit.positions());
+        assertThat(defaultEndOfSession.orders()).hasSize(2);
+        assertThat(defaultEndOfSession.trades()).hasSize(1);
+    }
+
+    @Test
+    void receivedBarCountExcludesOutOfSessionStarts() {
+        List<IntradayBar> bars = new java.util.ArrayList<>(fixtureBars());
+        bars.add(barAt("15:30", "100", "100", "100", "100"));
+
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, bars,
+            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(1, "1000"));
+
+        assertThat(result.status()).isEqualTo("COMPLETED");
+        assertThat(result.expectedBars()).isEqualTo(25);
+        assertThat(result.receivedBars()).isEqualTo(25);
+    }
+
+    @Test
     void forcesOpenPositionFlatAtTheIntradaySquareOffBar() {
         IntradayPaperSessionResult result = service.runSession("TCS", DAY, completeSession(squareOffBars()),
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(1, "1000"));

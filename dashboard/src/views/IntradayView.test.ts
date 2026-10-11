@@ -59,10 +59,12 @@ function completedSession(): IntradayPaperSessionResult {
         exitTime,
         entryPrice: 102.051,
         exitPrice: 104.03997399,
+        currentPrice: 104.03997399,
         quantity: 10,
         status: 'CLOSED',
         costs: 47.57,
         realizedPnl: -27.6802601,
+        unrealizedPnl: 0,
         exitReason: 'TARGET_HIT',
         carriedOvernight: false,
       },
@@ -129,6 +131,7 @@ describe('IntradayView paper cockpit', () => {
     expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith({
       symbol: 'TCS',
       sessionDate: '2026-10-09',
+      asOfBarTime: '15:15',
       strategyType: 'INTRADAY_ORB',
       riskConfig: {
         initialCapital: 10_000,
@@ -148,6 +151,28 @@ describe('IntradayView paper cockpit', () => {
     expect(wrapper.text()).toContain('X run-1-order-2')
     expect(wrapper.text()).toContain('No broker route')
 
+    wrapper.unmount()
+  })
+
+  it('offers all 25 session bar times and sends the selected as-of time', async () => {
+    apiMocks.runIntradayPaperSession.mockResolvedValue(completedSession())
+    const wrapper = await mountView()
+    const selector = wrapper.find('[aria-label="Replay as of bar time"]')
+
+    expect(selector.findAll('option')).toHaveLength(25)
+    expect(selector.findAll('option').map((option) => option.attributes('value'))).toEqual([
+      '09:15', '09:30', '09:45', '10:00', '10:15', '10:30', '10:45', '11:00', '11:15',
+      '11:30', '11:45', '12:00', '12:15', '12:30', '12:45', '13:00', '13:15', '13:30',
+      '13:45', '14:00', '14:15', '14:30', '14:45', '15:00', '15:15',
+    ])
+
+    await selector.setValue('10:00')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith(
+      expect.objectContaining({ asOfBarTime: '10:00' })
+    )
     wrapper.unmount()
   })
 

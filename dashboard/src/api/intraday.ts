@@ -3,6 +3,7 @@ import { apiRequest } from './shared'
 export interface IntradayPaperSessionRequest {
   symbol: string
   sessionDate: string
+  asOfBarTime?: string
   strategyType: string
   riskConfig?: {
     initialCapital: number
@@ -28,15 +29,17 @@ export interface IntradayPaperPosition {
   positionId: string
   symbol: string
   entryOrderId: string
-  exitOrderId: string
+  exitOrderId: string | null
   entryTime: string
-  exitTime: string
+  exitTime: string | null
   entryPrice: number
-  exitPrice: number
+  exitPrice: number | null
+  currentPrice: number
   quantity: number
   status: 'OPEN' | 'CLOSED'
   costs: number
   realizedPnl: number
+  unrealizedPnl: number
   exitReason: string
   carriedOvernight: boolean
 }

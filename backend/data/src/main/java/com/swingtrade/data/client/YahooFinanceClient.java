@@ -199,50 +199,6 @@ public class YahooFinanceClient implements MarketDataClient {
         return requestMetrics.snapshot();
     }
 
-    public record RequestMetricsSnapshot(long attempts, long retries, long minimumAttemptSpacingMillis,
-                                         java.util.Map<Integer, Long> non2xxStatuses) {}
-
-    private static final class RequestMetrics {
-        private final AtomicLong attempts = new AtomicLong();
-        private final AtomicLong retries = new AtomicLong();
-        private final AtomicLong lastAttemptNanos = new AtomicLong();
-        private final AtomicLong minimumSpacingNanos = new AtomicLong(Long.MAX_VALUE);
-        private final java.util.concurrent.ConcurrentHashMap<Integer, AtomicLong> non2xxStatuses =
-            new java.util.concurrent.ConcurrentHashMap<>();
-
-        private ExchangeFilterFunction filter() {
-            return (request, next) -> {
-                recordAttempt();
-                return next.exchange(request).doOnNext(response -> {
-                    int status = response.statusCode().value();
-                    if (status < 200 || status >= 300) {
-                        non2xxStatuses.computeIfAbsent(status, ignored -> new AtomicLong()).incrementAndGet();
-                    }
-                });
-            };
-        }
-
-        private void recordAttempt() {
-            attempts.incrementAndGet();
-            long now = System.nanoTime();
-            long previous = lastAttemptNanos.getAndSet(now);
-            if (previous != 0) minimumSpacingNanos.accumulateAndGet(now - previous, Math::min);
-        }
-
-        private void recordRetry() {
-            retries.incrementAndGet();
-        }
-
-        private RequestMetricsSnapshot snapshot() {
-            java.util.Map<Integer, Long> statuses = new java.util.TreeMap<>();
-            non2xxStatuses.forEach((status, count) -> statuses.put(status, count.get()));
-            long minimumMillis = minimumSpacingNanos.get() == Long.MAX_VALUE
-                ? 0 : java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(minimumSpacingNanos.get());
-            return new RequestMetricsSnapshot(attempts.get(), retries.get(), minimumMillis,
-                java.util.Map.copyOf(statuses));
-        }
-    }
-
     /** Retry transient DNS/connectivity failures as well as retryable HTTP responses. */
     private boolean isRetryableFailure(Throwable error) {
         if (error instanceof YahooHttpException yahoo) return yahoo.isRetryable();
@@ -694,6 +650,50 @@ public class YahooFinanceClient implements MarketDataClient {
     static final class YahooDataUnavailableException extends RuntimeException {
         YahooDataUnavailableException(String message, Throwable cause) {
             super(message, cause);
+        }
+    }
+
+    public record RequestMetricsSnapshot(long attempts, long retries, long minimumAttemptSpacingMillis,
+                                         java.util.Map<Integer, Long> non2xxStatuses) {}
+
+    private static final class RequestMetrics {
+        private final AtomicLong attempts = new AtomicLong();
+        private final AtomicLong retries = new AtomicLong();
+        private final AtomicLong lastAttemptNanos = new AtomicLong();
+        private final AtomicLong minimumSpacingNanos = new AtomicLong(Long.MAX_VALUE);
+        private final java.util.concurrent.ConcurrentHashMap<Integer, AtomicLong> non2xxStatuses =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+        private ExchangeFilterFunction filter() {
+            return (request, next) -> {
+                recordAttempt();
+                return next.exchange(request).doOnNext(response -> {
+                    int status = response.statusCode().value();
+                    if (status < 200 || status >= 300) {
+                        non2xxStatuses.computeIfAbsent(status, ignored -> new AtomicLong()).incrementAndGet();
+                    }
+                });
+            };
+        }
+
+        private void recordAttempt() {
+            attempts.incrementAndGet();
+            long now = System.nanoTime();
+            long previous = lastAttemptNanos.getAndSet(now);
+            if (previous != 0) minimumSpacingNanos.accumulateAndGet(now - previous, Math::min);
+        }
+
+        private void recordRetry() {
+            retries.incrementAndGet();
+        }
+
+        private RequestMetricsSnapshot snapshot() {
+            java.util.Map<Integer, Long> statuses = new java.util.TreeMap<>();
+            non2xxStatuses.forEach((status, count) -> statuses.put(status, count.get()));
+            long minimumMillis = minimumSpacingNanos.get() == Long.MAX_VALUE
+                ? 0 : java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(minimumSpacingNanos.get());
+            return new RequestMetricsSnapshot(attempts.get(), retries.get(), minimumMillis,
+                java.util.Map.copyOf(statuses));
         }
     }
 }

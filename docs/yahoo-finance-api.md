@@ -32,7 +32,9 @@ timestamp, and logs a warning when the response has no usable close value.
 This happens even with a browser User-Agent header. `query1` is more permissive and should be used
 as the primary host for automated clients. If you get 429, switch to `query1` or add delays between
 requests. The Yahoo Finance client in this project uses `query1` and applies a one-second shared
-request throttle with bounded retries for 429 and 5xx responses.
+request throttle with bounded retries for 429 and 5xx responses. It also exposes a read-only
+snapshot of observed HTTP attempts, retry count, minimum attempt spacing, and non-2xx response
+counts for the I0 readiness report; these counters do not alter request or retry behavior.
 
 ---
 

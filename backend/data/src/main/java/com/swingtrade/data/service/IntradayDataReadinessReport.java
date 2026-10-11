@@ -13,11 +13,6 @@ import java.util.stream.Collectors;
 public final class IntradayDataReadinessReport {
     private IntradayDataReadinessReport() {}
 
-    public record LedgerRow(String symbol, Interval interval, LocalDate sessionDate,
-                            int requestedBars, int returnedBars, int validSessionBars,
-                            int missingBars, int invalidTimestampBars, double missingRate,
-                            String providerStatus, long elapsedMillis) {}
-
     public static List<LedgerRow> analyze(String symbol, Interval interval,
                                           List<LocalDate> expectedSessions,
                                           List<CandleData> candles, long elapsedMillis,
@@ -63,4 +58,9 @@ public final class IntradayDataReadinessReport {
         }
         return times;
     }
+
+    public record LedgerRow(String symbol, Interval interval, LocalDate sessionDate,
+                            int requestedBars, int returnedBars, int validSessionBars,
+                            int missingBars, int invalidTimestampBars, double missingRate,
+                            String providerStatus, long elapsedMillis) {}
 }

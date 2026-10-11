@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /** Executes an intraday session through deterministic bar fills only; it has no broker client. */
@@ -50,8 +52,10 @@ public class IntradayPaperExecutionService {
         if (!sessions.isTradingSession(sessionDate)) {
             throw new IllegalArgumentException("The requested date is not an NSE trading session");
         }
-        if (bars.isEmpty()) {
-            return emptyResult(runId, "NO_DATA", symbol, sessionDate, strategy.type(), false, config);
+        Set<java.time.LocalTime> providedBarStarts = new HashSet<>();
+        bars.forEach(bar -> providedBarStarts.add(bar.sessionTime()));
+        if (!providedBarStarts.containsAll(sessions.expectedBarStartTimes(sessionDate))) {
+            return emptyResult(runId, "INCOMPLETE_DATA", symbol, sessionDate, strategy.type(), false, config);
         }
 
         IntradayBacktestResult replay = new IntradayBacktestEngine(sessions, new IntradayCostModel(), config)

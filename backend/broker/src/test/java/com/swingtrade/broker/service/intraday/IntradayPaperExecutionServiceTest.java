@@ -52,8 +52,8 @@ class IntradayPaperExecutionServiceTest {
 
     @Test
     void runsOneSessionToClosedPaperRecordsWithoutAnyLiveBrokerCalls() {
-        IntradayPaperSessionResult result = service.runSession("TCS", DAY, breakoutBars(),
-            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000"));
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, completeSession(breakoutBars()),
+            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(1, "1000"));
 
         assertThat(result.executionMode()).isEqualTo("PAPER_SIMULATION");
         assertThat(result.status()).isEqualTo("COMPLETED");
@@ -85,7 +85,7 @@ class IntradayPaperExecutionServiceTest {
 
     @Test
     void forcesOpenPositionFlatAtTheIntradaySquareOffBar() {
-        IntradayPaperSessionResult result = service.runSession("TCS", DAY, squareOffBars(),
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, completeSession(squareOffBars()),
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(1, "1000"));
 
         assertThat(result.trades()).hasSize(1);
@@ -103,7 +103,7 @@ class IntradayPaperExecutionServiceTest {
     void killSwitchBlocksTheSessionBeforeAnyPaperOrderIsCreated() {
         when(killSwitch.isActive()).thenReturn(true);
 
-        IntradayPaperSessionResult result = service.runSession("TCS", DAY, breakoutBars(),
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, completeSession(breakoutBars()),
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000"));
 
         assertThat(result.status()).isEqualTo("BLOCKED_KILL_SWITCH");
@@ -116,13 +116,13 @@ class IntradayPaperExecutionServiceTest {
 
     @Test
     void dailyLossAndTradeCountLimitsConstrainThePaperLedger() {
-        List<IntradayBar> bars = List.of(
+        List<IntradayBar> bars = completeSession(List.of(
             barAt("09:15", "100", "100", "100", "100"),
             barAt("09:30", "99", "99", "98", "98"),
             barAt("09:45", "98", "98", "97", "97"),
             barAt("10:00", "97", "97", "96", "96"),
             barAt("10:15", "96", "96", "95", "95")
-        );
+        ));
         IntradayPaperSessionResult lossLimited = service.runSession("TCS", DAY, bars,
             new LossAfterEachBar(), StrategyParamsView.of(java.util.Map.of()), config(5, "1"));
         IntradayPaperSessionResult tradeLimited = service.runSession("TCS", DAY, bars,
@@ -132,6 +132,31 @@ class IntradayPaperExecutionServiceTest {
         assertThat(lossLimited.netPnl()).isNegative();
         assertThat(tradeLimited.trades()).hasSize(1);
         assertThat(tradeLimited.orders()).hasSize(2);
+    }
+
+    @Test
+    void partialSessionReturnsIncompleteWithoutSimulatedLedgerOrForcedExit() {
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, breakoutBars(),
+            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000"));
+
+        assertThat(result.status()).isEqualTo("INCOMPLETE_DATA");
+        assertThat(result.orders()).isEmpty();
+        assertThat(result.positions()).isEmpty();
+        assertThat(result.trades()).isEmpty();
+        assertThat(result.netPnl()).isZero();
+        assertThat(result.finalCapital()).isEqualByComparingTo(result.initialCapital());
+        assertThat(result.openPositionsAtEnd()).isZero();
+    }
+
+    @Test
+    void emptySessionReturnsIncompleteData() {
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, List.of(),
+            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000"));
+
+        assertThat(result.status()).isEqualTo("INCOMPLETE_DATA");
+        assertThat(result.orders()).isEmpty();
+        assertThat(result.positions()).isEmpty();
+        assertThat(result.trades()).isEmpty();
     }
 
     @Test
@@ -156,6 +181,14 @@ class IntradayPaperExecutionServiceTest {
                 bd("101.3"), bd("101.6"), 1_000));
         }
         return List.copyOf(bars);
+    }
+
+    private List<IntradayBar> completeSession(List<IntradayBar> supplied) {
+        java.util.Map<LocalTime, IntradayBar> byTime = new java.util.HashMap<>();
+        supplied.forEach(bar -> byTime.put(bar.sessionTime(), bar));
+        return sessions.expectedBarStartTimes(DAY).stream()
+            .map(time -> byTime.getOrDefault(time, barAt(time.toString(), "100", "100", "100", "100")))
+            .toList();
     }
 
     private static List<IntradayBar> breakoutBars() {

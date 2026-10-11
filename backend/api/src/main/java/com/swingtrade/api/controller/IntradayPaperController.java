@@ -50,8 +50,6 @@ public class IntradayPaperController {
         List<OhlcvCandleEntity> stored = candles.findBySymbolAndIntervalAndDateRange(
             request.symbol().trim().toUpperCase(), Interval.FIFTEEN_MINUTES.getCode(),
             request.sessionDate(), request.sessionDate(), Pageable.unpaged());
-        if (stored.isEmpty()) return ResponseEntity.notFound().build();
-
         try {
             List<IntradayBar> bars = stored.stream().map(candle -> new IntradayBar(
                 ZonedDateTime.of(candle.getDate(), candle.getBarTime(), NSE_ZONE), candle.getOpenPrice(),

@@ -66,6 +66,26 @@ class IntradayPaperControllerTest {
         verify(execution, never()).runSession(any(), any(), any(), any(), any(), any());
     }
 
+    @Test
+    void sendsEmptyStoredSessionToExecutionSoItCanReturnIncompleteData() {
+        OhlcvCandleRepository repository = mock(OhlcvCandleRepository.class);
+        IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
+        StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
+        IntradayPaperSessionResult incomplete = new IntradayPaperSessionResult("run-2", "PAPER_SIMULATION",
+            "INCOMPLETE_DATA", "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
+            0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
+        when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults())))
+            .thenReturn(incomplete);
+        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution);
+
+        var response = controller.runSession(new IntradayPaperSessionRequest(
+            "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, null));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().status()).isEqualTo("INCOMPLETE_DATA");
+        verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()));
+    }
+
     private static OhlcvCandleEntity candle() {
         OhlcvCandleEntity candle = new OhlcvCandleEntity();
         candle.setSymbol("TCS");

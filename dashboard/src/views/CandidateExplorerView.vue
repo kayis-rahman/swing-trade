@@ -282,7 +282,7 @@
         No scan results match the selected filters.
       </div>
       <div v-else class="overflow-x-auto">
-        <table class="w-full min-w-[850px] text-left text-sm">
+        <table class="w-full min-w-[980px] text-left text-sm">
           <thead
             class="border-b border-border-subtle bg-bg-surface/60 text-xs uppercase tracking-[0.12em] text-text-muted"
           >
@@ -296,6 +296,7 @@
               <th class="px-3 py-3 font-semibold">Return</th>
               <th class="px-3 py-3 font-semibold">Decision</th>
               <th class="px-3 py-3 font-semibold">History / activation</th>
+              <th class="px-3 py-3 font-semibold">Intraday paper</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border-subtle/70">
@@ -355,6 +356,18 @@
                   {{ percent(item.oosTotalReturn) }}
                 </div>
               </td>
+              <td class="px-3 py-3.5 text-xs">
+                <button
+                  v-if="item.activated"
+                  type="button"
+                  class="rounded-md border border-brand/30 px-2.5 py-1.5 font-semibold text-brand transition-colors hover:bg-brand-subtle"
+                  :aria-label="`Review ${item.symbol} in intraday paper trading`"
+                  @click="reviewInIntraday(item.symbol)"
+                >
+                  Review in intraday paper
+                </button>
+                <span v-else class="text-text-muted">Activate from qualified scan first</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -398,6 +411,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { asAppError } from '../errors/appError'
 import {
   cancelCandidateScan,
@@ -413,6 +427,7 @@ import {
 } from '../api/candidateScan'
 import type { CandidateScanLogEvent, CandidateScanResult, CandidateScanRun } from '../api/types'
 
+const router = useRouter()
 const run = ref<CandidateScanRun | null>(null)
 const results = ref<CandidateScanResult[]>([])
 const totalResults = ref(0)
@@ -538,6 +553,10 @@ const metrics = computed(() => [
     tone: 'text-text-primary',
   },
 ])
+
+function reviewInIntraday(symbol: string) {
+  void router.push({ path: '/intraday', query: { source: 'candidate-explorer', symbol } })
+}
 
 const percent = (value?: number) => (value == null ? '—' : `${value.toFixed(1)}%`)
 const signalClass = (signal?: string) =>

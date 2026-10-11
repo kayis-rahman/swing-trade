@@ -7,7 +7,6 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import java.util.Locale;
 
 
@@ -42,7 +41,6 @@ import java.util.Locale;
         "com.swingtrade.broker.entity",
         "com.swingtrade.llm"
     })
-@EnableScheduling
 @SpringBootApplication
 public class SwingTradeApiApplication {
 

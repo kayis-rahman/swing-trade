@@ -90,3 +90,45 @@ export function runIntradayPaperSession(
     responseContract: 'direct',
   })
 }
+
+export interface IntradayPaperScanRequest {
+  sessionDate: string
+  asOfBarTime: string
+  riskConfig?: IntradayPaperSessionRequest['riskConfig']
+}
+
+export interface IntradayPaperScanRow {
+  symbol: string
+  strategy: string
+  status: 'CANDIDATE' | 'NO_OPEN_SETUP' | 'INCOMPLETE_DATA' | 'BLOCKED_KILL_SWITCH'
+  expectedBars: number
+  receivedBars: number
+  completedTrades: number
+  netPnl: number
+  openEntryPrice: number | null
+  openEntryTime: string | null
+}
+
+export interface IntradayPaperScanResult {
+  mode: 'PAPER_SCAN_AS_OF'
+  sessionDate: string
+  asOfBarTime: string
+  universe: 'ACTIVE_NSE_WATCHLIST'
+  watchlistSize: number
+  scannedSymbols: number
+  candidateCount: number
+  liveBrokerCalls: 0
+  excludedSymbols: string[]
+  results: IntradayPaperScanRow[]
+}
+
+export function scanIntradayPaperWatchlist(
+  request: IntradayPaperScanRequest
+): Promise<IntradayPaperScanResult> {
+  return apiRequest<IntradayPaperScanResult>('/intraday/paper/scans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    responseContract: 'direct',
+  })
+}

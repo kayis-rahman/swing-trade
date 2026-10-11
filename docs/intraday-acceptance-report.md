@@ -32,7 +32,7 @@ The fixture contains all 25 expected bar starts (09:15–15:15 IST) for Friday 2
 
 The result is intentionally instructive: the fixture's positive-price target exit is net-negative after the configured brokerage, exchange, tax, and slippage costs. The cockpit shows the closed paper position and order/trade references. Completed sessions end flat by design; the as-of bar selector can show positions while a replay is in progress.
 
-A separate complete-session fixture tests forced square-off on the 15:15 bar-open proxy for the 15:20 cutoff. Risk tests verify that a ₹1 daily realized-loss limit stops further entries after a loss, a one-trade limit is obeyed, and an active kill switch emits no paper ledger. A partial session returns `INCOMPLETE_DATA` and does not synthesize fills or forced exits.
+A separate complete-session fixture tests forced square-off on the 15:15 bar-open proxy for the 15:20 cutoff. Risk tests verify that a ₹1 daily realized-loss limit stops further entries after a loss, a one-trade limit is obeyed, and an active kill switch emits no paper ledger. In full-session mode, a partial session returns `INCOMPLETE_DATA` and does not synthesize fills or forced exits; as-of coverage is described in [paper intraday session execution](intraday-paper-execution.md).
 
 ## Local demonstration
 
@@ -67,8 +67,8 @@ The dashboard selected checks also run Prettier, typecheck, lint, and a producti
 - The page reports the completed historical replay state, not a live exchange feed or real-time market status.
 - Completed sessions end flat by design; the full-session simulator force-flattens every position. The cockpit's as-of selector exposes entry-to-exit open states and closed position records.
 - No Fyers measurement was made. The seeded scenario uses Yahoo data only; Fyers requires authentication and was not measured.
-- No intraday candidate scanner exists yet. Intraday runs use the watchlist only.
+- The retrospective active-watchlist scanner is documented in [Intraday paper watchlist scan](intraday-paper-scan.md).
 - Current risk is single-symbol and caps concurrency at one position; portfolio-wide, multi-symbol exposure and capital allocation are out of scope.
-- Daily-loss control is based on realized session P&L. Partial/incomplete sessions are refused; missing expected bars do not create order or position records.
+- Daily-loss control is based on realized session P&L. Full-session replay requires complete session coverage; as-of replay requires coverage only through its selected cutoff. Missing required bars do not create order or position records. See [paper intraday session execution](intraday-paper-execution.md) for replay semantics.
 - API authentication remains deferred for the private MVP and is required before external exposure or live broker integration.
 - No live trading, real credentials, live orders, provider calls, or staging deployment were performed.

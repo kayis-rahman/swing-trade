@@ -3,8 +3,10 @@ package com.swingtrade.strategy;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.Set;
+import org.springframework.stereotype.Component;
 
 /** Long-only opening-range breakout: first two 15-minute bars define the range. */
+@Component
 public final class IntradayOpeningRangeBreakoutStrategy implements SignalStrategy {
     public static final String TYPE = "INTRADAY_ORB";
     @Override public String type() { return TYPE; }

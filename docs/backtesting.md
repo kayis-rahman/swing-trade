@@ -58,8 +58,10 @@ isn't partitioned by exchange in the schema today.
 Intraday replay is a separate 15-minute-bar path; it does not call `BacktestEngine` or
 `ZerodhaDeliveryCostModel`. The strategy module provides `IntradayOpeningRangeBreakoutStrategy`,
 `IntradayVwapPullbackStrategy`, and `IntradayRsi2Strategy`, all implementing `SignalStrategy`, plus
-`IntradayBacktestEngine` and the independent `IntradayCostModel`. There is no intraday execution,
-broker authentication, or order-placement API.
+`IntradayBacktestEngine` and the independent `IntradayCostModel`. A paper-only session execution API
+now replays stored bars and returns a simulated audit ledger; see
+[Paper intraday session execution](intraday-paper-execution.md) for its request and response contract.
+It does not use broker authentication or place live orders.
 
 To run the deterministic one-symbol sample locally:
 

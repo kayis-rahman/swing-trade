@@ -27,14 +27,20 @@ public class MarketDataClientProvider {
 
     private final Map<String, MarketDataClient> clients;
     private final AppSettingsService appSettingsService;
+    private final boolean fyersEnabled;
     private final AtomicReference<String> activeBroker;
 
     public MarketDataClientProvider(Map<String, MarketDataClient> clients, AppSettingsService appSettingsService) {
+        this(clients, appSettingsService, true);
+    }
+
+    MarketDataClientProvider(Map<String, MarketDataClient> clients, AppSettingsService appSettingsService,
+                             boolean fyersEnabled) {
         this.clients = normalizeClientNames(clients);
         this.appSettingsService = appSettingsService;
+        this.fyersEnabled = fyersEnabled;
         String configuredBroker = appSettingsService.get(SELECTED_BROKER_SETTING, "yahoo");
-        this.activeBroker = new AtomicReference<>(this.clients.containsKey(configuredBroker)
-            ? configuredBroker : "yahoo");
+        this.activeBroker = new AtomicReference<>(isAvailable(configuredBroker) ? configuredBroker : "yahoo");
         logger.info("Market data provider initialized without request throttling (compatibility constructor)");
     }
 
@@ -44,13 +50,14 @@ public class MarketDataClientProvider {
                              @Value("${market-data.rate-limit-ms:250}") long rateLimitMillis,
                              @Value("${data.rate-limit.upstox.requests-per-minute:100}") long upstoxRpm,
                              @Value("${data.rate-limit.fyers.requests-per-minute:60}") long fyersRpm,
-                             @Value("${data.rate-limit.default.requests-per-minute:30}") long defaultRpm) {
+                             @Value("${data.rate-limit.default.requests-per-minute:30}") long defaultRpm,
+                             @Value("${market-data.fyers.enabled:true}") boolean fyersEnabled) {
         this.clients = rateLimitClients(normalizeClientNames(clients), metrics, rateLimitMillis,
             upstoxRpm, fyersRpm, defaultRpm);
         this.appSettingsService = appSettingsService;
+        this.fyersEnabled = fyersEnabled;
         String configuredBroker = appSettingsService.get(SELECTED_BROKER_SETTING, "yahoo");
-        this.activeBroker = new AtomicReference<>(this.clients.containsKey(configuredBroker)
-            ? configuredBroker : "yahoo");
+        this.activeBroker = new AtomicReference<>(isAvailable(configuredBroker) ? configuredBroker : "yahoo");
         logger.info("MarketDataClientProvider initialized with: {}", this.clients.keySet());
         logger.info("Active market data provider: {}", activeBroker.get());
     }
@@ -59,6 +66,7 @@ public class MarketDataClientProvider {
     public MarketDataClientProvider(Map<String, MarketDataClient> clients) {
         this.clients = normalizeClientNames(clients);
         this.appSettingsService = null;
+        this.fyersEnabled = true;
         this.activeBroker = new AtomicReference<>(this.clients.containsKey("yahoo") ? "yahoo" : FYERS);
     }
 
@@ -114,6 +122,11 @@ public class MarketDataClientProvider {
         }
     }
 
+    private boolean isAvailable(String broker) {
+        return broker != null && clients.containsKey(broker)
+            && (fyersEnabled || !broker.toLowerCase().startsWith(FYERS));
+    }
+
     public MarketDataClient getClient() {
         String broker = activeBroker.get();
         MarketDataClient client = clients.get(broker);
@@ -131,8 +144,9 @@ public class MarketDataClientProvider {
     }
 
     public void setActiveBroker(String broker) {
-        if (!clients.containsKey(broker)) {
-            logger.warn("Cannot set broker to '{}', available: {}", broker, clients.keySet());
+        if (!isAvailable(broker)) {
+            logger.warn("Cannot set broker to '{}', available: {}, Fyers enabled: {}",
+                broker, clients.keySet(), fyersEnabled);
             return;
         }
         logger.info("Switched data source to '{}'", broker);

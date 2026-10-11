@@ -53,6 +53,19 @@ class MarketDataClientProviderTest {
     }
 
     @Test
+    void stagePaperModeIgnoresPersistedFyersSelectionWithoutChangingSimulationBroker() {
+        when(appSettingsService.get(eq("selectedBroker"), any())).thenReturn("fyers");
+        MarketDataClientProvider stage = new MarketDataClientProvider(
+            Map.of("yahoo", yahoo, "fyers", fyers), appSettingsService, false);
+
+        stage.restorePersistedBroker();
+        stage.setActiveBroker("fyers");
+
+        assertThat(stage.getActiveBroker()).isEqualTo("yahoo");
+        assertThat(stage.getClient()).isSameAs(yahoo);
+    }
+
+    @Test
     void restoresPersistedBrokerOnStartup() {
         when(appSettingsService.get(eq("selectedBroker"), any())).thenReturn("fyers");
         MarketDataClientProvider restarted =
@@ -81,11 +94,11 @@ class MarketDataClientProviderTest {
         DataIngestionMetrics metrics = new DataIngestionMetrics(new SimpleMeterRegistry());
         MarketDataClient productionProvider = new MarketDataClientProvider(
             Map.of("yahoo", yahoo, "fyers", fyers, "fyersServiceClient", fyers),
-            appSettingsService, metrics, 0, 100, 60, 30).getClient();
+            appSettingsService, metrics, 0, 100, 60, 30, true).getClient();
 
         MarketDataClientProvider configured = new MarketDataClientProvider(
             Map.of("yahoo", yahoo, "fyers", fyers, "fyersServiceClient", fyers),
-            appSettingsService, metrics, 0, 100, 60, 30);
+            appSettingsService, metrics, 0, 100, 60, 30, true);
         configured.setActiveBroker("fyers");
         MarketDataClient fyersAliasLimiter = configured.getClient();
         configured.setActiveBroker("fyersServiceClient");

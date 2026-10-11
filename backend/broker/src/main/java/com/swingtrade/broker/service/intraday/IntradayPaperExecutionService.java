@@ -47,21 +47,25 @@ public class IntradayPaperExecutionService {
         }
         String runId = UUID.randomUUID().toString();
         if (killSwitch.isActive()) {
-            return emptyResult(runId, "BLOCKED_KILL_SWITCH", symbol, sessionDate, strategy.type(), true, config);
+            return emptyResult(runId, "BLOCKED_KILL_SWITCH", symbol, sessionDate, strategy.type(), true,
+                0, 0, config);
         }
         if (!sessions.isTradingSession(sessionDate)) {
             throw new IllegalArgumentException("The requested date is not an NSE trading session");
         }
         Set<java.time.LocalTime> providedBarStarts = new HashSet<>();
         bars.forEach(bar -> providedBarStarts.add(bar.sessionTime()));
-        if (!providedBarStarts.containsAll(sessions.expectedBarStartTimes(sessionDate))) {
-            return emptyResult(runId, "INCOMPLETE_DATA", symbol, sessionDate, strategy.type(), false, config);
+        Set<java.time.LocalTime> expectedBarStarts = new HashSet<>(sessions.expectedBarStartTimes(sessionDate));
+        if (!providedBarStarts.containsAll(expectedBarStarts)) {
+            return emptyResult(runId, "INCOMPLETE_DATA", symbol, sessionDate, strategy.type(), false,
+                expectedBarStarts.size(), providedBarStarts.size(), config);
         }
 
         IntradayBacktestResult replay = new IntradayBacktestEngine(sessions, new IntradayCostModel(), config)
             .run(symbol, bars, strategy, params);
         List<IntradayPaperSessionResult.PaperOrderRecord> orders = new ArrayList<>(replay.trades().size() * 2);
         List<IntradayPaperSessionResult.PaperPositionRecord> positions = new ArrayList<>(replay.trades().size());
+        List<IntradayPaperSessionResult.PaperTradeRecord> paperTrades = new ArrayList<>(replay.trades().size());
         int maxConcurrent = 0;
         for (int index = 0; index < replay.trades().size(); index++) {
             IntradayBacktestTrade trade = replay.trades().get(index);
@@ -76,19 +80,24 @@ public class IntradayPaperExecutionService {
                 entryOrderId, exitOrderId, trade.entryTime(), trade.exitTime(), trade.entryPrice(),
                 trade.exitPrice(), trade.quantity(), "CLOSED", trade.costs(), trade.pnl(),
                 trade.exitReason(), false));
+            paperTrades.add(new IntradayPaperSessionResult.PaperTradeRecord(positionId, entryOrderId,
+                exitOrderId, trade.strategy(), trade.entryTime(), trade.exitTime(), trade.entryPrice(),
+                trade.exitPrice(), trade.quantity(), trade.costs(), trade.pnl(), trade.exitReason()));
             maxConcurrent = 1;
         }
         return new IntradayPaperSessionResult(runId, EXECUTION_MODE, "COMPLETED", symbol, sessionDate,
-            strategy.type(), false, maxConcurrent, 0, 0, replay.initialCapital(), replay.finalCapital(),
-            replay.netPnl(), orders, positions, replay.trades());
+            expectedBarStarts.size(), providedBarStarts.size(), strategy.type(), false,
+            maxConcurrent, 0, 0, replay.initialCapital(), replay.finalCapital(),
+            replay.netPnl(), orders, positions, paperTrades);
     }
 
     private static IntradayPaperSessionResult emptyResult(String runId, String status, String symbol,
                                                            LocalDate sessionDate, String strategy,
-                                                           boolean killSwitchActive,
-                                                           IntradayBacktestConfig config) {
+                                                           boolean killSwitchActive, int expectedBars,
+                                                           int receivedBars, IntradayBacktestConfig config) {
         return new IntradayPaperSessionResult(runId, EXECUTION_MODE, status, symbol, sessionDate,
-            strategy, killSwitchActive, 0, 0, 0, config.initialCapital(), config.initialCapital(),
+            expectedBars, receivedBars, strategy, killSwitchActive, 0, 0, 0,
+            config.initialCapital(), config.initialCapital(),
             BigDecimal.ZERO, List.of(), List.of(), List.of());
     }
 }

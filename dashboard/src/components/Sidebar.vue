@@ -249,6 +249,13 @@ const navItems = computed(() => [
   { path: '/portfolio', label: 'Portfolio', icon: iconPaths.portfolio, badge: undefined },
   { path: '/positions', label: 'Positions', icon: iconPaths.positions, badge: undefined },
   {
+    path: '/intraday',
+    label: 'Intraday paper',
+    icon: iconPaths.backtest,
+    badge: undefined,
+    group: 'Paper trading',
+  },
+  {
     path: '/news',
     label: 'News',
     icon: iconPaths.intelligence,

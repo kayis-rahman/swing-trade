@@ -1,5 +1,21 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-11 (I4/I5 local review approved; pipeline authorized)
+
+- [x] Combined I4/I5 implementation is ready for captain review on
+  `fm/swing-trade-intraday-cockpit-acceptance-v1`: explicit trade-to-position/entry-order/exit-order
+  references and assertions; Vue paper-session cockpit with strategy outcomes, linked ledgers, costs,
+  net P&L, and empty/loading/error/incomplete-data states; and the
+  [intraday acceptance report](intraday-acceptance-report.md). Full backend tests and
+  `./bin/verify-changes` passed; dashboard verification includes formatting, typecheck, 61 Vitest
+  files / 368 tests, lint, and production build. The throwaway Pi-context DB was seeded from the 25-bar
+  checked-in fixture; local API/UI replay completed with 2 simulated orders, 1 closed position, 1
+  trade, ₹47.57 costs, -₹27.6802601 net P&L, and 0 live broker calls. Browser console was clean.
+  Stack and screenshots are in `firstmate/data/swing-trade-intraday-i4-i5-cockpit-acceptance-v1/`.
+  Captain approved the local review (inbox 017); the Mac processes and the project's throwaway Pi
+  database/volume were stopped and removed without touching shared/stage infrastructure. The
+  combined no-mistakes run and one PR are authorized.
+
 Last checked: 2026-10-10 (I3 paper intraday session execution local verification)
 
 - [x] I3 backend slice implemented on `fm/swing-trade-intraday-i3-paper-risk-v1`: a paper-only

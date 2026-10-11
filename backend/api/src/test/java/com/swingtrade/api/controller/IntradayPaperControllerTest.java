@@ -37,7 +37,7 @@ class IntradayPaperControllerTest {
         when(repository.findBySymbolAndIntervalAndDateRange("TCS", "15m", DAY, DAY, Pageable.unpaged()))
             .thenReturn(List.of(candle));
         IntradayPaperSessionResult expected = new IntradayPaperSessionResult("run-1", "PAPER_SIMULATION",
-            "COMPLETED", "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
+            "COMPLETED", "TCS", DAY, 25, 25, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
             0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
         when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults())))
             .thenReturn(expected);
@@ -72,7 +72,7 @@ class IntradayPaperControllerTest {
         IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
         StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
         IntradayPaperSessionResult incomplete = new IntradayPaperSessionResult("run-2", "PAPER_SIMULATION",
-            "INCOMPLETE_DATA", "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
+            "INCOMPLETE_DATA", "TCS", DAY, 25, 0, IntradayOpeningRangeBreakoutStrategy.TYPE, false,
             0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
         when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults())))
             .thenReturn(incomplete);

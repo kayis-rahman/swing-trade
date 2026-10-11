@@ -19,7 +19,12 @@ import com.swingtrade.strategy.StrategyParamsView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -52,11 +57,13 @@ class IntradayPaperExecutionServiceTest {
 
     @Test
     void runsOneSessionToClosedPaperRecordsWithoutAnyLiveBrokerCalls() {
-        IntradayPaperSessionResult result = service.runSession("TCS", DAY, completeSession(breakoutBars()),
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, fixtureBars(),
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(1, "1000"));
 
         assertThat(result.executionMode()).isEqualTo("PAPER_SIMULATION");
         assertThat(result.status()).isEqualTo("COMPLETED");
+        assertThat(result.expectedBars()).isEqualTo(25);
+        assertThat(result.receivedBars()).isEqualTo(25);
         assertThat(result.liveBrokerCalls()).isZero();
         assertThat(result.trades()).hasSize(1);
         assertThat(result.trades().getFirst().exitReason()).isEqualTo("TARGET_HIT");
@@ -78,6 +85,7 @@ class IntradayPaperExecutionServiceTest {
             assertThat(position.entryOrderId()).isEqualTo(result.orders().getFirst().orderId());
             assertThat(position.exitOrderId()).isEqualTo(result.orders().getLast().orderId());
         });
+        assertTradeLinks(result);
         assertThat(result.maxConcurrentPositions()).isEqualTo(1);
         assertThat(result.openPositionsAtEnd()).isZero();
         assertThat(result.netPnl()).isEqualByComparingTo(result.trades().getFirst().pnl());
@@ -95,6 +103,7 @@ class IntradayPaperExecutionServiceTest {
             assertThat(position.carriedOvernight()).isFalse();
             assertThat(position.exitTime().toLocalTime()).isEqualTo(LocalTime.of(15, 15));
         });
+        assertTradeLinks(result);
         assertThat(result.openPositionsAtEnd()).isZero();
         assertThat(result.maxConcurrentPositions()).isEqualTo(1);
     }
@@ -103,7 +112,7 @@ class IntradayPaperExecutionServiceTest {
     void killSwitchBlocksTheSessionBeforeAnyPaperOrderIsCreated() {
         when(killSwitch.isActive()).thenReturn(true);
 
-        IntradayPaperSessionResult result = service.runSession("TCS", DAY, completeSession(breakoutBars()),
+        IntradayPaperSessionResult result = service.runSession("TCS", DAY, fixtureBars(),
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000"));
 
         assertThat(result.status()).isEqualTo("BLOCKED_KILL_SWITCH");
@@ -132,6 +141,8 @@ class IntradayPaperExecutionServiceTest {
         assertThat(lossLimited.netPnl()).isNegative();
         assertThat(tradeLimited.trades()).hasSize(1);
         assertThat(tradeLimited.orders()).hasSize(2);
+        assertTradeLinks(lossLimited);
+        assertTradeLinks(tradeLimited);
     }
 
     @Test
@@ -140,6 +151,8 @@ class IntradayPaperExecutionServiceTest {
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000"));
 
         assertThat(result.status()).isEqualTo("INCOMPLETE_DATA");
+        assertThat(result.expectedBars()).isEqualTo(25);
+        assertThat(result.receivedBars()).isEqualTo(4);
         assertThat(result.orders()).isEmpty();
         assertThat(result.positions()).isEmpty();
         assertThat(result.trades()).isEmpty();
@@ -169,6 +182,45 @@ class IntradayPaperExecutionServiceTest {
             new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams(), config(3, "1000")))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("one session date");
+    }
+
+    private static List<IntradayBar> fixtureBars() {
+        String resource = "/com/swingtrade/broker/intraday/tcs-2026-10-09-15m.csv";
+        try (var stream = IntradayPaperExecutionServiceTest.class.getResourceAsStream(resource)) {
+            if (stream == null) throw new IllegalStateException("Missing intraday acceptance fixture: " + resource);
+            try (var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                return reader.lines().skip(1).map(line -> {
+                    String[] fields = line.split(",");
+                    return new IntradayBar(ZonedDateTime.of(LocalDate.parse(fields[0]),
+                        LocalTime.parse(fields[1]), IST), bd(fields[2]), bd(fields[3]), bd(fields[4]),
+                        bd(fields[5]), Long.parseLong(fields[6]));
+                }).toList();
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static void assertTradeLinks(IntradayPaperSessionResult result) {
+        assertThat(result.positions()).hasSize(result.trades().size());
+        assertThat(result.orders()).hasSize(result.trades().size() * 2);
+        Set<String> orderIds = new java.util.HashSet<>();
+        result.orders().forEach(order -> assertThat(orderIds.add(order.orderId())).isTrue());
+        for (var trade : result.trades()) {
+            var positions = result.positions().stream()
+                .filter(position -> position.positionId().equals(trade.positionId())).toList();
+            assertThat(positions).hasSize(1);
+            var position = positions.getFirst();
+            assertThat(position.entryOrderId()).isEqualTo(trade.entryOrderId());
+            assertThat(position.exitOrderId()).isEqualTo(trade.exitOrderId());
+            var entryOrders = result.orders().stream()
+                .filter(order -> order.orderId().equals(trade.entryOrderId())).toList();
+            var exitOrders = result.orders().stream()
+                .filter(order -> order.orderId().equals(trade.exitOrderId())).toList();
+            assertThat(entryOrders).singleElement().satisfies(order -> assertThat(order.side()).isEqualTo("BUY"));
+            assertThat(exitOrders).singleElement().satisfies(order -> assertThat(order.side()).isEqualTo("SELL"));
+            assertThat(position.realizedPnl()).isEqualByComparingTo(trade.pnl());
+        }
     }
 
     private static List<IntradayBar> squareOffBars() {

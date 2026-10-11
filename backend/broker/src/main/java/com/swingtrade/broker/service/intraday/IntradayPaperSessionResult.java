@@ -1,7 +1,5 @@
 package com.swingtrade.broker.service.intraday;
 
-import com.swingtrade.strategy.IntradayBacktestTrade;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -14,6 +12,8 @@ public record IntradayPaperSessionResult(
     String status,
     String symbol,
     LocalDate sessionDate,
+    int expectedBars,
+    int receivedBars,
     String strategy,
     boolean killSwitchActive,
     int maxConcurrentPositions,
@@ -24,7 +24,7 @@ public record IntradayPaperSessionResult(
     BigDecimal netPnl,
     List<PaperOrderRecord> orders,
     List<PaperPositionRecord> positions,
-    List<IntradayBacktestTrade> trades
+    List<PaperTradeRecord> trades
 ) {
     public IntradayPaperSessionResult {
         orders = List.copyOf(orders);
@@ -37,6 +37,12 @@ public record IntradayPaperSessionResult(
                                    ZonedDateTime filledAt, BigDecimal fillPrice,
                                    int quantity, String status, String executionMode,
                                    String fillSource) {}
+
+    /** Paper trade row with explicit links to its one closed position and both simulated orders. */
+    public record PaperTradeRecord(String positionId, String entryOrderId, String exitOrderId,
+                                   String strategy, ZonedDateTime entryTime, ZonedDateTime exitTime,
+                                   BigDecimal entryPrice, BigDecimal exitPrice, int quantity,
+                                   BigDecimal costs, BigDecimal pnl, String exitReason) {}
 
     /** Closed position row linked to its simulated entry and exit order records. */
     public record PaperPositionRecord(String positionId, String symbol,

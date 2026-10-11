@@ -65,9 +65,15 @@ public final class MarketContext {
     private final Map<ScaledIndicatorCacheKey, Indicator<Num>> scaledCache = new ConcurrentHashMap<>();
 
     private MarketContext(String symbol, List<OhlcvCandle> chronologicalCandles) {
+        this(symbol, chronologicalCandles, null);
+    }
+
+    private MarketContext(String symbol, List<OhlcvCandle> chronologicalCandles,
+                          List<ZonedDateTime> intradayTimestamps) {
         this.symbol = symbol;
         this.candles = List.copyOf(chronologicalCandles);
-        this.series = buildBarSeries(symbol, this.candles);
+        this.series = intradayTimestamps == null ? buildBarSeries(symbol, this.candles)
+            : buildIntradayBarSeries(symbol, this.candles, intradayTimestamps);
         this.closePriceIndicator = new ClosePriceIndicator(series);
         this.openPriceIndicator = new OpenPriceIndicator(series);
         this.highPriceIndicator = new HighPriceIndicator(series);
@@ -81,13 +87,23 @@ public final class MarketContext {
      * @throws IllegalArgumentException if symbol is null/blank or candles is null/empty
      */
     public static MarketContext of(String symbol, List<OhlcvCandle> chronologicalCandles) {
-        if (symbol == null || symbol.isBlank()) {
-            throw new IllegalArgumentException("Symbol cannot be null or blank");
-        }
-        if (chronologicalCandles == null || chronologicalCandles.isEmpty()) {
-            throw new IllegalArgumentException("Candles cannot be null or empty");
-        }
+        validateInput(symbol, chronologicalCandles);
         return new MarketContext(symbol, chronologicalCandles);
+    }
+
+    /** Builds the same bounded strategy context over 15-minute candles without changing daily bars. */
+    public static MarketContext ofIntraday(String symbol, List<OhlcvCandle> chronologicalCandles,
+                                           List<ZonedDateTime> timestamps) {
+        validateInput(symbol, chronologicalCandles);
+        if (timestamps == null || timestamps.size() != chronologicalCandles.size()) {
+            throw new IllegalArgumentException("Intraday timestamps must match candle count");
+        }
+        return new MarketContext(symbol, chronologicalCandles, List.copyOf(timestamps));
+    }
+
+    private static void validateInput(String symbol, List<OhlcvCandle> candles) {
+        if (symbol == null || symbol.isBlank()) throw new IllegalArgumentException("Symbol cannot be null or blank");
+        if (candles == null || candles.isEmpty()) throw new IllegalArgumentException("Candles cannot be null or empty");
     }
 
     public String symbol() {
@@ -206,27 +222,28 @@ public final class MarketContext {
     }
 
     static BarSeries buildBarSeries(String symbol, List<OhlcvCandle> chronologicalCandles) {
-        // Deliberately mirrors PriceActionSignalEngine.buildBarSeries: both build the identical
-        // ta4j series shape from the same adjusted-for-analysis candles, which is what makes the
-        // legacy engine and MarketContext-based strategies produce identical indicator values
-        // for the golden parity test (plan §3.4).
+        // Preserve the existing daily series shape and indicator behavior exactly.
         BarSeries barSeries = new BaseBarSeries(symbol, DecimalNum.valueOf(0));
         for (OhlcvCandle candle : chronologicalCandles) {
-            OhlcvCandle analyticalCandle = candle.adjustedForAnalysis();
-            ZonedDateTime endTime = analyticalCandle.date().atStartOfDay(MARKET_ZONE);
-            Long volume = analyticalCandle.volume();
-            Bar bar = new BaseBar(
-                Duration.ofDays(1),
-                endTime,
-                analyticalCandle.open(),
-                analyticalCandle.high(),
-                analyticalCandle.low(),
-                analyticalCandle.close(),
-                BigDecimal.valueOf(volume != null ? volume : 0L)
-            );
-            barSeries.addBar(bar);
+            addBar(barSeries, candle, candle.date().atStartOfDay(MARKET_ZONE), Duration.ofDays(1));
         }
         return barSeries;
+    }
+
+    private static BarSeries buildIntradayBarSeries(String symbol, List<OhlcvCandle> candles,
+                                                     List<ZonedDateTime> timestamps) {
+        BarSeries barSeries = new BaseBarSeries(symbol, DecimalNum.valueOf(0));
+        for (int i = 0; i < candles.size(); i++) {
+            addBar(barSeries, candles.get(i), timestamps.get(i).plusMinutes(15), Duration.ofMinutes(15));
+        }
+        return barSeries;
+    }
+
+    private static void addBar(BarSeries series, OhlcvCandle candle, ZonedDateTime endTime, Duration duration) {
+        OhlcvCandle analytical = candle.adjustedForAnalysis();
+        Long volume = analytical.volume();
+        series.addBar(new BaseBar(duration, endTime, analytical.open(), analytical.high(), analytical.low(),
+            analytical.close(), BigDecimal.valueOf(volume != null ? volume : 0L)));
     }
 
     private static BigDecimal numToBigDecimal(Num value) {

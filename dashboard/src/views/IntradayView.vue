@@ -211,7 +211,7 @@
             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               Market state
             </p>
-            <p class="mt-2 text-sm font-semibold text-text-primary">As of {{ form.asOfBarTime }} IST</p>
+            <p class="mt-2 text-sm font-semibold text-text-primary">As of {{ resultAsOfBarTime }} IST</p>
           </div>
           <div class="px-4 py-4 sm:px-5">
             <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
@@ -477,6 +477,7 @@ const form = reactive({
 
 const loading = ref(false)
 const result = ref<IntradayPaperSessionResult | null>(null)
+const resultAsOfBarTime = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
 const sessionBarTimes = Array.from({ length: 25 }, (_, index) => {
   const totalMinutes = 9 * 60 + 15 + index * 15
@@ -522,8 +523,10 @@ function shortId(value: string): string {
 }
 
 async function runSession() {
+  const submittedAsOfBarTime = form.asOfBarTime
   loading.value = true
   result.value = null
+  resultAsOfBarTime.value = null
   errorMessage.value = null
   try {
     result.value = await runIntradayPaperSession({
@@ -538,6 +541,7 @@ async function runSession() {
         maxDailyLoss: form.maxDailyLoss,
       },
     })
+    resultAsOfBarTime.value = submittedAsOfBarTime
   } catch (error) {
     errorMessage.value = formatAppError(error, {
       title: 'Couldn’t load the paper session',

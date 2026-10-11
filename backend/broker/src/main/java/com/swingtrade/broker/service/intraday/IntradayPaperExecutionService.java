@@ -110,9 +110,10 @@ public class IntradayPaperExecutionService {
                 realizedPnl = realizedPnl.add(trade.pnl());
             } else {
                 BigDecimal currentPrice = markBar.close();
+                BigDecimal estimatedSellFill = costModel.sellFill(currentPrice);
                 BigDecimal estimatedCosts = costModel.roundTripCost(trade.entryPrice(),
-                    costModel.sellFill(currentPrice), trade.quantity());
-                BigDecimal openPnl = currentPrice.subtract(trade.entryPrice())
+                    estimatedSellFill, trade.quantity());
+                BigDecimal openPnl = estimatedSellFill.subtract(trade.entryPrice())
                     .multiply(BigDecimal.valueOf(trade.quantity())).subtract(estimatedCosts);
                 positions.add(new IntradayPaperSessionResult.PaperPositionRecord(positionId, symbol,
                     entryOrderId, null, trade.entryTime(), null, trade.entryPrice(), null, currentPrice,

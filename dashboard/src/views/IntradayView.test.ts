@@ -173,6 +173,9 @@ describe('IntradayView paper cockpit', () => {
     expect(apiMocks.runIntradayPaperSession).toHaveBeenCalledWith(
       expect.objectContaining({ asOfBarTime: '10:00' })
     )
+    expect(wrapper.text()).toContain('As of 10:00 IST')
+    await selector.setValue('10:15')
+    expect(wrapper.text()).toContain('As of 10:00 IST')
     wrapper.unmount()
   })
 

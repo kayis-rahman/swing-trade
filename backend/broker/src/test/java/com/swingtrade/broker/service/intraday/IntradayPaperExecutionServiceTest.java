@@ -103,16 +103,20 @@ class IntradayPaperExecutionServiceTest {
 
         IntradayPaperSessionResult whileOpen = service.runSession("TCS", DAY, bars, strategy, params,
             config(1, "1000"), LocalTime.of(10, 0));
-        assertThat(whileOpen.positions()).singleElement().satisfies(position -> {
-            assertThat(position.status()).isEqualTo("OPEN");
-            assertThat(position.exitOrderId()).isNull();
-            assertThat(position.realizedPnl()).isZero();
-            assertThat(position.currentPrice()).isPositive();
-            assertThat(position.unrealizedPnl()).isNotZero();
-        });
+        var openPosition = whileOpen.positions().getFirst();
+        assertThat(openPosition.status()).isEqualTo("OPEN");
+        assertThat(openPosition.exitOrderId()).isNull();
+        assertThat(openPosition.realizedPnl()).isZero();
+        assertThat(openPosition.currentPrice()).isPositive();
+        BigDecimal estimatedSellFill = openPosition.currentPrice().multiply(new BigDecimal("0.9995"));
+        BigDecimal expectedOpenPnl = estimatedSellFill.subtract(openPosition.entryPrice())
+            .multiply(BigDecimal.valueOf(openPosition.quantity())).subtract(openPosition.costs());
+        assertThat(openPosition.unrealizedPnl()).isEqualByComparingTo(expectedOpenPnl);
         assertThat(whileOpen.orders()).hasSize(1);
         assertThat(whileOpen.trades()).isEmpty();
         assertThat(whileOpen.openPositionsAtEnd()).isEqualTo(1);
+        assertThat(whileOpen.netPnl()).isEqualByComparingTo(expectedOpenPnl);
+        assertThat(whileOpen.finalCapital()).isEqualByComparingTo(whileOpen.initialCapital().add(expectedOpenPnl));
 
         IntradayPaperSessionResult afterExit = service.runSession("TCS", DAY, bars, strategy, params,
             config(1, "1000"), LocalTime.of(15, 15));

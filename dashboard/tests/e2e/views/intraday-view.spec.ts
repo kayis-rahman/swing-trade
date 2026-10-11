@@ -42,6 +42,7 @@ test(
     await page.getByLabel('Replay as of bar time').selectOption('10:00')
     await page.getByRole('button', { name: 'Scan watchlist at selected time' }).click()
     await expect(page.getByText('INFY', { exact: true })).toBeVisible()
+    await page.getByLabel('Replay as of bar time').selectOption('10:15')
     await page.getByRole('button', { name: 'Use in replay form' }).click()
 
     await expect(page.getByLabel('Replay as of bar time')).toHaveValue('10:00')

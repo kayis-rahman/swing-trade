@@ -78,6 +78,12 @@ Key env vars (all configurable via `-e`):
 - `STRATEGY_ENABLED` — signal generation
 - `SIGNAL_ENABLED`, `DISCORD_WEBHOOK_ENABLED` — notification toggles
 
+Stage paper trading uses Yahoo for market data and disables Fyers as a selectable
+market-data provider. A persisted Fyers selection is ignored, and the settings
+API reports the provider that is actually active. Fyers authentication still
+requires Fyers credentials; disabling its market-data provider does not enable
+the Fyers connect flow.
+
 The stage API declares a 1 GiB Docker memory cap and a 512 MiB JVM heap maximum
 (`-Xmx512m`). The cap is enforced only when the host kernel supports Docker
 memory limits. `dev-stack.sh stage` applies the same limit with `docker update`

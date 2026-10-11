@@ -112,7 +112,7 @@ public class SettingsController {
             return ResponseEntity.badRequest().body(ApiResponse.error("broker is required"));
         }
         marketDataClientProvider.setActiveBroker(broker);
-        Map<String, String> settings = Map.of("selectedBroker", broker);
+        Map<String, String> settings = Map.of("selectedBroker", marketDataClientProvider.getActiveBroker());
         return ResponseEntity.ok(ApiResponse.ok(settings));
     }
 

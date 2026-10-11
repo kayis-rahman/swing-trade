@@ -50,6 +50,60 @@ class IntradayBacktestEngineTest {
     }
 
     @Test
+    void orbSkipsSessionWhenActualOpeningBarsAreMissing() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:30", "100", "100", "99", "100", 1000),
+            bar(DAY, "09:45", "100", "101", "99.5", "101", 1000),
+            bar(DAY, "10:00", "101", "103", "100", "102", 1000),
+            bar(DAY, "10:15", "102", "104", "101", "103", 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions, new IntradayCostModel(),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestResult result = engine.run("TEST", bars,
+            new IntradayOpeningRangeBreakoutStrategy(), IntradayBacktestEngine.defaultParams());
+
+        assertThat(result.trades()).isEmpty();
+    }
+
+    @Test
+    void vwapReclaimRequiresPriorCloseBelowPriorBarVwap() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "99", "102", "98", "101", 1000),
+            bar(DAY, "09:30", "99", "102", "98", "101", 1000),
+            bar(DAY, "09:45", "104", "105", "103", "104", 3000),
+            bar(DAY, "10:00", "104", "105", "103", "104", 3000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions, new IntradayCostModel(),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestResult result = engine.run("TEST", bars,
+            new IntradayVwapPullbackStrategy(), IntradayBacktestEngine.defaultParams());
+
+        assertThat(result.trades()).isEmpty();
+    }
+
+    @Test
+    void vwapReclaimStillEntersWhenBothSessionComparisonsHold() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "101", "103", "100", "100", 1000),
+            bar(DAY, "09:30", "101", "103", "100", "102", 1000),
+            bar(DAY, "09:45", "102", "104", "101.5", "103", 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions, new IntradayCostModel(),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestResult result = engine.run("TEST", bars,
+            new IntradayVwapPullbackStrategy(), IntradayBacktestEngine.defaultParams());
+
+        assertThat(result.trades()).hasSize(1);
+        assertThat(result.trades().getFirst().entryTime()).isEqualTo(bars.get(2).timestamp());
+    }
+
+    @Test
     void holidayAndMuhuratOutOfBandBarsAreNotTraded() {
         LocalDate holiday = LocalDate.of(2025, 10, 2);
         LocalDate muhurat = LocalDate.of(2025, 10, 21);

@@ -28,10 +28,12 @@ import org.ta4j.core.num.Num;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -53,6 +55,7 @@ public final class MarketContext {
 
     private final String symbol;
     private final List<OhlcvCandle> candles;
+    private final List<ZonedDateTime> intradayTimestamps;
     private final BarSeries series;
 
     private final ClosePriceIndicator closePriceIndicator;
@@ -72,8 +75,9 @@ public final class MarketContext {
                           List<ZonedDateTime> intradayTimestamps) {
         this.symbol = symbol;
         this.candles = List.copyOf(chronologicalCandles);
-        this.series = intradayTimestamps == null ? buildBarSeries(symbol, this.candles)
-            : buildIntradayBarSeries(symbol, this.candles, intradayTimestamps);
+        this.intradayTimestamps = intradayTimestamps == null ? null : List.copyOf(intradayTimestamps);
+        this.series = this.intradayTimestamps == null ? buildBarSeries(symbol, this.candles)
+            : buildIntradayBarSeries(symbol, this.candles, this.intradayTimestamps);
         this.closePriceIndicator = new ClosePriceIndicator(series);
         this.openPriceIndicator = new OpenPriceIndicator(series);
         this.highPriceIndicator = new HighPriceIndicator(series);
@@ -277,6 +281,12 @@ public final class MarketContext {
 
         public LocalDate date(int index) {
             return candles.get(checkView(index)).date();
+        }
+
+        public Optional<LocalTime> sessionTime(int index) {
+            int checkedIndex = checkView(index);
+            return intradayTimestamps == null ? Optional.empty()
+                : Optional.of(intradayTimestamps.get(checkedIndex).withZoneSameInstant(MARKET_ZONE).toLocalTime());
         }
 
         public BigDecimal close() {

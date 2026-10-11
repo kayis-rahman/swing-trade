@@ -1,6 +1,7 @@
 package com.swingtrade.strategy;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.util.Set;
 
 /** Long-only opening-range breakout: first two 15-minute bars define the range. */
@@ -16,6 +17,10 @@ public final class IntradayOpeningRangeBreakoutStrategy implements SignalStrateg
         int first = index;
         while (first > 0 && view.date(first - 1).equals(view.date(index))) first--;
         if (index - first < 2) return IntradayStrategySupport.decision(false, "openingRangeBreakout", "Opening range not complete", view.close());
+        if (view.sessionTime(first).filter(LocalTime.of(9, 15)::equals).isEmpty()
+                || view.sessionTime(first + 1).filter(LocalTime.of(9, 30)::equals).isEmpty()) {
+            return IntradayStrategySupport.decision(false, "openingRangeBreakout", "Opening bars unavailable", view.close());
+        }
         BigDecimal rangeHigh = view.high(first).max(view.high(first + 1));
         boolean breakout = view.close().compareTo(rangeHigh) > 0;
         return IntradayStrategySupport.decision(breakout, "openingRangeBreakout", "Close above first two 15-minute bars' high", view.close());

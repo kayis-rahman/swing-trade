@@ -19,16 +19,23 @@ public final class IntradayVwapPullbackStrategy implements SignalStrategy {
         if (index == first) return IntradayStrategySupport.decision(false, "vwapReclaim", "Need a prior session bar", view.close());
         BigDecimal pv = BigDecimal.ZERO;
         BigDecimal volume = BigDecimal.ZERO;
+        BigDecimal priorPv = BigDecimal.ZERO;
+        BigDecimal priorVolume = BigDecimal.ZERO;
         for (int i = first; i <= index; i++) {
             BigDecimal typical = view.high(i).add(view.low(i)).add(view.close(i)).divide(BigDecimal.valueOf(3), 8, RoundingMode.HALF_UP);
             BigDecimal barVolume = view.volume(i);
             pv = pv.add(typical.multiply(barVolume));
             volume = volume.add(barVolume);
+            if (i == index - 1) {
+                priorPv = pv;
+                priorVolume = volume;
+            }
         }
-        if (volume.signum() == 0) return IntradayStrategySupport.decision(false, "vwapReclaim", "No session volume", view.close());
+        if (priorVolume.signum() == 0) return IntradayStrategySupport.decision(false, "vwapReclaim", "No prior session volume", view.close());
+        BigDecimal priorVwap = priorPv.divide(priorVolume, 8, RoundingMode.HALF_UP);
         BigDecimal vwap = pv.divide(volume, 8, RoundingMode.HALF_UP);
         BigDecimal priorClose = view.close(index - 1);
-        boolean reclaim = priorClose.compareTo(vwap) < 0 && view.close().compareTo(vwap) >= 0;
+        boolean reclaim = priorClose.compareTo(priorVwap) < 0 && view.close().compareTo(vwap) >= 0;
         return IntradayStrategySupport.decision(reclaim, "vwapReclaim", "Previous close below and current close at/above session VWAP", view.close());
     }
 

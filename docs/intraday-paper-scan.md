@@ -40,6 +40,6 @@ The dashboard exposes the action in **Paper trading → Intraday paper**. Select
 
 - `intraday.scan.max-watchlist-symbols` (environment override `INTRADAY_SCAN_MAX_WATCHLIST_SYMBOLS`) defaults to 20.
 - Backend coverage: `IntradayPaperScanServiceTest`, `IntradayPaperScanControllerTest`.
-- Dashboard coverage: `dashboard/src/api/intraday.test.ts`, `dashboard/src/views/IntradayView.test.ts`.
+- Dashboard coverage: `dashboard/src/api/intraday.test.ts`, `dashboard/src/views/IntradayView.test.ts`, and the Playwright acceptance flow in `dashboard/tests/e2e/views/intraday-view.spec.ts`.
 - Run backend checks from `backend/`: `gradle :broker:test :api:test --offline --no-daemon`.
 - Run dashboard checks from `dashboard/`: `yarn vitest run --maxWorkers=2`.

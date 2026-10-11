@@ -14,6 +14,7 @@ import java.util.Map;
 /** Session-aware, single-symbol intraday replay. This path never calls the delivery backtest. */
 public final class IntradayBacktestEngine {
     private static final LocalTime LAST_ENTRY_BAR = LocalTime.of(15, 0);
+    private static final LocalTime SQUARE_OFF_BAR = LocalTime.of(15, 15);
     private final NseSessionCalendar calendar;
     private final IntradayCostModel costs;
     private final IntradayBacktestConfig config;
@@ -52,19 +53,24 @@ public final class IntradayBacktestEngine {
             IntradayBar bar = bars.get(i);
             LocalDate date = bar.sessionDate();
             if (position != null && position.entryDate().equals(date)) {
-                ExitDecision exit = bar.low().compareTo(position.stopLoss()) <= 0
+                boolean stopHit = bar.low().compareTo(position.stopLoss()) <= 0;
+                boolean targetHit = !stopHit && bar.high().compareTo(position.target()) >= 0;
+                boolean barrierExit = stopHit || targetHit;
+                ExitDecision exit = stopHit
                     ? ExitDecision.exit(ExitReason.STOP_LOSS, position.stopLoss().min(bar.open()), "Intraday stop")
-                    : bar.high().compareTo(position.target()) >= 0
-                        ? ExitDecision.exit(ExitReason.TARGET_HIT, position.target(), "Intraday target")
+                    : targetHit
+                        ? ExitDecision.exit(ExitReason.TARGET_HIT, position.target().max(bar.open()), "Intraday target")
                         : strategy.evaluateExit(context, i, position, params);
                 boolean cutoff = !bar.sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF);
-                boolean cutoffBar = bar.sessionTime().equals(LocalTime.of(15, 15));
+                boolean cutoffBar = bar.sessionTime().equals(SQUARE_OFF_BAR);
                 boolean sessionEnd = i + 1 == bars.size() || !bars.get(i + 1).sessionDate().equals(date);
                 if (exit.exit() || cutoff || cutoffBar || sessionEnd) {
                     // The cutoff is 15:20 inside the 15:15–15:30 bar; open is the reproducible
                     // bar-only proxy for the cutoff fill, avoiding a close after the cutoff.
-                    BigDecimal reference = cutoff || cutoffBar ? bar.open() : exit.exit() ? exit.exitPrice() : bar.close();
-                    String reason = cutoff || cutoffBar ? "FORCED_SQUARE_OFF"
+                    BigDecimal reference = barrierExit ? exit.exitPrice()
+                        : cutoff || cutoffBar ? bar.open() : exit.exit() ? exit.exitPrice() : bar.close();
+                    String reason = barrierExit ? exit.reason().name()
+                        : cutoff || cutoffBar ? "FORCED_SQUARE_OFF"
                         : exit.exit() ? exit.reason().name() : "FORCED_SESSION_END";
                     BigDecimal sell = costs.sellFill(reference);
                     BigDecimal fees = costs.roundTripCost(position.entryPrice(), sell, position.quantity());
@@ -83,7 +89,7 @@ public final class IntradayBacktestEngine {
                     && dayPnl.getOrDefault(date, BigDecimal.ZERO).compareTo(config.maxDailyLoss().negate()) > 0
                     && !bar.sessionTime().isAfter(LAST_ENTRY_BAR)
                     && bars.get(i + 1).sessionDate().equals(date)
-                    && bars.get(i + 1).sessionTime().isBefore(NseSessionCalendar.SQUARE_OFF_CUTOFF)
+                    && bars.get(i + 1).sessionTime().isBefore(SQUARE_OFF_BAR)
                     && i + 1 >= strategy.warmupBars(params)) {
                 StrategyDecision decision = strategy.evaluateEntry(context, i, params);
                 if (decision.type() == SignalType.BUY) {

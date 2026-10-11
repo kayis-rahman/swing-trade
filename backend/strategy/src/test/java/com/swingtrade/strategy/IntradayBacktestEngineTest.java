@@ -130,6 +130,7 @@ class IntradayBacktestEngineTest {
             bar(DAY, "09:15", "100", "101", "99", "100", 1000),
             bar(DAY, "09:30", "100", "100.5", "99.5", "100", 1000),
             bar(DAY, "09:45", "100", "103", "100", "102", 1000),
+            bar(DAY, "10:00", "102", "103", "101", "102.5", 1000),
             bar(DAY, "15:15", "103", "104", "102", "103.5", 1000)
         );
         IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions,
@@ -142,6 +143,63 @@ class IntradayBacktestEngineTest {
         assertThat(result.trades()).hasSize(1);
         assertThat(result.trades().getFirst().exitReason()).isEqualTo("FORCED_SQUARE_OFF");
         assertThat(result.trades().getFirst().exitPrice()).isEqualByComparingTo("103");
+    }
+
+    @Test
+    void stopBarrierTakesPrecedenceOverSquareOffProxy() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "09:30", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "15:15", "100", "101", "98", "100", 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions,
+            new IntradayCostModel(BigDecimal.ZERO, BigDecimal.ZERO),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestTrade trade = engine.run("TEST", bars, new AlwaysBuyAndHoldStrategy(),
+            IntradayBacktestEngine.defaultParams()).trades().getFirst();
+
+        assertThat(trade.exitReason()).isEqualTo("STOP_LOSS");
+        assertThat(trade.exitPrice()).isEqualByComparingTo("99");
+    }
+
+    @Test
+    void targetGapUsesBarOpenBeforeSellSlippage() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "09:30", "100", "102", "100", "101", 1000),
+            bar(DAY, "09:45", "104", "105", "103.5", "104.5", 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions,
+            new IntradayCostModel(BigDecimal.ZERO, new BigDecimal("0.01")),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestTrade trade = engine.run("TEST", bars, new AlwaysBuyAndHoldStrategy(),
+            IntradayBacktestEngine.defaultParams()).trades().getFirst();
+
+        assertThat(trade.exitReason()).isEqualTo("TARGET_HIT");
+        assertThat(trade.exitPrice()).isEqualByComparingTo("102.96");
+    }
+
+    @Test
+    void entryIsSkippedWhenTheNextBarIsTheSquareOffProxyBar() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "09:30", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "15:00", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "15:15", "100", "100.5", "99.5", "100", 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions,
+            new IntradayCostModel(BigDecimal.ZERO, BigDecimal.ZERO),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestResult result = engine.run("TEST", bars, new BuyAtIndexStrategy(2),
+            IntradayBacktestEngine.defaultParams());
+
+        assertThat(result.trades()).isEmpty();
     }
 
     @Test
@@ -258,6 +316,22 @@ class IntradayBacktestEngineTest {
         @Override public int warmupBars(StrategyParamsView params) { return 1; }
         @Override public StrategyDecision evaluateEntry(MarketContext ctx, int index, StrategyParamsView params) {
             return new StrategyDecision(SignalType.BUY, BigDecimal.ONE, List.of(), null, null, "fixture");
+        }
+        @Override public ExitDecision evaluateExit(MarketContext ctx, int index, OpenPosition position, StrategyParamsView params) {
+            return ExitDecision.hold();
+        }
+    }
+
+    private static final class BuyAtIndexStrategy implements SignalStrategy {
+        private final int signalIndex;
+        private BuyAtIndexStrategy(int signalIndex) { this.signalIndex = signalIndex; }
+        @Override public String type() { return "TEST_BUY_AT_INDEX"; }
+        @Override public ParamSchema paramSchema() { return new ParamSchema(List.of()); }
+        @Override public Set<IndicatorKey> requiredIndicators(StrategyParamsView params) { return Set.of(); }
+        @Override public int warmupBars(StrategyParamsView params) { return 1; }
+        @Override public StrategyDecision evaluateEntry(MarketContext ctx, int index, StrategyParamsView params) {
+            SignalType type = index == signalIndex ? SignalType.BUY : SignalType.HOLD;
+            return new StrategyDecision(type, BigDecimal.ONE, List.of(), null, null, "fixture");
         }
         @Override public ExitDecision evaluateExit(MarketContext ctx, int index, OpenPosition position, StrategyParamsView params) {
             return ExitDecision.hold();

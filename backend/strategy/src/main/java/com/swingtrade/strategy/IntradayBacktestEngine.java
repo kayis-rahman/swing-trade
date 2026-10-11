@@ -53,7 +53,7 @@ public final class IntradayBacktestEngine {
             LocalDate date = bar.sessionDate();
             if (position != null && position.entryDate().equals(date)) {
                 ExitDecision exit = bar.low().compareTo(position.stopLoss()) <= 0
-                    ? ExitDecision.exit(ExitReason.STOP_LOSS, position.stopLoss(), "Intraday stop")
+                    ? ExitDecision.exit(ExitReason.STOP_LOSS, position.stopLoss().min(bar.open()), "Intraday stop")
                     : bar.high().compareTo(position.target()) >= 0
                         ? ExitDecision.exit(ExitReason.TARGET_HIT, position.target(), "Intraday target")
                         : strategy.evaluateExit(context, i, position, params);

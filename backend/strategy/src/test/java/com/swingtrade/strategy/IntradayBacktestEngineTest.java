@@ -106,6 +106,25 @@ class IntradayBacktestEngineTest {
         assertThat(both.exitPrice()).isEqualByComparingTo("99");
     }
 
+    @Test
+    void gapThroughStopUsesBarOpenBeforeSellSlippage() {
+        when(marketCalendar.isNseTradingSession(DAY)).thenReturn(true);
+        List<IntradayBar> bars = List.of(
+            bar(DAY, "09:15", "100", "100.5", "99.5", "100", 1000),
+            bar(DAY, "09:30", "100", "100.5", "100", "100.2", 1000),
+            bar(DAY, "09:45", "95", "100", "94", "96", 1000)
+        );
+        IntradayBacktestEngine engine = new IntradayBacktestEngine(sessions,
+            new IntradayCostModel(BigDecimal.ZERO, new BigDecimal("0.01")),
+            new IntradayBacktestConfig(new BigDecimal("10000"), 1, 3, new BigDecimal("1000")));
+
+        IntradayBacktestTrade trade = engine.run("TEST", bars, new AlwaysBuyAndHoldStrategy(),
+            IntradayBacktestEngine.defaultParams()).trades().getFirst();
+
+        assertThat(trade.exitReason()).isEqualTo("STOP_LOSS");
+        assertThat(trade.exitPrice()).isEqualByComparingTo("94.05");
+    }
+
     private IntradayBacktestTrade tradeForExitBar(String high, String low, String close) {
         List<IntradayBar> bars = List.of(
             bar(DAY, "09:15", "100", "100.5", "99.5", "100", 1000),

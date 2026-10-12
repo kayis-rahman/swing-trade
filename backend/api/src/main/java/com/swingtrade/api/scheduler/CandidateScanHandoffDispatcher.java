@@ -1,10 +1,10 @@
 package com.swingtrade.api.scheduler;
 
 import com.swingtrade.api.service.JobOrchestratorService;
+import com.swingtrade.api.service.RunRequest;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
-import com.swingtrade.api.service.RunRequest;
 import com.swingtrade.data.repository.JobRunRepository;
 import com.swingtrade.domain.JobRun;
 import org.slf4j.Logger;
@@ -35,7 +35,8 @@ public class CandidateScanHandoffDispatcher {
         synchronized (dispatchLock) {
             for (CandidateScanRunEntity scan : runs.findByStatusAndOrchestrationStatus("COMPLETED", "PENDING")) {
                 boolean manualScan = "MANUAL".equals(scan.getScanTrigger());
-                if (!manualScan && scan.getQualifiedSymbols() == 0) {
+                if (manualScan) continue; // Manual discovery waits for an operator-selected analysis scope.
+                if (scan.getQualifiedSymbols() == 0) {
                     markNotRequired(scan);
                     continue;
                 }
@@ -65,22 +66,15 @@ public class CandidateScanHandoffDispatcher {
                 }
                 if (orchestrator.findActiveRun().isPresent()) return;
                 try {
-                    JobRun job;
-                    if (manualScan) {
-                        // Manual discovery scans the full stock universe; orchestration remains
-                        // scoped to the active watchlist via the orchestrator's default request.
-                        job = orchestrator.startRun(JobRun.TriggerType.MANUAL, scan.getRunId(), RunRequest.NONE);
-                    } else {
-                        var symbols = results.findByRunIdOrderBySymbolAsc(scan.getRunId()).stream()
-                            .filter(result -> result.isQualified() && result.isActivated())
-                            .map(result -> result.getSymbol()).toList();
-                        if (symbols.isEmpty()) {
-                            markNotRequired(scan);
-                            continue;
-                        }
-                        job = orchestrator.startRun(JobRun.TriggerType.SCHEDULED, scan.getRunId(),
-                            new RunRequest(symbols, null, null, null, null));
+                    var symbols = results.findByRunIdOrderBySymbolAsc(scan.getRunId()).stream()
+                        .filter(result -> result.isQualified() && result.isActivated())
+                        .map(result -> result.getSymbol()).toList();
+                    if (symbols.isEmpty()) {
+                        markNotRequired(scan);
+                        continue;
                     }
+                    JobRun job = orchestrator.startRun(JobRun.TriggerType.SCHEDULED, scan.getRunId(),
+                        new RunRequest(symbols, null, null, null, null));
                     scan.setOrchestrationJobRunId(job.runId());
                     scan.setOrchestrationStatus("STARTED");
                     scan.setOrchestrationError(null);
@@ -100,6 +94,54 @@ public class CandidateScanHandoffDispatcher {
             }
         }
     }
+    @Transactional
+    public CandidateScanRunEntity startManualAnalysis(java.util.UUID runId, String scope,
+                                                       java.util.List<String> requestedSymbols) {
+        synchronized (dispatchLock) {
+            CandidateScanRunEntity scan = runs.findByRunId(runId).orElseThrow(
+                () -> new IllegalArgumentException("Candidate scan not found"));
+            if (!"MANUAL".equals(scan.getScanTrigger()) || !"COMPLETED".equals(scan.getStatus())) {
+                throw new IllegalArgumentException("Analysis scope can only be selected for a completed manual scan");
+            }
+            if ("STARTED".equals(scan.getOrchestrationStatus())) {
+                throw new IllegalStateException("An analysis scope has already been started for this scan");
+            }
+            var qualified = results.findByRunIdOrderBySymbolAsc(runId).stream()
+                .filter(result -> result.isQualified() && result.isActivated())
+                .map(result -> result.getSymbol()).distinct().toList();
+            java.util.List<String> symbols;
+            RunRequest request;
+            switch (scope == null ? "" : scope.toUpperCase(java.util.Locale.ROOT)) {
+                case "NONE" -> {
+                    scan.setOrchestrationStatus("NOT_REQUIRED");
+                    scan.setOrchestrationError(null);
+                    return runs.save(scan);
+                }
+                case "WATCHLIST" -> request = RunRequest.NONE;
+                case "QUALIFIED" -> {
+                    symbols = qualified;
+                    request = new RunRequest(symbols, null, null, null, null);
+                }
+                case "SELECTED" -> {
+                    symbols = requestedSymbols == null ? java.util.List.of() : requestedSymbols.stream().distinct().toList();
+                    if (symbols.isEmpty() || !qualified.containsAll(symbols)) {
+                        throw new IllegalArgumentException("Selected symbols must be qualified candidates from this scan");
+                    }
+                    request = new RunRequest(symbols, null, null, null, null);
+                }
+                default -> throw new IllegalArgumentException("Scope must be NONE, WATCHLIST, QUALIFIED, or SELECTED");
+            }
+            if (orchestrator.findActiveRun().isPresent()) {
+                throw new IllegalStateException("Another analysis run is already active");
+            }
+            JobRun job = orchestrator.startRun(JobRun.TriggerType.MANUAL, runId, request);
+            scan.setOrchestrationJobRunId(job.runId());
+            scan.setOrchestrationStatus("STARTED");
+            scan.setOrchestrationError(null);
+            return runs.save(scan);
+        }
+    }
+
     @Transactional
     void markNotRequired(CandidateScanRunEntity scan) {
         scan.setOrchestrationStatus("NOT_REQUIRED");

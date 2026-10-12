@@ -5,6 +5,7 @@ import CandidateExplorerView from './CandidateExplorerView.vue'
 const router = vi.hoisted(() => ({ push: vi.fn() }))
 const api = vi.hoisted(() => ({
   startCandidateScan: vi.fn(),
+  startCandidateAnalysis: vi.fn(),
   getCandidateScan: vi.fn(),
   getCandidateScanResults: vi.fn(),
   getCandidateScanHistory: vi.fn(),
@@ -64,10 +65,10 @@ describe('CandidateExplorerView', () => {
     expect(api.startCandidateScan).toHaveBeenCalledOnce()
     expect(wrapper.text()).toContain('Cancel scan')
     expect(wrapper.text()).toContain('RUNNING')
-    expect(wrapper.text()).toContain('active watchlist symbols')
+    expect(wrapper.text()).toContain('NSE symbol master')
   })
 
-  it('labels the manual candidate universe and watchlist orchestration separately', async () => {
+  it('shows operator scope choices after a completed manual candidate scan', async () => {
     const completed = {
       runId: 'run-manual',
       status: 'COMPLETED',
@@ -75,9 +76,9 @@ describe('CandidateExplorerView', () => {
       completedSymbols: 59,
       failedSymbols: 0,
       qualifiedSymbols: 0,
-      scanScope: 'ACTIVE_STOCKS',
+      scanScope: 'NSE_BROAD',
       scanTrigger: 'MANUAL',
-      orchestrationStatus: 'STARTED',
+      orchestrationStatus: 'NOT_REQUIRED',
       startedAt: '2026-08-31T00:00:00',
     }
     api.getCandidateScanHistory.mockResolvedValue([completed])
@@ -88,21 +89,25 @@ describe('CandidateExplorerView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('59')
-    expect(wrapper.text()).toContain('all active stock records')
-    expect(wrapper.text()).toContain('watchlist orchestration started')
+    expect(wrapper.text()).toContain('NSE symbol master')
+    expect(wrapper.text()).toContain('Choose what to analyze next')
+    api.startCandidateAnalysis.mockResolvedValue({ ...completed, orchestrationStatus: 'STARTED' })
+    await wrapper.findAll('button').find((button) => button.text() === 'Qualified candidates')?.trigger('click')
+    await flushPromises()
+    expect(api.startCandidateAnalysis).toHaveBeenCalledWith('run-manual', 'QUALIFIED')
   })
 
-  it('refreshes a completed manual scan while watchlist orchestration is pending', async () => {
+  it('refreshes a completed scheduled scan while candidate orchestration is pending', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     const started = {
-      runId: 'run-manual-pending',
+      runId: 'run-scheduled-pending',
       status: 'RUNNING',
       totalSymbols: 59,
       completedSymbols: 0,
       failedSymbols: 0,
       qualifiedSymbols: 0,
-      scanScope: 'ACTIVE_STOCKS',
-      scanTrigger: 'MANUAL',
+      scanScope: 'NSE_BROAD',
+      scanTrigger: 'SCHEDULED',
       orchestrationStatus: 'PENDING',
       startedAt: '2026-08-31T00:00:00',
     }
@@ -127,12 +132,12 @@ describe('CandidateExplorerView', () => {
     await wrapper.get('button[data-test="scan-toggle"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('watchlist orchestration pending')
+    expect(wrapper.text()).toContain('candidate handoff pending')
     await vi.advanceTimersByTimeAsync(2000)
     await flushPromises()
 
     expect(api.getCandidateScan).toHaveBeenCalledTimes(2)
-    expect(wrapper.text()).toContain('watchlist orchestration started')
+    expect(wrapper.text()).toContain('candidate orchestration started')
     vi.useRealTimers()
   })
 

@@ -5,6 +5,7 @@ import com.swingtrade.broker.service.intraday.IntradayPaperExecutionService;
 import com.swingtrade.broker.service.intraday.IntradayPaperSessionResult;
 import com.swingtrade.data.entity.OhlcvCandleEntity;
 import com.swingtrade.data.repository.OhlcvCandleRepository;
+import com.swingtrade.data.repository.IntradayPaperSessionRepository;
 import com.swingtrade.strategy.IntradayBacktestConfig;
 import com.swingtrade.strategy.IntradayOpeningRangeBreakoutStrategy;
 import com.swingtrade.strategy.StrategyTypeRegistry;
@@ -30,7 +31,7 @@ class IntradayPaperControllerTest {
     private static final LocalDate DAY = LocalDate.of(2026, 10, 9);
 
     @Test
-    void readsOnlyStoredFifteenMinuteBarsAndReturnsThePaperAudit() {
+    void readsOnlyStoredFifteenMinuteBarsAndReturnsThePaperAudit() throws Exception {
         OhlcvCandleRepository repository = mock(OhlcvCandleRepository.class);
         IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
         StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
@@ -42,7 +43,10 @@ class IntradayPaperControllerTest {
             0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
         when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), nullable(LocalTime.class)))
             .thenReturn(expected);
-        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution);
+        IntradayPaperSessionRepository sessions = mock(IntradayPaperSessionRepository.class);
+        com.fasterxml.jackson.databind.ObjectMapper mapper = mock(com.fasterxml.jackson.databind.ObjectMapper.class);
+        when(mapper.writeValueAsString(expected)).thenReturn("{}");
+        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution, sessions, mapper);
 
         var response = controller.runSession(new IntradayPaperSessionRequest(
             "tcs", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, null, LocalTime.of(10, 0)));
@@ -51,6 +55,7 @@ class IntradayPaperControllerTest {
         assertThat(response.getBody()).isSameAs(expected);
         verify(repository).findBySymbolAndIntervalAndDateRange("TCS", "15m", DAY, DAY, Pageable.unpaged());
         verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), eq(LocalTime.of(10, 0)));
+        verify(sessions).save(any());
     }
 
     @Test
@@ -58,7 +63,8 @@ class IntradayPaperControllerTest {
         OhlcvCandleRepository repository = mock(OhlcvCandleRepository.class);
         IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
         StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
-        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution);
+        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution,
+            mock(IntradayPaperSessionRepository.class), mock(com.fasterxml.jackson.databind.ObjectMapper.class));
 
         var response = controller.runSession(new IntradayPaperSessionRequest("TCS", DAY, "BREAKOUT", null));
 
@@ -77,7 +83,9 @@ class IntradayPaperControllerTest {
             0, 0, 0, BigDecimal.TEN, BigDecimal.TEN, BigDecimal.ZERO, List.of(), List.of(), List.of());
         when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), nullable(LocalTime.class)))
             .thenReturn(incomplete);
-        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution);
+        IntradayPaperSessionRepository sessions = mock(IntradayPaperSessionRepository.class);
+        IntradayPaperController controller = new IntradayPaperController(repository, registry, execution, sessions,
+            mock(com.fasterxml.jackson.databind.ObjectMapper.class));
 
         var response = controller.runSession(new IntradayPaperSessionRequest(
             "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, null));
@@ -85,6 +93,7 @@ class IntradayPaperControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().status()).isEqualTo("INCOMPLETE_DATA");
         verify(execution).runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), eq(null));
+        verify(sessions, never()).save(any());
     }
 
     private static OhlcvCandleEntity candle() {

@@ -53,6 +53,18 @@ export function getCandidateScanResults(
   )
 }
 
+export function startCandidateAnalysis(
+  runId: string,
+  scope: 'NONE' | 'WATCHLIST' | 'QUALIFIED'
+): Promise<CandidateScanRun> {
+  return apiRequest<CandidateScanRun>(`/candidate-scans/${runId}/analysis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope }),
+    responseContract: 'direct',
+  })
+}
+
 export function cancelCandidateScan(runId: string): Promise<CandidateScanRun> {
   return apiRequest<CandidateScanRun>(`/candidate-scans/${runId}/cancel`, {
     method: 'POST',

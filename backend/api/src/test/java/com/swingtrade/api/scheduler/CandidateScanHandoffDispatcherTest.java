@@ -71,6 +71,33 @@ class CandidateScanHandoffDispatcherTest {
     }
 
     @Test
+    void firstScopeChoiceStartsFromTheInitialManualScanStatus() {
+        CandidateScanRunRepository runs = mock(CandidateScanRunRepository.class);
+        JobRunRepository jobs = mock(JobRunRepository.class);
+        CandidateScanResultRepository results = mock(CandidateScanResultRepository.class);
+        JobOrchestratorService orchestrator = mock(JobOrchestratorService.class);
+        CandidateScanRunEntity scan = new CandidateScanRunEntity();
+        scan.setRunId(UUID.randomUUID());
+        scan.setStatus("COMPLETED");
+        scan.setScanTrigger("MANUAL");
+        when(runs.findByRunId(scan.getRunId())).thenReturn(Optional.of(scan));
+        when(runs.save(scan)).thenReturn(scan);
+        when(orchestrator.findActiveRun()).thenReturn(Optional.empty());
+        UUID jobId = UUID.randomUUID();
+        when(orchestrator.startRun(eq(JobRun.TriggerType.MANUAL), eq(scan.getRunId()), any(RunRequest.class)))
+            .thenReturn(new JobRun(jobId, JobRun.TriggerType.MANUAL, JobRun.Status.RUNNING,
+                LocalDateTime.now(), null, 1, 0, 0, null));
+
+        CandidateScanHandoffDispatcher dispatcher = new CandidateScanHandoffDispatcher(runs, jobs, results, orchestrator);
+        dispatcher.startManualAnalysis(scan.getRunId(), "WATCHLIST");
+
+        org.assertj.core.api.Assertions.assertThat(scan.getOrchestrationStatus()).isEqualTo("STARTED");
+        org.assertj.core.api.Assertions.assertThat(scan.getOrchestrationJobRunId()).isEqualTo(jobId);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatcher.startManualAnalysis(scan.getRunId(), "QUALIFIED"))
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void noneIsATerminalOperatorScopeChoice() {
         CandidateScanRunRepository runs = mock(CandidateScanRunRepository.class);
         JobRunRepository jobs = mock(JobRunRepository.class);
@@ -80,7 +107,7 @@ class CandidateScanHandoffDispatcherTest {
         scan.setRunId(UUID.randomUUID());
         scan.setStatus("COMPLETED");
         scan.setScanTrigger("MANUAL");
-        scan.setOrchestrationStatus("PENDING");
+        scan.setOrchestrationStatus(new CandidateScanRunEntity().getOrchestrationStatus());
         when(runs.findByRunId(scan.getRunId())).thenReturn(Optional.of(scan));
         when(runs.save(scan)).thenReturn(scan);
 
@@ -88,7 +115,7 @@ class CandidateScanHandoffDispatcherTest {
         dispatcher.startManualAnalysis(scan.getRunId(), "NONE");
 
         verify(orchestrator, never()).startRun(any(), any(), any());
-        org.assertj.core.api.Assertions.assertThat(scan.getOrchestrationStatus()).isEqualTo("NOT_REQUIRED");
+        org.assertj.core.api.Assertions.assertThat(scan.getOrchestrationStatus()).isEqualTo("SKIPPED");
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatcher.startManualAnalysis(scan.getRunId(), "WATCHLIST"))
             .isInstanceOf(IllegalStateException.class);
     }
@@ -103,7 +130,7 @@ class CandidateScanHandoffDispatcherTest {
         scan.setRunId(UUID.randomUUID());
         scan.setStatus("COMPLETED");
         scan.setScanTrigger("MANUAL");
-        scan.setOrchestrationStatus("PENDING");
+        scan.setOrchestrationStatus("NOT_REQUIRED");
         when(runs.findByRunId(scan.getRunId())).thenReturn(Optional.of(scan));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> new CandidateScanHandoffDispatcher(runs, jobs, results, orchestrator)

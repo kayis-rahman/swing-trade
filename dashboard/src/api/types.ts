@@ -107,7 +107,7 @@ export interface CandidateScanRun {
   startedAt: string
   completedAt?: string
   errorMessage?: string
-  orchestrationStatus?: 'PENDING' | 'NOT_REQUIRED' | 'STARTED' | 'FAILED'
+  orchestrationStatus?: 'PENDING' | 'NOT_REQUIRED' | 'SKIPPED' | 'STARTED' | 'FAILED'
   orchestrationJobRunId?: string
   orchestrationError?: string
 }

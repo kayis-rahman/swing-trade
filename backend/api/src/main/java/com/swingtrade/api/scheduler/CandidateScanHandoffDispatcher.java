@@ -102,7 +102,7 @@ public class CandidateScanHandoffDispatcher {
             if (!"MANUAL".equals(scan.getScanTrigger()) || !"COMPLETED".equals(scan.getStatus())) {
                 throw new IllegalArgumentException("Analysis scope can only be selected for a completed manual scan");
             }
-            if (!"PENDING".equals(scan.getOrchestrationStatus())) {
+            if (!"NOT_REQUIRED".equals(scan.getOrchestrationStatus())) {
                 throw new IllegalStateException("An analysis scope has already been selected for this scan");
             }
             var qualified = results.findByRunIdOrderBySymbolAsc(runId).stream()
@@ -112,7 +112,7 @@ public class CandidateScanHandoffDispatcher {
             RunRequest request;
             switch (scope == null ? "" : scope) {
                 case "NONE" -> {
-                    scan.setOrchestrationStatus("NOT_REQUIRED");
+                    scan.setOrchestrationStatus("SKIPPED");
                     scan.setOrchestrationError(null);
                     return runs.save(scan);
                 }

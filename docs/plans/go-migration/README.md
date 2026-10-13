@@ -4,6 +4,7 @@ Status: planned. **Only Phase 0 is authorized.** Every later phase needs explici
 Source analysis: a read-only scout of the repository at `c691c504` (module sizes, endpoints, schedulers, deployment, observability, safety flags); file references point at this repository. Repo baseline: `c691c504`.
 
 ## Decisions (captain, 2026-10-13)
+
 | Topic | Decision |
 |---|---|
 | Motivation / success metric | Pi memory and footprint; Go must beat the native-image Java baseline measured in Phase 0 |
@@ -19,6 +20,7 @@ Source analysis: a read-only scout of the repository at `c691c504` (module sizes
 | Structure and process | Same module separation, same scanners, test-first (see [standards.md](standards.md)) |
 
 ## Document map
+
 | File | Purpose |
 |---|---|
 | [standards.md](standards.md) | Module layout, dependency rules, static scanning, coding standards, TDD loop |

@@ -1,12 +1,13 @@
 # Feature ledger
 
-One row per feature. Columns: ID, Java module, Java classes, endpoints, schedulers, tables, metrics, settings, Java tests, Go module and file, red tests committed, green, parity evidence, status.
+One row per feature, using the row template below.
 
 Status values: not-started, red, green, parity-pending, closed.
 
 Expanding the area rows below to one row per endpoint, job, entity, metric and strategy is a mandatory Gate G0 deliverable. G0 cannot pass with unexpanded rows.
 
 ## Row template
+
 | Column | Required content |
 |---|---|
 | ID | Unique, `F-<area>-<name>` |
@@ -22,6 +23,7 @@ Expanding the area rows below to one row per endpoint, job, entity, metric and s
 | Status | not-started, red, green, parity-pending, closed |
 
 ## Initial area rows
+
 | ID | Area | Java module | Phase |
 |---|---|---|---|
 | F-API-HEALTH | Health endpoints and actuator aliases | api | 2 |

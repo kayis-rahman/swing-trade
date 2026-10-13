@@ -16,6 +16,7 @@ One Go workspace (`go.work`), one Go module per Gradle module, so the compiler r
 Package layers inside a module keep the Java names and roles (api: controller, service, dto, config, scheduler, metrics; data: entity, repository, store, client, service; broker: risk, manager, scheduler, service). Ports and interfaces live in core and are implemented in data and broker. Each Java class maps to a named Go file or type recorded in the feature ledger.
 
 ## Static scanning (each Java gate gets a Go equivalent)
+
 | Java | Go |
 |---|---|
 | Checkstyle | gofmt, goimports, revive |

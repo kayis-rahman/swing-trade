@@ -165,19 +165,40 @@
     </div>
 
     <section
-      v-if="run?.status === 'COMPLETED' && run.scanTrigger === 'MANUAL' && run.orchestrationStatus === 'NOT_REQUIRED'"
+      v-if="
+        run?.status === 'COMPLETED' &&
+        run.scanTrigger === 'MANUAL' &&
+        run.orchestrationStatus === 'NOT_REQUIRED'
+      "
       class="card-panel mb-4 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
       aria-label="Choose analysis scope"
     >
       <div>
         <p class="explorer-kicker">Operator decision</p>
         <h2 class="mt-1 text-base font-semibold text-text-primary">Choose what to analyze next</h2>
-        <p class="mt-1 text-sm text-text-muted">The scan does not start deep analysis automatically.</p>
+        <p class="mt-1 text-sm text-text-muted">
+          The scan does not start deep analysis automatically.
+        </p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button class="rounded-lg border border-border-subtle px-3 py-2 text-sm" @click="selectAnalysisScope('QUALIFIED')">Qualified candidates</button>
-        <button class="rounded-lg border border-border-subtle px-3 py-2 text-sm" @click="selectAnalysisScope('WATCHLIST')">Active watchlist</button>
-        <button class="rounded-lg border border-border-subtle px-3 py-2 text-sm" @click="selectAnalysisScope('NONE')">No analysis</button>
+        <button
+          class="rounded-lg border border-border-subtle px-3 py-2 text-sm"
+          @click="selectAnalysisScope('QUALIFIED')"
+        >
+          Qualified candidates
+        </button>
+        <button
+          class="rounded-lg border border-border-subtle px-3 py-2 text-sm"
+          @click="selectAnalysisScope('WATCHLIST')"
+        >
+          Active watchlist
+        </button>
+        <button
+          class="rounded-lg border border-border-subtle px-3 py-2 text-sm"
+          @click="selectAnalysisScope('NONE')"
+        >
+          No analysis
+        </button>
       </div>
     </section>
 

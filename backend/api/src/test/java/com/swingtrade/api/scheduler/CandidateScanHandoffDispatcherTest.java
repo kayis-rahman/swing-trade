@@ -71,7 +71,7 @@ class CandidateScanHandoffDispatcherTest {
     }
 
     @Test
-    void selectedQualifiedCandidatesAreExplicitlyScopedForAnalysis() {
+    void noneIsATerminalOperatorScopeChoice() {
         CandidateScanRunRepository runs = mock(CandidateScanRunRepository.class);
         JobRunRepository jobs = mock(JobRunRepository.class);
         CandidateScanResultRepository results = mock(CandidateScanResultRepository.class);
@@ -80,20 +80,35 @@ class CandidateScanHandoffDispatcherTest {
         scan.setRunId(UUID.randomUUID());
         scan.setStatus("COMPLETED");
         scan.setScanTrigger("MANUAL");
+        scan.setOrchestrationStatus("PENDING");
         when(runs.findByRunId(scan.getRunId())).thenReturn(Optional.of(scan));
-        when(results.findByRunIdOrderBySymbolAsc(scan.getRunId())).thenReturn(List.of(
-            result(scan.getRunId(), "INFY", true, true), result(scan.getRunId(), "TCS", true, true)));
-        when(orchestrator.findActiveRun()).thenReturn(Optional.empty());
-        JobRun job = new JobRun(UUID.randomUUID(), JobRun.TriggerType.MANUAL, JobRun.Status.RUNNING,
-            LocalDateTime.now(), null, 1, 0, 0, null);
-        when(orchestrator.startRun(eq(JobRun.TriggerType.MANUAL), eq(scan.getRunId()), any(RunRequest.class)))
-            .thenReturn(job);
+        when(runs.save(scan)).thenReturn(scan);
 
-        new CandidateScanHandoffDispatcher(runs, jobs, results, orchestrator)
-            .startManualAnalysis(scan.getRunId(), "SELECTED", List.of("INFY"));
+        CandidateScanHandoffDispatcher dispatcher = new CandidateScanHandoffDispatcher(runs, jobs, results, orchestrator);
+        dispatcher.startManualAnalysis(scan.getRunId(), "NONE");
 
-        verify(orchestrator).startRun(JobRun.TriggerType.MANUAL, scan.getRunId(),
-            new RunRequest(List.of("INFY"), null, null, null, null));
+        verify(orchestrator, never()).startRun(any(), any(), any());
+        org.assertj.core.api.Assertions.assertThat(scan.getOrchestrationStatus()).isEqualTo("NOT_REQUIRED");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> dispatcher.startManualAnalysis(scan.getRunId(), "WATCHLIST"))
+            .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void rejectsNonCanonicalScopeCasing() {
+        CandidateScanRunRepository runs = mock(CandidateScanRunRepository.class);
+        JobRunRepository jobs = mock(JobRunRepository.class);
+        CandidateScanResultRepository results = mock(CandidateScanResultRepository.class);
+        JobOrchestratorService orchestrator = mock(JobOrchestratorService.class);
+        CandidateScanRunEntity scan = new CandidateScanRunEntity();
+        scan.setRunId(UUID.randomUUID());
+        scan.setStatus("COMPLETED");
+        scan.setScanTrigger("MANUAL");
+        scan.setOrchestrationStatus("PENDING");
+        when(runs.findByRunId(scan.getRunId())).thenReturn(Optional.of(scan));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> new CandidateScanHandoffDispatcher(runs, jobs, results, orchestrator)
+            .startManualAnalysis(scan.getRunId(), "watchlist"))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static CandidateScanResultEntity result(UUID runId, String symbol, boolean qualified, boolean activated) {

@@ -83,7 +83,7 @@ public class CandidateScanController {
     @PostMapping("/{runId}/analysis")
     public ResponseEntity<?> startAnalysis(@PathVariable UUID runId, @RequestBody AnalysisScopeRequest request) {
         try {
-            return ResponseEntity.ok(handoffs.startManualAnalysis(runId, request.scope(), request.symbols()));
+            return ResponseEntity.ok(handoffs.startManualAnalysis(runId, request.scope()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (IllegalStateException e) {
@@ -91,7 +91,7 @@ public class CandidateScanController {
         }
     }
 
-    public record AnalysisScopeRequest(String scope, List<String> symbols) { }
+    public record AnalysisScopeRequest(String scope) { }
 
     @PostMapping("/{runId}/cancel")
     public ResponseEntity<?> cancel(@PathVariable UUID runId) {

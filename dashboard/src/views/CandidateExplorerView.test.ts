@@ -65,7 +65,7 @@ describe('CandidateExplorerView', () => {
     expect(api.startCandidateScan).toHaveBeenCalledOnce()
     expect(wrapper.text()).toContain('Cancel scan')
     expect(wrapper.text()).toContain('RUNNING')
-    expect(wrapper.text()).toContain('NSE symbol master')
+    expect(wrapper.text()).toContain('NSE symbol catalog')
   })
 
   it('shows operator scope choices after a completed manual candidate scan', async () => {
@@ -89,10 +89,13 @@ describe('CandidateExplorerView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('59')
-    expect(wrapper.text()).toContain('NSE symbol master')
+    expect(wrapper.text()).toContain('NSE symbol catalog')
     expect(wrapper.text()).toContain('Choose what to analyze next')
     api.startCandidateAnalysis.mockResolvedValue({ ...completed, orchestrationStatus: 'STARTED' })
-    await wrapper.findAll('button').find((button) => button.text() === 'Qualified candidates')?.trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Qualified candidates')
+      ?.trigger('click')
     await flushPromises()
     expect(api.startCandidateAnalysis).toHaveBeenCalledWith('run-manual', 'QUALIFIED')
   })

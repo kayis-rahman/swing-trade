@@ -95,23 +95,22 @@ public class CandidateScanHandoffDispatcher {
         }
     }
     @Transactional
-    public CandidateScanRunEntity startManualAnalysis(java.util.UUID runId, String scope,
-                                                       java.util.List<String> requestedSymbols) {
+    public CandidateScanRunEntity startManualAnalysis(java.util.UUID runId, String scope) {
         synchronized (dispatchLock) {
             CandidateScanRunEntity scan = runs.findByRunId(runId).orElseThrow(
                 () -> new IllegalArgumentException("Candidate scan not found"));
             if (!"MANUAL".equals(scan.getScanTrigger()) || !"COMPLETED".equals(scan.getStatus())) {
                 throw new IllegalArgumentException("Analysis scope can only be selected for a completed manual scan");
             }
-            if ("STARTED".equals(scan.getOrchestrationStatus())) {
-                throw new IllegalStateException("An analysis scope has already been started for this scan");
+            if (!"PENDING".equals(scan.getOrchestrationStatus())) {
+                throw new IllegalStateException("An analysis scope has already been selected for this scan");
             }
             var qualified = results.findByRunIdOrderBySymbolAsc(runId).stream()
                 .filter(result -> result.isQualified() && result.isActivated())
                 .map(result -> result.getSymbol()).distinct().toList();
             java.util.List<String> symbols;
             RunRequest request;
-            switch (scope == null ? "" : scope.toUpperCase(java.util.Locale.ROOT)) {
+            switch (scope == null ? "" : scope) {
                 case "NONE" -> {
                     scan.setOrchestrationStatus("NOT_REQUIRED");
                     scan.setOrchestrationError(null);
@@ -122,14 +121,7 @@ public class CandidateScanHandoffDispatcher {
                     symbols = qualified;
                     request = new RunRequest(symbols, null, null, null, null);
                 }
-                case "SELECTED" -> {
-                    symbols = requestedSymbols == null ? java.util.List.of() : requestedSymbols.stream().distinct().toList();
-                    if (symbols.isEmpty() || !qualified.containsAll(symbols)) {
-                        throw new IllegalArgumentException("Selected symbols must be qualified candidates from this scan");
-                    }
-                    request = new RunRequest(symbols, null, null, null, null);
-                }
-                default -> throw new IllegalArgumentException("Scope must be NONE, WATCHLIST, QUALIFIED, or SELECTED");
+                default -> throw new IllegalArgumentException("Scope must be exactly NONE, WATCHLIST, or QUALIFIED");
             }
             if (orchestrator.findActiveRun().isPresent()) {
                 throw new IllegalStateException("Another analysis run is already active");

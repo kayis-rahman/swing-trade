@@ -11,8 +11,8 @@ Yahoo, Upstox and Fyers HTTP clients, rate limiting, candle validation, NSE cale
 3. Recorded provider fixtures (payloads captured once, secrets removed).
 4. Implement clients, validator, calendar, ingestion; green.
 5. Run Go ingestion into a scratch database against the same sessions as Java; compare rows exactly (OHLCV, adjustments, rejects, audit rows).
-6. Scheduler ownership: `scheduler.<job>.owner = java|go|off` setting plus Postgres advisory lock per job; during this phase Go jobs write only to scratch databases.
+6. Scheduler safety: Go jobs write only to scratch databases until G8. Each Go job takes a per-job Postgres advisory lock so a run can never overlap another; the lock is exercised in the advisory-lock test. No Java code change is made before G8.
 7. Failure drills: provider timeout, rate limit, malformed payload, partial day.
 
 ## Gate G3 exit criteria
-Row-for-row equality over the agreed session window; failure behavior matches; no duplicate job runs in the ownership test.
+Row-for-row equality over the agreed session window; failure behavior matches; no duplicate job runs in the advisory-lock test.

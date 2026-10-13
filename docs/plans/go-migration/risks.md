@@ -5,8 +5,8 @@
 | R1 | Numeric parity of TA4j DecimalNum behavior | Java-generated golden vectors, zero tolerance, fuzzing | 4 |
 | R2 | Paper and risk safety re-implementation | Last phase, shadow, drills, no live path in released binaries | 7 |
 | R3 | Hidden Spring/JPA behavior (transactions, @Version, lazy loads) | Ledger rows per entity and service, explicit transaction tests | 2 to 7 |
-| R4 | Single-instance schedulers without locks | Owner setting plus advisory locks, scratch databases | 3, 6 |
-| R5 | Flyway ownership | Java keeps Flyway until G8; goose from V76 at cutover | 8 |
+| R4 | Single-instance schedulers without locks | Global `app.scheduling.enabled=false` at cutover, per-job advisory locks, scratch databases before G8 | 3, 6 |
+| R5 | Flyway ownership | Java keeps Flyway until G8; goose V76 no-op baseline, additive-only schema rules (rollback.md) | 8 |
 | R6 | JSON and time contract drift | Goldens, comparator, Playwright suite | 0, 2 |
 | R7 | LLM stack specifics | Recorded responses, behavior tests | 5 |
 | R8 | News scraping fragility | Recorded fixtures, parser fuzzing | 5 |

@@ -14,6 +14,13 @@ Gated big-bang: before G8 Go serves no production traffic, so rollback means sto
 - Unreviewed schema drift.
 
 ## Procedure after cutover
-1. Set job owners to java, route nginx back to Java, confirm Java health.
-2. Reconcile data written by Go during the window (additive-only schema rule makes this safe); if irreconcilable, restore the verified backup.
+1. Stop Go jobs, re-enable Java scheduling (`app.scheduling.enabled=true`), route nginx back to Java, confirm Java health.
+2. Reconcile data written by Go during the window (see the schema rules below); if irreconcilable, restore the verified backup.
 3. Post-incident note appended to this plan; captain decides retry.
+
+## Schema rules after the goose baseline
+- The goose baseline V76 is a no-op that records the schema as applied, verified equal to the Phase 0 schema snapshot.
+- `flyway_schema_history` is never dropped or edited, so Java's Flyway validation still passes on rollback.
+- Until Java is retired and the rollback window is closed, only additive changes are allowed: new tables, nullable or defaulted columns, new indexes. No drops, renames, type changes, or NOT NULL columns without a default.
+- Rollback is forward-fix with new additive migrations. There are no production down-migrations.
+- Before G8, rehearse booting Java with `ddl-auto=validate` against a goose-migrated database.

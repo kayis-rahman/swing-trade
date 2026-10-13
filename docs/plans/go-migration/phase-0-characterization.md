@@ -17,7 +17,8 @@ Captain authorization (given 2026-10-13). A seeded local or throwaway stack (nev
 9. Inventory log fields and consumers of `logs/*.log`.
 10. Measure the Pi baseline for the current JVM: RSS, heap, startup time, p50/p95/p99, CPU, full-universe backtest wall time. Confirm the Pi CPU architecture.
 11. Build and measure the native-image variant (`infra/Dockerfile.native`) against the same metrics.
-12. Build the feature ledger (see feature-ledger.md) to endpoint, job, entity and metric level.
+12. Build the feature ledger (see feature-ledger.md): expand every area row to one row per endpoint, job, entity, metric and strategy.
+12a. Characterize every scheduled job (trigger, side effects, idempotency) and test that `app.scheduling.enabled=false` stops all Java scheduling.
 13. Build the test traceability matrix: all Java test methods listed with module, class, target feature.
 14. Map every Checkstyle and PMD rule to a Go equivalent or a recorded reason.
 15. File a separate ticket for rotating the committed Finnhub key and cleaning secrets (independent of this program).
@@ -28,6 +29,7 @@ Golden corpus (outside product tree), OpenAPI file, schema snapshot, ownership s
 
 ## Gate G0 exit criteria
 - Baseline and native-image numbers are in the report with method and caveats.
-- Ledger covers every controller, scheduler, entity, metric and strategy.
+- Ledger is fully expanded: one row per endpoint, job, entity, metric and strategy, with no area-level row left. G0 cannot pass with unexpanded rows.
+- Every scheduled job is characterized and the scheduling-off test passes.
 - Golden corpus reproducible by a script.
 - Captain decides: proceed to Phase 1, or stay on Java with the native-image path. If Go does not clearly beat the native-image baseline on the Q1 metric, the default recommendation is to stay on Java.

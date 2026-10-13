@@ -4,7 +4,24 @@ One row per feature. Columns: ID, Java module, Java classes, endpoints, schedule
 
 Status values: not-started, red, green, parity-pending, closed.
 
-## Initial rows (to be expanded to endpoint, job, entity and metric level in Phase 0)
+Expanding the area rows below to one row per endpoint, job, entity, metric and strategy is a mandatory Gate G0 deliverable. G0 cannot pass with unexpanded rows.
+
+## Row template
+| Column | Required content |
+|---|---|
+| ID | Unique, `F-<area>-<name>` |
+| Kind | endpoint, job, entity, metric or strategy |
+| Java module | Module name |
+| Java classes | Fully qualified classes |
+| Endpoints / schedulers / tables / metrics / settings | Those the row touches |
+| Java tests | Test methods that characterize it |
+| Go module and file | Target path |
+| Red tests committed | Commit reference |
+| Green | Commit reference |
+| Parity evidence | Golden or shadow report link |
+| Status | not-started, red, green, parity-pending, closed |
+
+## Initial area rows
 | ID | Area | Java module | Phase |
 |---|---|---|---|
 | F-API-HEALTH | Health endpoints and actuator aliases | api | 2 |
@@ -38,4 +55,4 @@ Status values: not-started, red, green, parity-pending, closed.
 | F-BRK-RISK | Risk controls, kill switch, loss breaker | broker | 7 |
 | F-BRK-KITE | Kite interface and refusing stub | broker | 7 |
 | F-OBS | Logging, metrics, alerts, Pi thermal metrics | api, core | 1 |
-| F-SCHED | 15 scheduled jobs and ownership flags | all | 3, 6 |
+| F-SCHED | 15 scheduled jobs and scheduling flags | all | 3, 6 |

@@ -8,9 +8,9 @@ Source analysis: a read-only scout of the repository at `c691c504` (module sizes
 |---|---|
 | Motivation / success metric | Pi memory and footprint; Go must beat the native-image Java baseline measured in Phase 0 |
 | Dashboard | Vue app unchanged behind nginx |
-| Cutover shape | Gated big-bang: phases and evidence gates G0 to G7, one traffic and job-ownership switch at G8 |
+| Cutover shape | Gated big-bang: phases and evidence gates G0 to G7, one traffic and job-scheduling switch at G8 (Java `app.scheduling.enabled=false`, Go advisory locks) |
 | Live broker (Kite) | Interface plus refusing stub; live code behind a `live` build tag, off in every released binary; paper-only is the only enabled mode |
-| Migrations | Java keeps Flyway until G8; goose takes over from a V76 baseline at cutover |
+| Migrations | Java keeps Flyway until G8; goose takes over from a no-op V76 baseline at cutover; additive-only schema rules in [rollback.md](rollback.md) |
 | Shadow evidence | 1 trading week for reads, 2 weekly cycles for schedulers, zero tolerance on decimal paths |
 | Security scope | Parity only (secret rotation tracked separately) |
 | Logs | JSON |

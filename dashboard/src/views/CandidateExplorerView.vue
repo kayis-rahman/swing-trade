@@ -9,9 +9,8 @@
           Candidate Explorer
         </h1>
         <p class="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-          Scan all active stock records for strategy-consensus BUY signals with a profitable
-          backtest. Candidates need agreement from at least two active strategies before they join
-          the pilot wishlist.
+          Scan the NSE symbol catalog for strategy-consensus BUY signals with fresh daily candles
+          and passing backtest gates. Qualified candidates are automatically added to the watchlist.
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -164,6 +163,44 @@
         <small class="mt-1 block text-xs text-text-muted">{{ metric.detail }}</small>
       </div>
     </div>
+
+    <section
+      v-if="
+        run?.status === 'COMPLETED' &&
+        run.scanTrigger === 'MANUAL' &&
+        run.orchestrationStatus === 'NOT_REQUIRED'
+      "
+      class="card-panel mb-4 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
+      aria-label="Choose analysis scope"
+    >
+      <div>
+        <p class="explorer-kicker">Operator decision</p>
+        <h2 class="mt-1 text-base font-semibold text-text-primary">Choose what to analyze next</h2>
+        <p class="mt-1 text-sm text-text-muted">
+          The scan does not start deep analysis automatically.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          class="rounded-lg border border-border-subtle px-3 py-2 text-sm"
+          @click="selectAnalysisScope('QUALIFIED')"
+        >
+          Qualified candidates
+        </button>
+        <button
+          class="rounded-lg border border-border-subtle px-3 py-2 text-sm"
+          @click="selectAnalysisScope('WATCHLIST')"
+        >
+          Active watchlist
+        </button>
+        <button
+          class="rounded-lg border border-border-subtle px-3 py-2 text-sm"
+          @click="selectAnalysisScope('NONE')"
+        >
+          No analysis
+        </button>
+      </div>
+    </section>
 
     <section
       v-if="run?.status === 'RUNNING' || run?.status === 'PAUSED'"
@@ -402,9 +439,9 @@
     </section>
 
     <p class="mt-4 text-xs leading-5 text-text-muted">
-      Candidate scans never invoke paper trading. Manual scans cover all active stock records;
-      qualified symbols are automatically added to the wishlist. After a manual scan, orchestration
-      runs over the active watchlist only; scheduled scans hand off qualified symbols only.
+      Candidate scans never invoke broker or order execution. Manual and scheduled discovery use the
+      NSE symbol catalog; fresh-data and strategy gates qualify candidates, which are automatically
+      added to the watchlist. Manual deep analysis starts only after the operator selects a scope.
     </p>
   </div>
 </template>
@@ -415,6 +452,7 @@ import { useRouter } from 'vue-router'
 import { asAppError } from '../errors/appError'
 import {
   cancelCandidateScan,
+  startCandidateAnalysis,
   getCandidateScan,
   getCandidateScanHistory,
   getCandidateScanResults,
@@ -508,7 +546,7 @@ const metrics = computed(() => [
       run.value?.scanScope === 'WATCHLIST'
         ? 'active watchlist symbols'
         : run.value?.scanScope === 'ACTIVE_STOCKS'
-          ? 'all active stock records'
+          ? 'legacy stock-table scope'
           : run.value?.scanScope === 'NSE_BROAD'
             ? 'NSE symbol master'
             : 'scope unavailable for legacy run',
@@ -663,6 +701,15 @@ async function start() {
     handleError(cause)
   } finally {
     loading.value = false
+  }
+}
+
+async function selectAnalysisScope(scope: 'NONE' | 'WATCHLIST' | 'QUALIFIED') {
+  if (!run.value) return
+  try {
+    run.value = await startCandidateAnalysis(run.value.runId, scope)
+  } catch (cause) {
+    handleError(cause)
   }
 }
 

@@ -92,6 +92,32 @@ class CandidateScanDataQualityTest {
     }
 
     @Test
+    void staleDailyHistoryCannotReachSignalEvaluationOrQualification() {
+        UUID runId = UUID.randomUUID();
+        CandidateScanRunEntity run = runningRun(runId);
+        when(runs.findByRunId(runId)).thenReturn(Optional.of(run));
+        when(eligibility.findById("STALE")).thenReturn(Optional.empty());
+        when(candles.countBySymbol("STALE")).thenReturn(60L);
+        when(candles.findAllBySymbolOrderByDateDesc("STALE")).thenReturn(List.of(
+            OhlcvCandle.of("STALE", LocalDate.now().minusDays(10), BigDecimal.TEN,
+                BigDecimal.TEN, BigDecimal.TEN, BigDecimal.TEN, 1_000L)));
+        AtomicReference<CandidateScanResultEntity> saved = new AtomicReference<>();
+        when(results.save(any(CandidateScanResultEntity.class))).thenAnswer(invocation -> {
+            CandidateScanResultEntity result = invocation.getArgument(0);
+            saved.set(result);
+            return result;
+        });
+
+        assertThat(service.scanSymbol(runId, "STALE", true)).isFalse();
+
+        assertThat(saved.get().getDataStatus()).isEqualTo("STALE");
+        assertThat(saved.get().isQualified()).isFalse();
+        assertThat(saved.get().isActivated()).isFalse();
+        verify(signalEngine, never()).generateSignal(any());
+        verify(backtest, never()).runBacktest(any(), any(), any());
+    }
+
+    @Test
     void recordsInsufficientHistoryWithoutCallingStrategyOrBacktest() {
         UUID runId = UUID.randomUUID();
         CandidateScanRunEntity run = runningRun(runId);
@@ -154,7 +180,7 @@ class CandidateScanDataQualityTest {
         List<OhlcvCandle> candles = new ArrayList<>();
         for (int index = 0; index < count; index++) {
             BigDecimal close = BigDecimal.valueOf(100 + index);
-            candles.add(OhlcvCandle.of(symbol, LocalDate.of(2023, 1, 1).plusDays(index),
+            candles.add(OhlcvCandle.of(symbol, LocalDate.now().minusDays(count - index - 1),
                 close, close, close, close, 1_000L));
         }
         return candles;

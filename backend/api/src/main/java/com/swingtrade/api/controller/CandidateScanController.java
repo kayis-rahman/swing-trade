@@ -1,6 +1,7 @@
 package com.swingtrade.api.controller;
 
 import com.swingtrade.api.service.CandidateScanService;
+import com.swingtrade.api.scheduler.CandidateScanHandoffDispatcher;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.springframework.http.HttpStatus;
@@ -23,8 +24,12 @@ import java.util.UUID;
 @RequestMapping("/api/candidate-scans")
 public class CandidateScanController {
     private final CandidateScanService service;
+    private final CandidateScanHandoffDispatcher handoffs;
 
-    public CandidateScanController(CandidateScanService service) { this.service = service; }
+    public CandidateScanController(CandidateScanService service, CandidateScanHandoffDispatcher handoffs) {
+        this.service = service;
+        this.handoffs = handoffs;
+    }
 
     @GetMapping("/settings")
     public ResponseEntity<?> getSettings() {
@@ -74,6 +79,19 @@ public class CandidateScanController {
         SseEmitter emitter = service.stream(runId);
         return emitter == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(emitter);
     }
+
+    @PostMapping("/{runId}/analysis")
+    public ResponseEntity<?> startAnalysis(@PathVariable UUID runId, @RequestBody AnalysisScopeRequest request) {
+        try {
+            return ResponseEntity.ok(handoffs.startManualAnalysis(runId, request.scope()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    public record AnalysisScopeRequest(String scope) { }
 
     @PostMapping("/{runId}/cancel")
     public ResponseEntity<?> cancel(@PathVariable UUID runId) {

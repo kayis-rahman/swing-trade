@@ -80,6 +80,13 @@ export interface IntradayPaperSessionResult {
   trades: IntradayPaperTrade[]
 }
 
+export function getIntradayPaperSession(runId: string): Promise<IntradayPaperSessionResult> {
+  return apiRequest<IntradayPaperSessionResult>(
+    `/intraday/paper/sessions/${encodeURIComponent(runId)}`,
+    { responseContract: 'direct' }
+  )
+}
+
 export function runIntradayPaperSession(
   request: IntradayPaperSessionRequest
 ): Promise<IntradayPaperSessionResult> {

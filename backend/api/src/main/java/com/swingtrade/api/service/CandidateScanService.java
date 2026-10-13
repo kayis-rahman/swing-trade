@@ -2,7 +2,6 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
-import com.swingtrade.data.entity.StockEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.CandidateHistoryEligibilityRepository;
@@ -66,6 +65,7 @@ public class CandidateScanService {
     private static final String KEY_OOS_DAYS = "candidate-scan.out-of-sample-days";
     private static final String KEY_OOS_FOLDS = "candidate-scan.out-of-sample-folds";
     private static final String KEY_MIN_STRATEGY_BUYS = "candidate-scan.min-strategy-buys";
+    private static final String KEY_MAX_CANDLE_AGE_DAYS = "candidate-scan.max-candle-age-days";
     private static final double DEFAULT_MIN_WIN_RATE = 45.0;
     private static final double DEFAULT_MIN_TOTAL_RETURN = 0.0;
     private static final int DEFAULT_MIN_TRADES = 15;
@@ -188,18 +188,10 @@ public class CandidateScanService {
         if (watchlistOnly && watchlistService != null) {
             sourceSymbols = watchlistService.getActiveWatchlist().stream()
                 .map(entry -> new ScanTarget(entry.getSymbol(), entry.getExchange())).toList();
-        } else if (scheduled || stockRepository == null) {
+        } else {
+            // Manual and scheduled broad scans must enumerate the same existing NSE symbol catalog.
             sourceSymbols = symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE").stream()
                 .map(s -> new ScanTarget(s.getTradingSymbol(), "NSE")).toList();
-        } else {
-            List<StockEntity> stocks = stockRepository.findAllByOrderBySymbol();
-            long skippedOtherExchanges = stocks.stream()
-                .filter(stock -> !isNseOrExchangeUnspecified(stock))
-                .count();
-            logger.info("Manual candidate scan skipped {} stock row(s) outside NSE.", skippedOtherExchanges);
-            sourceSymbols = stocks.stream()
-                .filter(CandidateScanService::isNseOrExchangeUnspecified)
-                .map(stock -> new ScanTarget(stock.getSymbol(), stock.getExchange())).toList();
         }
 
         List<ScanTarget> symbols = sourceSymbols.stream()
@@ -215,10 +207,10 @@ public class CandidateScanService {
         run.setRunId(UUID.randomUUID());
         run.setStatus("RUNNING");
         run.setTotalSymbols(symbols.size());
-        run.setScanScope(watchlistOnly ? "WATCHLIST" : scheduled ? "NSE_BROAD" : "ACTIVE_STOCKS");
+        run.setScanScope(watchlistOnly ? "WATCHLIST" : "NSE_BROAD");
         run.setScanTrigger(scheduled ? "SCHEDULED" : "MANUAL");
         run.setStartedAt(LocalDateTime.now(MARKET_ZONE));
-        run.setOrchestrationStatus("PENDING");
+        run.setOrchestrationStatus(scheduled ? "PENDING" : "NOT_REQUIRED");
         runRepository.save(run);
         activeRun.set(run.getRunId());
         cancellations.put(run.getRunId(), new AtomicBoolean(false));
@@ -261,6 +253,15 @@ public class CandidateScanService {
                 appSettingsService.get(KEY_MAX_CONCURRENT, String.valueOf(maxConcurrent)))));
         } catch (NumberFormatException ignored) {
             return 3;
+        }
+    }
+
+    private int configuredMaxCandleAgeDays() {
+        try {
+            return Math.max(0, Math.min(14, Integer.parseInt(
+                appSettingsService.get(KEY_MAX_CANDLE_AGE_DAYS, "4"))));
+        } catch (NumberFormatException ignored) {
+            return 4;
         }
     }
 
@@ -593,6 +594,18 @@ public class CandidateScanService {
             resultRepository.save(result);
             return false;
         }
+        int maxCandleAgeDays = configuredMaxCandleAgeDays();
+        LocalDate latestAllowedDate = today.minusDays(maxCandleAgeDays);
+        if (result.getLastAvailableDate() == null || result.getLastAvailableDate().isBefore(latestAllowedDate)) {
+            result.setDataStatus("STALE");
+            result.setQualified(false);
+            result.setActivated(false);
+            result.setReason("Stale daily OHLCV: latest candle " + result.getLastAvailableDate()
+                + " is older than the configured " + maxCandleAgeDays + " calendar-day limit");
+            resultRepository.save(result);
+            publish(runId, "STAGE_COMPLETED", symbol, "WARN", result.getReason());
+            return false;
+        }
         result.setDataStatus("READY");
         publish(runId, "STAGE_STARTED", symbol, "INFO", "Signal: generating technical signal.");
         SignalResult signal = signalEngine.generateSignal(symbol);
@@ -874,11 +887,6 @@ public class CandidateScanService {
 
     @PreDestroy
     void shutdown() { executor.shutdownNow(); }
-
-    private static boolean isNseOrExchangeUnspecified(StockEntity stock) {
-        String exchange = stock.getExchange();
-        return exchange == null || exchange.isBlank() || "NSE".equalsIgnoreCase(exchange.trim());
-    }
 
     private record ScanTarget(String symbol, String exchange) { }
 

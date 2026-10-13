@@ -2,7 +2,6 @@ package com.swingtrade.api.service;
 
 import com.swingtrade.data.entity.CandidateScanResultEntity;
 import com.swingtrade.data.entity.CandidateScanRunEntity;
-import com.swingtrade.data.entity.StockEntity;
 import com.swingtrade.data.repository.CandidateScanResultRepository;
 import com.swingtrade.data.repository.CandidateScanRunRepository;
 import com.swingtrade.data.repository.FyersSymbolRepository;
@@ -133,39 +132,23 @@ class CandidateScanServiceTest {
     class Lifecycle {
 
         @Test
-        void manualScansAllNseAndExchangeLessRowsRegardlessOfActivityAndSkipsOtherExchanges() {
+        void manualAndScheduledBroadScansUseTheSameNseSymbolCatalog() {
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            StockEntity firstStock = new StockEntity();
-            firstStock.setSymbol("INFY");
-            firstStock.setExchange("NSE");
-            StockEntity secondStock = new StockEntity();
-            secondStock.setSymbol("TCS");
-            secondStock.setExchange("NSE");
-            StockEntity thirdStock = new StockEntity();
-            thirdStock.setSymbol("M&M");
-            thirdStock.setExchange("NSE");
-            StockEntity fourthStock = new StockEntity();
-            fourthStock.setSymbol("BAJAJ-AUTO");
-            fourthStock.setExchange("NSE");
-            StockEntity fifthStock = new StockEntity();
-            fifthStock.setSymbol("BSECO");
-            fifthStock.setExchange("BSE");
-            StockEntity sixthStock = new StockEntity();
-            sixthStock.setSymbol("FOOCO");
-            sixthStock.setExchange("FOO");
-            StockEntity exchangeLessStock = new StockEntity();
-            exchangeLessStock.setSymbol("UNKNOWNEXCHANGE");
-            when(stockRepository.findAllByOrderBySymbol())
-                .thenReturn(List.of(firstStock, secondStock, thirdStock, fourthStock, fifthStock, sixthStock,
-                    exchangeLessStock));
+            com.swingtrade.data.entity.FyersSymbolEntity first = new com.swingtrade.data.entity.FyersSymbolEntity();
+            first.setTradingSymbol("INFY");
+            com.swingtrade.data.entity.FyersSymbolEntity second = new com.swingtrade.data.entity.FyersSymbolEntity();
+            second.setTradingSymbol("TCS");
+            when(symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE"))
+                .thenReturn(List.of(first, second));
 
             CandidateScanRunEntity scan = service.start();
 
-            assertThat(scan.getScanScope()).isEqualTo("ACTIVE_STOCKS");
-            assertThat(scan.getTotalSymbols()).isEqualTo(5);
-            assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
+            assertThat(scan.getScanScope()).isEqualTo("NSE_BROAD");
+            assertThat(scan.getTotalSymbols()).isEqualTo(2);
+            assertThat(scan.getOrchestrationStatus()).isEqualTo("NOT_REQUIRED");
             assertThat(scan.getScanTrigger()).isEqualTo("MANUAL");
-            verify(stockRepository).findAllByOrderBySymbol();
+            verify(symbolRepository).findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE");
+            verify(stockRepository, never()).findAllByOrderBySymbol();
             verify(watchlistService, never()).getAllWatchlist();
         }
 
@@ -173,7 +156,7 @@ class CandidateScanServiceTest {
         void completedManualScanWithNoQualifiedSymbolsKeepsItsHandoffPending() {
             AtomicReference<CandidateScanRunEntity> savedRun = new AtomicReference<>();
             when(runRepository.existsByStatus("RUNNING")).thenReturn(false);
-            when(stockRepository.findAllByOrderBySymbol()).thenReturn(List.of());
+            when(symbolRepository.findByExchangeIgnoreCaseOrderByTradingSymbolAsc("NSE")).thenReturn(List.of());
             org.mockito.Mockito.doAnswer(invocation -> {
                 CandidateScanRunEntity run = invocation.getArgument(0);
                 savedRun.set(run);
@@ -187,7 +170,7 @@ class CandidateScanServiceTest {
             org.mockito.Mockito.verify(runRepository, org.mockito.Mockito.timeout(1000).atLeast(2)).save(scan);
             assertThat(scan.getStatus()).isEqualTo("COMPLETED");
             assertThat(scan.getQualifiedSymbols()).isZero();
-            assertThat(scan.getOrchestrationStatus()).isEqualTo("PENDING");
+            assertThat(scan.getOrchestrationStatus()).isEqualTo("NOT_REQUIRED");
         }
 
         @Test

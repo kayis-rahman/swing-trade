@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -18,7 +17,7 @@ class CandidateScanMigrationOrderingTest {
     private static final String CANDIDATE_SCAN_MIGRATION = "candidate_scan_trigger";
 
     @Test
-    void candidateScanMigrationRunsAfterEveryExistingMigration() throws IOException {
+    void candidateScanTriggerMigrationKeepsItsAssignedVersion() throws IOException {
         Map<String, MigrationVersion> versions;
         try (var migrationFiles = Files.list(MIGRATION_DIRECTORY)) {
             versions = migrationFiles
@@ -33,14 +32,7 @@ class CandidateScanMigrationOrderingTest {
             .filter(entry -> entry.getKey().contains("__" + CANDIDATE_SCAN_MIGRATION + ".sql"))
             .map(Map.Entry::getValue)
             .toList();
-        MigrationVersion latestOtherMigration = versions.entrySet().stream()
-            .filter(entry -> !entry.getKey().contains("__" + CANDIDATE_SCAN_MIGRATION + ".sql"))
-            .map(Map.Entry::getValue)
-            .max(Comparator.naturalOrder())
-            .orElseThrow();
-
-        assertThat(candidateScanVersions).hasSize(1);
-        assertThat(candidateScanVersions.get(0)).isGreaterThan(latestOtherMigration);
+        assertThat(candidateScanVersions).containsExactly(MigrationVersion.fromVersion("76"));
     }
 
     private static MigrationVersion versionFromFilename(String filename) {

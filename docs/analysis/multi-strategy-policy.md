@@ -23,13 +23,12 @@ conservative policy:
   operator action from the Strategies view/API. Route-level admin/API-key
   authorization is deferred as a follow-up hardening item; until then, callers
   that can reach the API can invoke the mutation endpoint directly.
-- Manual candidate scans persist `ACTIVE_STOCKS` and inspect every `stocks`
-  row regardless of watchlist membership. Rows marked NSE and rows without an
-  exchange value are scanned as NSE; rows explicitly marked for another
-  exchange are skipped and counted in the start log. Scheduled candidate scans
-  persist `NSE_BROAD`. After a manual scan, orchestration uses the active
-  watchlist; scheduled orchestration uses qualified scan results. Older rows
-  have no scope value and are shown as unavailable rather than being guessed.
+- Manual and scheduled broad candidate scans persist `NSE_BROAD` and share one
+  symbol source; see `docs/universe-to-paper-workflow.md`. After a manual scan,
+  downstream analysis starts only from the operator's explicit scope choice;
+  scheduled orchestration uses qualified scan results. Older rows may carry
+  `ACTIVE_STOCKS` or no scope value and are shown as unavailable rather than
+  being guessed.
 
 This keeps signal discovery, performance attribution, and live authority
 separate while the historical data coverage and per-strategy qualification

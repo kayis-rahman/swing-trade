@@ -32,6 +32,20 @@ throwaway stack now runs the real jar end to end (see evidence/golden-corpus.md 
 Ledger rows are now complete for endpoints (169), jobs (15), tables (42), entities (39),
 repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 
+## Progress log (added by implementation runs; not part of the plan spec)
+
+| Date | Steps | Outcome | Evidence |
+|---|---|---|---|
+| 2026-10-14 | 2, 3 | Endpoint inventory (156 live, 13 disabled, 3 SSE) and dashboard-consumption diff | [evidence/endpoint-inventory.md](evidence/endpoint-inventory.md) |
+| 2026-10-14 | 12 (partial), 12a (static) | Feature ledger expanded to 169 endpoint rows + 15 job rows; all 15 `@Scheduled` jobs characterized with triggers, side effects, idempotency guards and test coverage | [feature-ledger.md](feature-ledger.md), [evidence/scheduled-jobs.md](evidence/scheduled-jobs.md) |
+
+Still outstanding for G0 (in dependency order): golden corpus and OpenAPI export (steps 2 remainder, 4), time/decimal
+formatting rules (5), numeric golden vectors (6), schema snapshot and table ownership sheet (7), Prometheus inventory
+(8), log-field inventory (9), Pi and native-image measurements (10, 11), the runtime half of the scheduling-off test
+(12a), the remaining ledger rows for entities, metrics and strategies (12), the test traceability matrix (13), the
+Checkstyle/PMD rule mapping (14) and the G0 report (16). Steps 1 and 4-14 need a throwaway stack or Pi hardware that
+this environment does not provide.
+
 ## Entry
 Captain authorization (given 2026-10-13). A seeded local or throwaway stack (never shared or stage infrastructure without explicit confirmation).
 

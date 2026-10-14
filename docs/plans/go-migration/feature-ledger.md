@@ -7,14 +7,17 @@ Status values: not-started, red, green, parity-pending, closed.
 **Gate G0 status of this file.** Section 2 expands the endpoint surface: 169 rows (156 live endpoints from
 [endpoint-inventory.md](evidence/endpoint-inventory.md) plus the 13 endpoints Java keeps commented out), one row per
 endpoint, with Java classes, Java tests and the planned Go file. Section 3 expands the scheduling surface: 15 rows,
-one row per `@Scheduled` method, characterized in [scheduled-jobs.md](evidence/scheduled-jobs.md). Section 5 lists
-the areas that are **not yet expanded** (entities, Prometheus metrics, indicators/strategies/gates, cross-cutting
-platform concerns) — while any of those remain area-level rows, G0 cannot pass. The area table in §1 is an index for
-navigation, not a ledger row set.
+one row per `@Scheduled` method, characterized in [scheduled-jobs.md](evidence/scheduled-jobs.md). Section 5 expands
+the observability surface: 45 rows (35 application meters from 11 Java meter classes plus 10
+platform/auto-configured groups), one row per meter or group, characterized in
+[metrics-inventory.md](evidence/metrics-inventory.md). Section 6 lists the areas that are **not yet expanded**
+(entities, indicators/strategies/gates, cross-cutting platform concerns) — while any of those remain area-level rows,
+G0 cannot pass. The area table in §1 is an index for navigation, not a ledger row set.
 
 Derived by: full read of all 28 controllers in `backend/api/src/main/java/com/swingtrade/api/controller/`,
-cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`).
-Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs).
+cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`), plus
+the `Counter.builder`/`Timer.builder`/`Gauge.builder`/`meterRegistry.` call sites under `backend/*/src/main`.
+Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-OBS-<NN>` / `F-OBS-P<NN>` (metrics).
 
 ## Row template
 
@@ -33,9 +36,9 @@ Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs).
 | Status | not-started, red, green, parity-pending, closed |
 
 **Expanded-row columns.** The template's "Endpoints / schedulers / tables / metrics / settings" column is realized as
-`Path` for endpoint rows and `Trigger` for job rows, and the four evidence columns (red/green/parity/status) are
-collapsed into `Status` while nothing is implemented — every row is `not-started` and the red-test/green/parity
-commit references stay empty until the TDD loop of [standards.md](standards.md) starts.
+`Path` for endpoint rows, `Trigger` for job rows and `Labels` for metric rows, and the four evidence columns
+(red/green/parity/status) are collapsed into `Status` while nothing is implemented — every row is `not-started` and
+the red-test/green/parity commit references stay empty until the TDD loop of [standards.md](standards.md) starts.
 
 ## 1. Area index
 
@@ -68,9 +71,10 @@ commit references stay empty until the TDD loop of [standards.md](standards.md) 
 | F-API-DATAEXPORT | `DataExportController` on `/api/data` | 3 | F-API-DATAEXPORT-01 | 1 |
 | F-API-OFF | 13 endpoints commented out in Java (GpuHub, Upstox, Admin) | 5, 6 | F-API-OFF-01…13 | 13 |
 | F-SCHED | 15 `@Scheduled` jobs across api, data, broker, llm | 3, 6 | F-SCHED-01…15 | 15 |
+| F-OBS | 11 Java meter classes (7 `core/metrics`, 3 `api/metrics`, 1 `api/config`) + 10 platform groups | 1, 3-7 | F-OBS-01…35, F-OBS-P01…P10 | 45 |
 
-Endpoint rows: 169. Job rows: 15. Every endpoint row names its Go target file, which is where the row's
-implementation and its red tests land when Phase 1+ starts.
+Endpoint rows: 169. Job rows: 15. Metric rows: 45. Every endpoint row names its Go target file, which is where the
+row's implementation and its red tests land when Phase 1+ starts; the same convention applies to metric rows.
 
 ## 2. Endpoint rows
 
@@ -324,6 +328,10 @@ what it drives.
 | Java test files in `backend/` | 283 files containing test methods |
 | `@Test` methods | 2461 (plus 1 `@ParameterizedTest`) |
 | `@Disabled` test classes | 6; no individual `@Test` method is disabled |
+| Ledger metric rows | 45 (35 application meters + 10 platform groups) |
+| Metric rows with at least one Java test reference | 33 — every `core/metrics` and `api/metrics` row except F-OBS-29 and F-OBS-30 (`PiThermalMetrics` has no test) |
+| Metric rows with no test reference at all | 12 (F-OBS-29, F-OBS-30 and all 10 platform groups; the e2e stage-sanity spec asserts only `application_`/`jvm_` prefixes) |
+| Application metric rows with no production writer | 4 rows / 7 exported series (`trades_duration_seconds_count`,`_sum`, `trades_pnl_seconds_count`,`_sum`, `data_ingestion_duration_seconds_count`,`_sum`, `signals_filtered_total`) |
 
 The 20 "only `@Disabled`" rows are the `F-API-SIGNALS-*` and `F-API-POSITIONS-*` rows whose tests live in
 `SignalControllerTest`, `PositionControllerTest` or `ErrorHandlingTest`. All three are `@Disabled` today: the first
@@ -341,15 +349,92 @@ path grep finds nothing: `WatchlistControllerTest`, `SymbolStrategyControllerTes
 `SignalControllerReservedPathTest`, `IntradayPaperControllerTest`, `IntradayPaperScanControllerTest`. Those rows cite
 the test with the note "direct controller test, no HTTP path string" instead of `none`.
 
-## 5. Remaining expansion (G0 still blocked)
+## 5. Metric rows (F-OBS)
+
+Full characterization — registration sites, writers, label value sets, naming conventions and the ten findings —
+is in [metrics-inventory.md](evidence/metrics-inventory.md). `Series` is the Prometheus series name (prefix for timers, which
+export `_count` and `_sum`) as scraped from `/actuator/prometheus`; consumer IDs (`G*` panel, `A*` alert, `E1`
+Playwright) are defined there.
+Dead-in-Java rows are kept so the Go port does not "discover" a missing writer mid-port.
+
+### 5.1 TradeMetrics and JobOrchestratorMetrics (`core`)
+
+| ID | Kind | Series | Java module | Java classes | Labels | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-OBS-01 | metric | `trades_open_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `broker=paper` | com.swingtrade.core.metrics.TradeMetricsTest#recordsOpenCloseOutcomesDurationsPnlAndSymbols | core/metrics/trade_metrics.go | not-started |
+| F-OBS-02 | metric | `trades_closed_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `broker=paper` | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started |
+| F-OBS-03 | metric | `trades_outcome_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `reason` ∈ {stop_loss, target_hit, time_stop, trend_break, manual} (closed set; other reasons are invisible) | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started |
+| F-OBS-04 | metric | `trades_duration_seconds_count`, `_sum` | core, broker | com.swingtrade.core.metrics.TradeMetrics | none | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started (no production writer in Java) |
+| F-OBS-05 | metric | `trades_pnl_seconds_count`, `_sum` | core, broker | com.swingtrade.core.metrics.TradeMetrics | none | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started (no production writer in Java) |
+| F-OBS-06 | metric | `trades_per_symbol_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `symbol` | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started |
+| F-OBS-07 | metric | `job_runs_completed_total` | core, api | com.swingtrade.core.metrics.JobOrchestratorMetrics | none | com.swingtrade.core.metrics.JobOrchestratorMetricsTest#shouldCountRunWithWarningsAsCompleted | core/metrics/job_orchestrator_metrics.go | not-started |
+| F-OBS-08 | metric | `job_runs_failed_total` | core, api | com.swingtrade.core.metrics.JobOrchestratorMetrics | none | …, #shouldTrackActiveRunsCompletedAndFailedCounters, …, #shouldRecordReapedRunAsFailedWithoutTouchingActiveGauge | core/metrics/job_orchestrator_metrics.go | not-started |
+| F-OBS-09 | metric | `job_run_duration_seconds_count`, `_sum` | core, api | com.swingtrade.core.metrics.JobOrchestratorMetrics | none | …, #shouldTrackActiveRunsCompletedAndFailedCounters | core/metrics/job_orchestrator_metrics.go | not-started |
+| F-OBS-10 | metric | `job_runs_active` | core, api | com.swingtrade.core.metrics.JobOrchestratorMetrics | none | …, #shouldTrackActiveRunsCompletedAndFailedCounters, …, #shouldDecrementActiveGaugeOnCancel | core/metrics/job_orchestrator_metrics.go | not-started |
+| F-OBS-11 | metric | `strategy_skipped_total` | core, api | com.swingtrade.core.metrics.JobOrchestratorMetrics; com.swingtrade.api.service.ConfiguredSignalTally | `variant`, `reason` ∈ {UNSUPPORTED_TYPE, INSUFFICIENT_HISTORY, INVALID_PARAMS, OTHER, ERROR} | com.swingtrade.core.metrics.JobOrchestratorMetricsTest#shouldCountSkippedStrategiesByVariantAndReason | core/metrics/job_orchestrator_metrics.go | not-started |
+| F-OBS-12 | metric | `stage_degraded_total` | core, api | com.swingtrade.core.metrics.JobOrchestratorMetrics; com.swingtrade.api.service.ConfiguredSignalTally | `stage`, `reason` ∈ {STRATEGY_ERROR, STRATEGY_SKIPPED, UNKNOWN} | com.swingtrade.core.metrics.JobOrchestratorMetricsTest#shouldCountDegradedStagesByStageAndReason | core/metrics/job_orchestrator_metrics.go | not-started |
+
+### 5.2 DataIngestionMetrics, LlmMetrics, SentimentMetrics, SignalMetrics, KillSwitchMetrics (`core`)
+
+| ID | Kind | Series | Java module | Java classes | Labels | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-OBS-13 | metric | `data_candles_ingested_total` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | none | com.swingtrade.core.metrics.DataIngestionMetricsTest#recordsCandlesDurationsFailuresAndRateLimitHitsBySource | core/metrics/data_ingestion_metrics.go | not-started |
+| F-OBS-14 | metric | `data_ingestion_duration_seconds_count`, `_sum` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | none | same as F-OBS-13 | core/metrics/data_ingestion_metrics.go | not-started (no production writer in Java) |
+| F-OBS-15 | metric | `data_fetch_failures_total` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | `source` ∈ {unknown, active broker name} | same as F-OBS-13 | core/metrics/data_ingestion_metrics.go | not-started |
+| F-OBS-16 | metric | `data_rate_limit_hits_total` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | `source` (active broker, or `fyers`) | same as F-OBS-13 | core/metrics/data_ingestion_metrics.go | not-started |
+| F-OBS-17 | metric | `llm_call_duration_seconds_count`, `_sum` | core, llm | com.swingtrade.core.metrics.LlmMetrics | none | com.swingtrade.core.metrics.LlmMetricsTest#recordsCallOutcomesDurationAndSentimentAnalyses | core/metrics/llm_metrics.go | not-started |
+| F-OBS-18 | metric | `llm_calls_total` | core, llm | com.swingtrade.core.metrics.LlmMetrics | `result` ∈ {success, failure} | same as F-OBS-17 | core/metrics/llm_metrics.go | not-started |
+| F-OBS-19 | metric | `llm_sentiment_analyzed_total` | core, llm | com.swingtrade.core.metrics.LlmMetrics | none | same as F-OBS-17 | core/metrics/llm_metrics.go | not-started |
+| F-OBS-20 | metric | `sentiment_analyses_completed_total` | core, llm | com.swingtrade.core.metrics.SentimentMetrics | none | com.swingtrade.core.metrics.SentimentMetricsTest#recordsCompletedFailedAndTimedAnalyses | core/metrics/sentiment_metrics.go | not-started |
+| F-OBS-21 | metric | `sentiment_analyses_failed_total` | core, llm | com.swingtrade.core.metrics.SentimentMetrics | none | same as F-OBS-20 | core/metrics/sentiment_metrics.go | not-started |
+| F-OBS-22 | metric | `sentiment_analysis_duration_seconds_count`, `_sum` | core, llm | com.swingtrade.core.metrics.SentimentMetrics | none | same as F-OBS-20 | core/metrics/sentiment_metrics.go | not-started |
+| F-OBS-23 | metric | `signals_generated_total` | core, strategy | com.swingtrade.core.metrics.SignalMetrics | none | com.swingtrade.core.metrics.SignalMetricsTest#recordsGeneratedFilteredAndPerTypeSignals | core/metrics/signal_metrics.go | not-started |
+| F-OBS-24 | metric | `signals_filtered_total` | core, strategy | com.swingtrade.core.metrics.SignalMetrics | none | same as F-OBS-23 | core/metrics/signal_metrics.go | not-started (no production writer in Java) |
+| F-OBS-25 | metric | `signals_by_type_total` | core, strategy | com.swingtrade.core.metrics.SignalMetrics | `type` (lowercased signal type) | same as F-OBS-23 | core/metrics/signal_metrics.go | not-started |
+| F-OBS-26 | metric | `killswitch_active` | core, broker | com.swingtrade.core.metrics.KillSwitchMetrics | 0/1 gauge | com.swingtrade.core.metrics.KillSwitchMetricsTest#exposesCurrentStateAndCountsEachStateChange | core/metrics/kill_switch_metrics.go | not-started |
+| F-OBS-27 | metric | `killswitch_state_changed_total` | core, broker | com.swingtrade.core.metrics.KillSwitchMetrics | `state` ∈ {enabled, disabled} | same as F-OBS-26 | core/metrics/kill_switch_metrics.go | not-started |
+
+### 5.3 api-module meters (`api/metrics`, `api/config`)
+
+| ID | Kind | Series | Java module | Java classes | Labels | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-OBS-28 | metric | `api_request_duration_seconds_count`, `_sum` | api | com.swingtrade.api.metrics.ApiRequestMetricsFilter | `method`, `status` (`/api/**` requests only) | com.swingtrade.api.metrics.ApiRequestMetricsFilterTest#recordsDurationWithMethodAndStatusTagsEvenWhenHandlerFails | api/metrics/api_request_metrics_filter.go | not-started |
+| F-OBS-29 | metric | `swingtrade_pi_cpu_temperature_celsius` | api | com.swingtrade.api.metrics.PiThermalMetrics | baseUnit `celsius`; sysfs read, NaN off-Pi | none (no test exists for this class) | api/metrics/pi_thermal_metrics.go | not-started |
+| F-OBS-30 | metric | `swingtrade_pi_cpu_frequency_hertz` | api | com.swingtrade.api.metrics.PiThermalMetrics | baseUnit `hertz`; sysfs read (kHz × 1000), NaN off-Pi | none | api/metrics/pi_thermal_metrics.go | not-started |
+| F-OBS-31 | metric | `portfolio_active_positions` | api, core | com.swingtrade.api.metrics.PortfolioMetrics (the api one, not com.swingtrade.strategy.PortfolioMetrics) | weak ref to TradingService | com.swingtrade.api.metrics.PortfolioMetricsTest#registersGaugesBackedByLivePaperState | api/metrics/portfolio_metrics.go | not-started |
+| F-OBS-32 | metric | `portfolio_total_pnl` | api, core | com.swingtrade.api.metrics.PortfolioMetrics | same | same | api/metrics/portfolio_metrics.go | not-started |
+| F-OBS-33 | metric | `portfolio_daily_return` | api, core | com.swingtrade.api.metrics.PortfolioMetrics | percent, no baseUnit | same | api/metrics/portfolio_metrics.go | not-started |
+| F-OBS-34 | metric | `portfolio_value` | api, core | com.swingtrade.api.metrics.PortfolioMetrics | weak ref to TradingService | same | api/metrics/portfolio_metrics.go | not-started |
+| F-OBS-35 | metric | `api_rate_limit_hits_total` | api | com.swingtrade.api.config.ApiSecurityInterceptor | no labels | com.swingtrade.api.config.ApiSecurityInterceptorTest#limitsPublicRequestsAndExposesHitMetric | api/config/api_security_interceptor.go | not-started |
+
+### 5.4 Platform meter groups (auto-configured, not application code)
+
+No application code registers these; each row is a group of series the Go port must reproduce or drop with a
+recorded reason. `management.metrics.enable.all=true`
+(`backend/api/src/main/resources/application.properties:276`) and only
+`percentiles-histogram.http.server.requests=true` are on, so no other meter publishes buckets or percentiles.
+
+| ID | Kind | Series group | Java module | Java classes | Labels | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-OBS-P01 | metric | `http_server_requests_seconds_count`, `_sum`, `_bucket`, `quantile` | api | Spring MVC auto timer (`WebMvcMetricsFilter`) | uri, method, status, outcome, exception | none in-tree | api/metrics/http_server_requests_timer.go | not-started |
+| F-OBS-P02 | metric | `jvm_memory_used_bytes`, `jvm_memory_max_bytes`, `jvm_gc_pause_seconds_*`, `jvm_threads_*`, `jvm_classes_loaded*` | api | JvmMemoryMetrics, JvmGcMetrics, JvmThreadMetrics, ClassLoaderMetrics | area/id/pool | none in-tree; asserted by dashboard/tests/e2e/views/stage-sanity.spec.ts | core/metrics/jvm_metrics.go | not-started |
+| F-OBS-P03 | metric | `application_started_time_seconds`, `application_ready_time_seconds` | api | Spring Boot startup gauges | none | e2e stage-sanity (asserts `application_`) | core/metrics/startup_gauges.go | not-started |
+| F-OBS-P04 | metric | `system_cpu_usage`, `system_load_average_1m` | api | ProcessorMetrics | none | none | core/metrics/system_metrics.go | not-started |
+| F-OBS-P05 | metric | `process_cpu_usage`, `process_uptime_seconds`, `process_files_*` | api | ProcessMetrics | none | none | core/metrics/process_metrics.go | not-started |
+| F-OBS-P06 | metric | `logback_events_total` | api | LogbackMetrics appender over logback-spring.xml | `level` | none | core/metrics/log_events_counter.go | not-started |
+| F-OBS-P07 | metric | `executor_*` (active, queued, completed, pool sizes) | api | ExecutorServiceMetrics | `name` | none | core/metrics/executor_metrics.go | not-started |
+| F-OBS-P08 | metric | `tomcat_sessions_*` | api | TomcatMetrics | none | none | core/metrics/tomcat_metrics.go | not-started |
+| F-OBS-P09 | metric | `hikaricp_connections_active`, `_idle`, `_pending`, `_connections`, `_acquire`, `_creation`, `_usage` | api | Spring Boot HikariDataSource metrics binder | pool | none | core/metrics/db_pool_metrics.go | not-started |
+| F-OBS-P10 | metric | `resilience4j_*` — expected **absent** | api | com.swingtrade.api.config.Resilience4jConfig, com.swingtrade.llm.config.LayaConfig create every breaker/bulkhead/limiter programmatically with no MeterRegistry binding, despite `resilience4j-micrometer` being on the classpath in api, broker, core, data and llm | — | none | api/metrics/resilience_metrics.go | not-started (expected no series) |
+
+## 6. Remaining expansion (G0 still blocked)
 
 These area rows are not yet expanded. Until they are, G0 cannot pass, because the exit criterion is "one row per
-endpoint, job, entity, metric and strategy".
+endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3) and metric (§5) surfaces are done.
 
 | Area | What must be expanded | Source of truth | Rows expected |
 |---|---|---|---|
 | F-DATA-ENTITIES | one row per JPA entity and per repository/store | `backend/data/src/main/java/com/swingtrade/data/entity/` (35 entity files verified) and `repository/`, plus `backend/core/src/main/java/com/swingtrade/domain/` (60 model classes) | 35 entity rows; 39 repository interfaces (the area row's "37" is stale) |
-| F-OBS | one row per Prometheus series (name, labels, type, consumers in Grafana JSON and alerts) | `backend/core/src/main/java/com/swingtrade/core/metrics/`, `backend/api/src/main/java/com/swingtrade/api/metrics/`, `infra/` | Phase 0 step 8 |
 | F-STRAT-IND | one row per indicator and one per strategy/gate | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 (numeric golden vectors) |
 | F-STRAT-BT | one row per backtest engine, walk-forward, DSR and cost model | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 |
 | F-API-SECURITY | one row per security concern (API key, rate limit, CORS, trace-id, error handler) | `backend/api/src/main/java/com/swingtrade/api/config/ApiSecurityInterceptor.java`, `GlobalExceptionHandler` | 6 rows |
@@ -357,4 +442,4 @@ endpoint, job, entity, metric and strategy".
 | F-SCHED settings | one row per scheduling-related property | `backend/*/src/main/resources/application*.properties` | ~10 rows |
 
 Method for each: read the Java class, name the target Go file per [standards.md](standards.md) (Java class → named
-Go file or type), and record the Java tests. The endpoint and job rows above are the template.
+Go file or type), and record the Java tests. The endpoint, job and metric rows above are the template.

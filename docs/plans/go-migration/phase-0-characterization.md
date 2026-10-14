@@ -8,13 +8,15 @@ Goal: produce the evidence needed for the Gate G0 go/no-go. Read-only against th
 |---|---|---|---|
 | 2026-10-14 | 2, 3 | Endpoint inventory (156 live, 13 disabled, 3 SSE) and dashboard-consumption diff | [evidence/endpoint-inventory.md](evidence/endpoint-inventory.md) |
 | 2026-10-14 | 12 (partial), 12a (static) | Feature ledger expanded to 169 endpoint rows + 15 job rows; all 15 `@Scheduled` jobs characterized with triggers, side effects, idempotency guards and test coverage | [feature-ledger.md](feature-ledger.md), [evidence/scheduled-jobs.md](evidence/scheduled-jobs.md) |
+| 2026-10-14 | 8 | Full Prometheus inventory — 35 application meters from 11 Java classes + 10 platform groups with registration sites, writers, label value sets, every consumer (15 Grafana panels, 2 alert rules, 1 Playwright spec) and 10 findings; ledger `F-OBS` expanded to 45 rows | [evidence/metrics-inventory.md](evidence/metrics-inventory.md), [feature-ledger.md](feature-ledger.md) |
 
 Still outstanding for G0 (in dependency order): golden corpus and OpenAPI export (steps 2 remainder, 4), time/decimal
-formatting rules (5), numeric golden vectors (6), schema snapshot and table ownership sheet (7), Prometheus inventory
-(8), log-field inventory (9), Pi and native-image measurements (10, 11), the runtime half of the scheduling-off test
-(12a), the remaining ledger rows for entities, metrics and strategies (12), the test traceability matrix (13), the
-Checkstyle/PMD rule mapping (14) and the G0 report (16). Steps 1 and 4-14 need a throwaway stack or Pi hardware that
-this environment does not provide.
+formatting rules (5), numeric golden vectors (6), schema snapshot and table ownership sheet (7), runtime confirmation
+of the metrics inventory against the live `/actuator/prometheus` (8, checklist in §7 of the inventory), log-field
+inventory (9), Pi and native-image measurements (10, 11), the runtime half of the scheduling-off test (12a), the
+remaining ledger rows for entities, indicators/strategies and cross-cutting concerns (12), the test traceability
+matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16). Steps 1 and 4-14 need a throwaway stack or
+Pi hardware that this environment does not provide.
 
 ## Entry
 Captain authorization (given 2026-10-13). A seeded local or throwaway stack (never shared or stage infrastructure without explicit confirmation).

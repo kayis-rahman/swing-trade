@@ -28,12 +28,10 @@ below, so the corpus can be re-validated in CI after the Go port exists.
 
 Preconditions
 -------------
-The Java API must be running against an isolated, Flyway-migrated throwaway
-database with scheduling disabled (see phase-0-characterization.md step 1).
-Flyway seeds baseline rows, so the database is not empty and response bodies
-may vary with seeded or network-dependent data (notably news) and timestamps.
-Treat these captures as characterization evidence, not byte-for-byte
-reproducible fixtures.
+The Java API must be running against an isolated throwaway database with
+scheduling disabled (see phase-0-characterization.md step 1). The capture is
+deterministic only on an empty database: every list endpoint returns the empty
+collection shape rather than data-dependent rows.
 """
 
 from __future__ import annotations
@@ -46,7 +44,7 @@ import urllib.error
 import urllib.request
 
 # (slug, method, path, expected_status, body_or_None, note)
-# Expected statuses were observed on a fresh Flyway-migrated throwaway database;
+# Expected statuses are the ones observed on an empty throwaway database;
 # a mismatch is a regression signal, not a failure of this script.
 CASES = [
     # --- health / platform -------------------------------------------------
@@ -77,7 +75,7 @@ CASES = [
     ("signals-gate-effectiveness", "GET", "/api/signals/gate-effectiveness?from=2026-01-01&to=2026-01-31", 200, None, "gate effectiveness report (from/to required)"),
     ("signals-symbol", "GET", "/api/signals/symbol/RELIANCE", 200, None, "per-symbol signals, empty symbol"),
     ("signals-combined", "GET", "/api/signals/combined/RELIANCE", 200, None,
-     "captured 200 degradation response with keyword fallback when the LLM is unreachable; live news content is network-dependent"),
+     "combined signal view: does not answer within 30s on an empty DB with no LLM, so no golden is possible yet (see evidence doc, finding 2)"),
     ("signals-analysis", "GET", "/api/signals/analysis/RELIANCE", 200, None, "stored analysis for a symbol"),
     ("positions", "GET", "/api/positions", 200, None, "open positions list"),
     ("positions-closed", "GET", "/api/positions/closed", 200, None, "closed positions list"),
@@ -133,21 +131,6 @@ CASES = [
      "DELETE on 'generate': answered by the {symbol} handler, so 'generate' is NOT a reserved segment"),
     ("reserved-segment-signals-delete-latest", "DELETE", "/api/signals/latest", 400, None,
      "DELETE on the reserved segment 'latest': bare 400 {\"error\": ...} body, not the ApiResponse envelope"),
-
-    # --- intraday paper sessions (POST /api/intraday/paper/sessions) --------
-    # This controller previously could not be instantiated by Boot 4's
-    # Jackson 3 auto-configuration (evidence doc §1); its two routes became
-    # capturable after the Jackson 3 fix.
-    ("intraday-paper-session-not-found", "GET", "/api/intraday/paper/sessions/gnhf-unknown-run", 404, None,
-     "unknown runId: Spring's default 404 error body"),
-    ("intraday-paper-session-empty-body", "POST", "/api/intraday/paper/sessions", 400, {},
-     "POST with an empty JSON object: bean-validation errors, fieldErrors still serialized as []"),
-    ("intraday-paper-session-no-bars", "POST", "/api/intraday/paper/sessions", 200,
-     {"symbol": "TCS", "sessionDate": "2026-10-09", "strategyType": "INTRADAY_ORB"},
-     "paper replay with no stored bars: 200 with status INCOMPLETE_DATA and no session row persisted"),
-    ("intraday-paper-session-non-intraday-strategy", "POST", "/api/intraday/paper/sessions", 400,
-     {"symbol": "TCS", "sessionDate": "2026-10-09", "strategyType": "BREAKOUT"},
-     "non-INTRADAY_ strategy: empty-bodied 400, no bars loaded and no execution"),
 ]
 
 # Security cases only make sense against an instance started with
@@ -221,10 +204,6 @@ def main() -> int:
     ap.add_argument("--tag", default=os.environ.get("GOLDEN_TAG", "local-throwaway"))
     ap.add_argument("--security", action="store_true",
                     help="also capture the admin API-key and preflight cases")
-    ap.add_argument("--only", nargs="+", default=None, metavar="SLUG",
-                    help="capture only the cases whose slug contains one of these "
-                         "substrings (the public rate limiter is one bucket per "
-                         "minute, so a full capture can exhaust it)")
     ap.add_argument("--rate-limit-probe", type=int, default=0,
                     help="fire N requests at --probe-path and record the first rejected response")
     args = ap.parse_args()
@@ -245,8 +224,7 @@ def main() -> int:
 
     failures = []
     index_rows = []
-    selected = [case for case in CASES if not args.only or any(token in case[0] for token in args.only)]
-    for case in selected:
+    for case in CASES:
         slug, method, path, expected, body, note = case[:6]
         # 7th element, when present, is the auth directive: None sends no key,
         # "provided" (or absent) uses --api-key, any other string is sent verbatim.

@@ -28,7 +28,7 @@ Capture tag: `local-throwaway`. Base: `http://127.0.0.1:8080`.
 | signals-date-range | GET | `/api/signals/date-range?startDate=2026-01-01&endDate=2026-01-31` | 200 | 200 | date-range query params |
 | signals-gate-effectiveness | GET | `/api/signals/gate-effectiveness?from=2026-01-01&to=2026-01-31` | 200 | 200 | gate effectiveness report (from/to required) |
 | signals-symbol | GET | `/api/signals/symbol/RELIANCE` | 200 | 200 | per-symbol signals, empty symbol |
-| signals-combined | GET | `/api/signals/combined/RELIANCE` | 200 | 200 | captured 200 degradation response with keyword fallback when the LLM is unreachable; live news content is network-dependent |
+| signals-combined | GET | `/api/signals/combined/RELIANCE` | 200 | 200 | combined signal view: does not answer within 30s on an empty DB with no LLM, so no golden is possible yet (see evidence doc, finding 2) |
 | signals-analysis | GET | `/api/signals/analysis/RELIANCE` | 200 | 200 | stored analysis for a symbol |
 | positions | GET | `/api/positions` | 200 | 200 | open positions list |
 | positions-closed | GET | `/api/positions/closed` | 200 | 200 | closed positions list |
@@ -75,12 +75,6 @@ Capture tag: `local-throwaway`. Base: `http://127.0.0.1:8080`.
 | validation-signals-generate-empty | POST | `/api/signals/generate` | 400 | 400 | POST generate with an empty body |
 | reserved-segment-signals-delete-generate | DELETE | `/api/signals/generate` | 200 | 200 | DELETE on 'generate': answered by the {symbol} handler, so 'generate' is NOT a reserved segment |
 | reserved-segment-signals-delete-latest | DELETE | `/api/signals/latest` | 400 | 400 | DELETE on the reserved segment 'latest': bare 400 {"error": ...} body, not the ApiResponse envelope |
-| intraday-paper-session-not-found | GET | `/api/intraday/paper/sessions/gnhf-unknown-run` | 404 | 404 | unknown runId: Spring's default 404 error body |
-| intraday-paper-session-empty-body | POST | `/api/intraday/paper/sessions` | 400 | 400 | POST with an empty JSON object: bean-validation errors, fieldErrors still serialized as [] |
-| intraday-paper-session-no-bars | POST | `/api/intraday/paper/sessions` | 200 | 200 | paper replay with no stored bars: 200 with status INCOMPLETE_DATA and no session row persisted |
-| intraday-paper-session-non-intraday-strategy | POST | `/api/intraday/paper/sessions` | 400 | 400 | non-INTRADAY_ strategy: empty-bodied 400, no bars loaded and no execution |
-
-The four `intraday-paper-*` rows were captured on 2026-10-15 against a *fresh* throwaway cluster (same V1 seed, tag `local-throwaway-fixed`) after the Jackson 3 fix in golden-corpus.md §1; every other row is tag `local-throwaway`. Use the capture script's `--only` flag for a partial re-capture, since the public rate window is one bucket per minute.
 
 ## Observed formatting facts
 

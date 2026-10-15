@@ -48,8 +48,10 @@ commented-out mappings. Counts: 156 live, 13 disabled (8 GpuHub + 4 Upstox + 1 A
   `candidateScan` (candidate scan start, intraday paper scan), `llmAnalysis` (analysis analyze, run-full).
 - **Ad-hoc token gate**: `POST /api/ingestion/reconcile` requires `apply=true` + `ingestion.reconcile.apply.enabled`
   flag + single symbol, and checks optional header `X-Reconcile-Token` (mismatch = 403).
-- **Trace/correlation**: backend emits `x-correlation-id` / `x-request-id` / `request-id` response headers;
-  the dashboard only reads them for error display. No correlation header is sent by the client.
+- **Trace/correlation**: no correlation response header is emitted — `TraceIdFilter` only populates the MDC with
+  `traceId`, `symbol` and `module` (see [security-and-error-handling.md §6](security-and-error-handling.md));
+  the dashboard only reads such headers opportunistically for error display, with a body-field fallback. No
+  correlation header is sent by the client.
 
 ## 4. SSE endpoints (3 found; plan's "five SSE event streams" is inaccurate)
 
@@ -395,7 +397,9 @@ Playwright e2e specs exercise a few of these directly (`/api/sentiment/evaluate/
 - `vite.config.ts` SSE de-buffering (strips Content-Length, forces keep-alive) is applied to any URL containing
   `/stream` or any `text/event-stream` response — the Go SSE responses must be flush-friendly.
 - The dashboard reads `x-correlation-id` / `x-request-id` / `request-id` response headers for error display and
-  sends none; Go must emit one of these names for parity.
+  sends none. **Correction (recorded in [security-and-error-handling.md §6](security-and-error-handling.md)): the Java
+  backend never emits those headers** — `traceId` exists only as an MDC log field — so the Go port does not need one
+  for parity; adding one is optional and safe because the dashboard falls back to a body field.
 - `/positions` pagination is cosmetic in Java (`total = positions.size()`); Go can paginate properly as long as
   the wire shape `PaginatedResponse<PositionResponse>` is unchanged.
 - Envelope handling differs per call site (`responseContract: 'direct' | 'envelope'`), so the Go port must keep
@@ -413,7 +417,10 @@ Playwright e2e specs exercise a few of these directly (`/api/sentiment/evaluate/
 4. **Error-status inconsistencies to preserve**: 422 (intraday scan), 409 (job run / candidate scan / candidate analysis),
    403 (reconcile token), 200-on-DELETE-with-body, 201 only on strategy-config create, `IllegalArgumentException`
    surfacing as 500 on strategy-config update mismatch (bug preserved by goldens).
-5. **Rate-limit and API-key gates are opt-in** and off by default; parity means off in Go as well.
+5. **Rate-limit and API-key gates are opt-in** and off by default locally, but the **stage profile turns the API key
+   on** and the stage compose file refuses to start without it; Go parity therefore means "same off-by-default
+   developer ergonomics, same enforced-on stage admin boundary" — fully characterized in
+   [security-and-error-handling.md](security-and-error-handling.md).
 
 ## 9. Open items feeding the next Phase 0 steps
 

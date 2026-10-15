@@ -10,14 +10,18 @@ endpoint, with Java classes, Java tests and the planned Go file. Section 3 expan
 one row per `@Scheduled` method, characterized in [scheduled-jobs.md](evidence/scheduled-jobs.md). Section 5 expands
 the observability surface: 45 rows (35 application meters from 11 Java meter classes plus 10
 platform/auto-configured groups), one row per meter or group, characterized in
-[metrics-inventory.md](evidence/metrics-inventory.md). Section 6 lists the areas that are **not yet expanded**
-(entities, indicators/strategies/gates, cross-cutting platform concerns) — while any of those remain area-level rows,
-G0 cannot pass. The area table in §1 is an index for navigation, not a ledger row set.
+[metrics-inventory.md](evidence/metrics-inventory.md). Section 6 expands the six cross-cutting concerns that change
+every response (API-key boundary, public rate window, Resilience4j rate limits, CORS, trace/log correlation, global
+error envelope), characterized in [security-and-error-handling.md](evidence/security-and-error-handling.md).
+Section 7 lists the areas that are **not yet expanded** (entities, indicators/strategies/gates, clients and risk
+controls, scheduling settings) — while any of those remain area-level rows, G0 cannot pass. The area table in §1 is an
+index for navigation, not a ledger row set.
 
 Derived by: full read of all 28 controllers in `backend/api/src/main/java/com/swingtrade/api/controller/`,
 cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`), plus
 the `Counter.builder`/`Timer.builder`/`Gauge.builder`/`meterRegistry.` call sites under `backend/*/src/main`.
-Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-OBS-<NN>` / `F-OBS-P<NN>` (metrics).
+Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-OBS-<NN>` / `F-OBS-P<NN>` (metrics),
+`F-API-SEC-<NN>` (cross-cutting security/error concerns).
 
 ## Row template
 
@@ -71,10 +75,12 @@ the red-test/green/parity commit references stay empty until the TDD loop of [st
 | F-API-DATAEXPORT | `DataExportController` on `/api/data` | 3 | F-API-DATAEXPORT-01 | 1 |
 | F-API-OFF | 13 endpoints commented out in Java (GpuHub, Upstox, Admin) | 5, 6 | F-API-OFF-01…13 | 13 |
 | F-SCHED | 15 `@Scheduled` jobs across api, data, broker, llm | 3, 6 | F-SCHED-01…15 | 15 |
+| F-API-SEC | Cross-cutting `api/config`: admin API-key boundary, public rate window, Resilience4j rate limits, CORS, trace/log correlation, global error envelope | 1, 2-7 | F-API-SEC-01…06 | 6 |
 | F-OBS | 11 Java meter classes (7 `core/metrics`, 3 `api/metrics`, 1 `api/config`) + 10 platform groups | 1, 3-7 | F-OBS-01…35, F-OBS-P01…P10 | 45 |
 
-Endpoint rows: 169. Job rows: 15. Metric rows: 45. Every endpoint row names its Go target file, which is where the
-row's implementation and its red tests land when Phase 1+ starts; the same convention applies to metric rows.
+Endpoint rows: 169. Job rows: 15. Metric rows: 45. Cross-cutting security/error rows: 6. Every endpoint row names its
+Go target file, which is where the row's implementation and its red tests land when Phase 1+ starts; the same
+convention applies to metric and cross-cutting rows.
 
 ## 2. Endpoint rows
 
@@ -329,6 +335,7 @@ what it drives.
 | `@Test` methods | 2461 (plus 1 `@ParameterizedTest`) |
 | `@Disabled` test classes | 6; no individual `@Test` method is disabled |
 | Ledger metric rows | 45 (35 application meters + 10 platform groups) |
+| Ledger cross-cutting security/error rows | 6 (`F-API-SEC-01…06`) |
 | Metric rows with at least one Java test reference | 33 — every `core/metrics` and `api/metrics` row except F-OBS-29 and F-OBS-30 (`PiThermalMetrics` has no test) |
 | Metric rows with no test reference at all | 12 (F-OBS-29, F-OBS-30 and all 10 platform groups; the e2e stage-sanity spec asserts only `application_`/`jvm_` prefixes) |
 | Application metric rows with no production writer | 4 rows / 7 exported series (`trades_duration_seconds_count`,`_sum`, `trades_pnl_seconds_count`,`_sum`, `data_ingestion_duration_seconds_count`,`_sum`, `signals_filtered_total`) |
@@ -427,17 +434,35 @@ recorded reason. `management.metrics.enable.all=true`
 | F-OBS-P09 | metric | `hikaricp_connections_active`, `_idle`, `_pending`, `_connections`, `_acquire`, `_creation`, `_usage` | api | Spring Boot HikariDataSource metrics binder | pool | none | core/metrics/db_pool_metrics.go | not-started |
 | F-OBS-P10 | metric | `resilience4j_*` — expected **absent** | api | com.swingtrade.api.config.Resilience4jConfig, com.swingtrade.llm.config.LayaConfig create every breaker/bulkhead/limiter programmatically with no MeterRegistry binding, despite `resilience4j-micrometer` being on the classpath in api, broker, core, data and llm | — | none | api/metrics/resilience_metrics.go | not-started (expected no series) |
 
-## 6. Remaining expansion (G0 still blocked)
+## 6. Cross-cutting security and error rows (F-API-SEC)
+
+These six concerns are not endpoints: they change the observable response of every one of the 156 live endpoints
+(headers, status codes, bodies), so a port that treats them as "infrastructure later" produces 169 wrong rows at once.
+Full characterization — pipeline order, exact properties and their dev/stage defaults, every header written, the two
+different 429 shapes, the CORS divergence and the 12 findings that constrain the Go implementation — is in
+[security-and-error-handling.md](evidence/security-and-error-handling.md). `Surface` is the path/mechanism the row
+governs; `Settings` lists the property keys that change it.
+
+| ID | Kind | Surface | Java module | Java classes | Settings | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-API-SEC-01 | security | admin API-key boundary on `/api/admin` and `/api/admin/**` (fail-closed 401 + `WWW-Authenticate: X-API-Key`, constant-time compare, OPTIONS exempt) | api | com.swingtrade.api.config.ApiSecurityWebConfig; com.swingtrade.api.config.ApiSecurityInterceptor | `app.security.api-key.enabled`, `app.security.api-key` | com.swingtrade.api.config.ApiSecurityInterceptorTest#protectsAdminRoutesWithConstantTimeApiKeyBoundary, #failsClosedWhenEnforcementIsEnabledWithoutConfiguredKey, #optionsRequestsBypassApiBoundaryForCorsPreflight | api/config/api_security_interceptor.go | not-started |
+| F-API-SEC-02 | security | public fixed-window rate limit for every other `/api/**` request: 1-minute window keyed by remote address, `X-RateLimit-Limit`/`-Remaining` on every response, 429 + `Retry-After` with an empty body, `api.rate.limit.hits` | api | com.swingtrade.api.config.ApiSecurityInterceptor | `app.security.public-rate-limit-per-minute` | com.swingtrade.api.config.ApiSecurityInterceptorTest#limitsPublicRequestsAndExposesHitMetric | api/config/api_security_interceptor.go | not-started |
+| F-API-SEC-03 | security | Resilience4j per-endpoint rate limits `candidateScan`, `llmAnalysis`, `sentimentAnalysis` (5/min, fail fast, 0s timeout) → 429 with an `ErrorResponse` body, distinct from F-API-SEC-02 | api | com.swingtrade.api.controller.AnalysisController; com.swingtrade.api.controller.AnalysisOrchestrationController; com.swingtrade.api.controller.CandidateScanController; com.swingtrade.api.controller.SentimentApiController; com.swingtrade.api.controller.IntradayPaperScanController; com.swingtrade.api.config.GlobalExceptionHandler | `resilience4j.ratelimiter.instances.*` | none (no test exercises the annotation or the `RequestNotPermitted` path) | api/config/resilience_rate_limiter.go | not-started |
+| F-API-SEC-04 | security | CORS on `/api/**`: `CorsFilter` bean with an 11-origin allowlist, 6 methods, 5 request headers, exposed `Authorization`, credentials + 1h preflight; `OPTIONS` bypasses the interceptor | api | com.swingtrade.api.config.CorsConfig | `spring.web.cors.*` (divergent duplicate config, dev and stage) | none in Java tests; the dev stack and the Playwright e2e suite exercise the filter through the Vite proxy's forced `Origin: http://localhost:3003` (`dashboard/vite.config.ts:22`) and the Playwright base URL `http://127.0.0.1:3003` (`dashboard/playwright.config.ts:6`) | api/config/cors.go | not-started |
+| F-API-SEC-05 | security | trace and log correlation: MDC `traceId` (8-char UUID), `module=api`, `symbol` from query params or the last URI segment of `/signals/` and `/positions/`; **no** response header is emitted | api | com.swingtrade.api.config.TraceIdFilter | `CONSOLE_LOG_PATTERN`, `LOG_FILE` | none in Java tests (consumers are `dashboard/src/api/shared.ts:192-200` and the log appenders) | api/config/trace_id_filter.go | not-started |
+| F-API-SEC-06 | security | global error envelope: `ErrorResponse` (status, code, message, offset-less `LocalDateTime` timestamp, path, `fieldErrors: []` always serialized) plus the exception → status/code map, 204 for dead SSE clients, 409 for optimistic locks, 500 fallback | api | com.swingtrade.api.config.GlobalExceptionHandler; com.swingtrade.api.dto.ErrorResponse; com.swingtrade.api.dto.ApiResponse | none | com.swingtrade.api.config.GlobalExceptionHandlerTest#testHandleTypeMismatchReturnsBadRequest, #testHandleIllegalArgumentReturnsBadRequest, #testHandleUnreadableMessageReturnsBadRequest, #testErrorResponseStaticFactoryMethods, #testErrorResponseStaticFactoryMethodsWithPath, #testGlobalExceptionHandlerInstantiates; [@D] com.swingtrade.api.controller.ErrorHandlingTest (5 nested classes, 35 methods) | api/config/global_exception_handler.go | not-started |
+
+## 7. Remaining expansion (G0 still blocked)
 
 These area rows are not yet expanded. Until they are, G0 cannot pass, because the exit criterion is "one row per
-endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3) and metric (§5) surfaces are done.
+endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), metric (§5) and cross-cutting security/error (§6)
+surfaces are done.
 
 | Area | What must be expanded | Source of truth | Rows expected |
 |---|---|---|---|
 | F-DATA-ENTITIES | one row per JPA entity and per repository/store | `backend/data/src/main/java/com/swingtrade/data/entity/` (35 entity files verified) and `repository/`, plus `backend/core/src/main/java/com/swingtrade/domain/` (60 model classes) | 35 entity rows; 39 repository interfaces (the area row's "37" is stale) |
 | F-STRAT-IND | one row per indicator and one per strategy/gate | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 (numeric golden vectors) |
 | F-STRAT-BT | one row per backtest engine, walk-forward, DSR and cost model | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 |
-| F-API-SECURITY | one row per security concern (API key, rate limit, CORS, trace-id, error handler) | `backend/api/src/main/java/com/swingtrade/api/config/ApiSecurityInterceptor.java`, `GlobalExceptionHandler` | 6 rows |
 | F-LLM-*, F-BRK-*, F-DATA-CLIENTS | one row per client, news source, prompt, risk control | `backend/llm/`, `backend/broker/`, `backend/data/client/` | ~40 rows |
 | F-SCHED settings | one row per scheduling-related property | `backend/*/src/main/resources/application*.properties` | ~10 rows |
 

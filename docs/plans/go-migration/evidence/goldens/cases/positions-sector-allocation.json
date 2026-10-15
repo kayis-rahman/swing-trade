@@ -1,0 +1,28 @@
+{
+ "note": "sector allocation",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/positions/sector-allocation"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"allocation\": {},\n \"message\": null,\n \"numberOfSectors\": 0,\n \"totalExposure\": 0\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "74"
+  },
+  "status": 200
+ },
+ "slug": "positions-sector-allocation",
+ "tag": "local-throwaway"
+}

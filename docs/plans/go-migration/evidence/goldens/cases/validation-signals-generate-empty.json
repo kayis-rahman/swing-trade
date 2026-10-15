@@ -1,0 +1,28 @@
+{
+ "note": "POST generate with an empty body",
+ "request": {
+  "body": {},
+  "method": "POST",
+  "path": "/api/signals/generate"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"code\": \"VALIDATION_ERROR\",\n \"fieldErrors\": [],\n \"message\": \"Request body is invalid or unreadable\",\n \"path\": \"/api/signals/generate\",\n \"status\": 400,\n \"timestamp\": \"2026-10-15T07:44:09.762529\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 400,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "35"
+  },
+  "status": 400
+ },
+ "slug": "validation-signals-generate-empty",
+ "tag": "local-throwaway"
+}

@@ -1,0 +1,28 @@
+{
+ "note": "DB health probe",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/health/database"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"components\": {\n  \"database\": {\n   \"description\": \"Database Connection\",\n   \"details\": {\n    \"type\": \"PostgreSQL\",\n    \"version\": \"PostgreSQL 14+\"\n   },\n   \"name\": \"database\",\n   \"responseTimeMs\": null,\n   \"status\": \"UP\"\n  }\n },\n \"status\": \"UP\",\n \"systemInfo\": {\n  \"architecture\": \"aarch64\",\n  \"availableProcessors\": 12,\n  \"freeMemoryMB\": 67,\n  \"javaVersion\": \"21.0.12.1\",\n  \"maxMemoryMB\": 8192,\n  \"osName\": \"Mac OS X\",\n  \"osVersion\": \"27.0.1\",\n  \"totalMemoryMB\": 396\n },\n \"timestamp\": \"2026-10-15T07:43:49.441237\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "97"
+  },
+  "status": 200
+ },
+ "slug": "health-database",
+ "tag": "local-throwaway"
+}

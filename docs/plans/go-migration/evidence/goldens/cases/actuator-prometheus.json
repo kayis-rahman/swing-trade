@@ -1,0 +1,25 @@
+{
+ "note": "Prometheus scrape endpoint",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/actuator/prometheus"
+ },
+ "response": {
+  "body": {
+   "kind": "text",
+   "value": "# HELP api_rate_limit_hits_total  \n# TYPE api_rate_limit_hits_total counter\napi_rate_limit_hits_total{application=\"swing-trade-api\"} 33.0\n# HELP api_request_duration_seconds HTTP API request duration\n# TYPE api_request_duration_seconds summary\napi_request_duration_seconds_count{application=\"swing-trade-api\",method=\"DELETE\",status=\"200\"} 3\napi_request_duration_seconds_sum{application=\"swing-trade-api\",method=\"DELETE\",status=\"200\"} 0.004621333\napi_request_duration_seconds_count{application=\"swing-trade-api\",method=\"DELETE\",status=\"400\"} 3\napi_request_duration_seconds_sum{application=\"swing-trade-api\",method=\"DELETE\",status=\"400\"} 0.001768917\napi_request_duration_seconds_count{application=\"swing-trade-api\",method=\"DELETE\",status=\"429\"} 2\napi_request_duration_seconds_sum{application=\"swing-trade-api\",method=\"DELETE\",status=\"429\"} 9.5292E-5\napi_request_duration_seconds_count{application=\"swing-trade-api\",method=\"GET\",status=\"200\"} 240\napi_request_duration_seconds_sum{application=\"swing-trade-api\",method=\"GET\",status=\"200\"} 46.647137967\napi_request_duration_seconds_count{application=\"swing-trade-api\",method=\"GET\",status=\"400\"} 6\napi_request_duration_seconds_sum{application=\"swing-trade-a\n...TRUNCATED"
+  },
+  "body_truncated": true,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "1448547",
+   "Content-Type": "text/plain;version=0.0.4;charset=utf-8",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT"
+  },
+  "status": 200
+ },
+ "slug": "actuator-prometheus",
+ "tag": "local-throwaway"
+}

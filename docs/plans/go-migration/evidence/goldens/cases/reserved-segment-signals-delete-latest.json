@@ -1,0 +1,28 @@
+{
+ "note": "DELETE on the reserved segment 'latest': bare 400 {\"error\": ...} body, not the ApiResponse envelope",
+ "request": {
+  "body": null,
+  "method": "DELETE",
+  "path": "/api/signals/latest"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"error\": \"'latest' is a reserved path segment, not a stock symbol\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 400,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "33"
+  },
+  "status": 400
+ },
+ "slug": "reserved-segment-signals-delete-latest",
+ "tag": "local-throwaway"
+}

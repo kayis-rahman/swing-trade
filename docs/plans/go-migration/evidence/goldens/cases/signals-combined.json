@@ -1,0 +1,28 @@
+{
+ "note": "combined signal view: does not answer within 30s on an empty DB with no LLM, so no golden is possible yet (see evidence doc, finding 2)",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/signals/combined/RELIANCE"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"analysisDate\": \"2026-10-15\",\n \"sentimentAnalysis\": {\n  \"analyzedAt\": \"2026-10-15\",\n  \"articleCount\": 10,\n  \"confidence\": 0.5,\n  \"score\": \"NEUTRAL\",\n  \"summary\": \"Mixed signals: 0 positive, 0 negative, 10 neutral\",\n  \"symbol\": \"RELIANCE\"\n },\n \"signalType\": null,\n \"symbol\": \"RELIANCE\",\n \"technicalAnalysis\": null\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "80"
+  },
+  "status": 200
+ },
+ "slug": "signals-combined",
+ "tag": "local-throwaway"
+}

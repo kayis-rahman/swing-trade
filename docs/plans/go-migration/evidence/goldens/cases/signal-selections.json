@@ -1,0 +1,28 @@
+{
+ "note": "operator signal selections",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/signal-selections"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "[]"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "2",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "45"
+  },
+  "status": 200
+ },
+ "slug": "signal-selections",
+ "tag": "local-throwaway"
+}

@@ -1,0 +1,28 @@
+{
+ "note": "evaluation job status",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/sentiment/evaluate/status"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"lastCount\": 0,\n  \"lastRun\": null,\n  \"lastStatus\": \"never run\"\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:54.370013\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "60"
+  },
+  "status": 200
+ },
+ "slug": "sentiment-evaluate-status",
+ "tag": "local-throwaway"
+}

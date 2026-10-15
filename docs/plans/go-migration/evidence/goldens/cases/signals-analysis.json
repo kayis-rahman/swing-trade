@@ -1,0 +1,28 @@
+{
+ "note": "stored analysis for a symbol",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/signals/analysis/RELIANCE"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"analysisDate\": \"2026-10-15\",\n \"indicators\": [],\n \"signal\": \"TECHNICAL\",\n \"symbol\": \"RELIANCE\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "79"
+  },
+  "status": 200
+ },
+ "slug": "signals-analysis",
+ "tag": "local-throwaway"
+}

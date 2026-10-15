@@ -1,0 +1,28 @@
+{
+ "note": "discord settings",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/settings/discord"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"discord.webhook.enabled\": \"false\",\n  \"discord.webhook.url\": \"\"\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:49.472887\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "88"
+  },
+  "status": 200
+ },
+ "slug": "settings-discord",
+ "tag": "local-throwaway"
+}

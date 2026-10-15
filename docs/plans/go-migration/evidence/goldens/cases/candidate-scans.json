@@ -1,0 +1,28 @@
+{
+ "note": "candidate scan list",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/candidate-scans"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "[]"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "2",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "48"
+  },
+  "status": 200
+ },
+ "slug": "candidate-scans",
+ "tag": "local-throwaway"
+}

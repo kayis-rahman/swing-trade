@@ -1,0 +1,30 @@
+{
+ "note": "OPTIONS preflight is exempt from the API-key gate and returns CORS headers",
+ "request": {
+  "body": null,
+  "method": "OPTIONS",
+  "path": "/api/admin/health"
+ },
+ "response": {
+  "body": {
+   "kind": "empty",
+   "value": ""
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Access-Control-Allow-Credentials": "true",
+   "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+   "Access-Control-Allow-Origin": "http://localhost:3000",
+   "Access-Control-Expose-Headers": "Authorization",
+   "Access-Control-Max-Age": "3600",
+   "Connection": "close",
+   "Content-Length": "0",
+   "Date": "Thu, 15 Oct 2026 02:23:38 GMT",
+   "Vary": "Origin"
+  },
+  "status": 200
+ },
+ "slug": "admin-options-preflight-no-key",
+ "tag": "local-throwaway-security"
+}

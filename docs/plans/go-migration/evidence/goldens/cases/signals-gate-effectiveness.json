@@ -1,0 +1,28 @@
+{
+ "note": "gate effectiveness report (from/to required)",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/signals/gate-effectiveness?from=2026-01-01&to=2026-01-31"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"auditCount\": 0,\n \"byRegime\": {},\n \"byStrategy\": {},\n \"from\": \"2026-01-01\",\n \"regime\": null,\n \"strategy\": null,\n \"symbol\": null,\n \"to\": \"2026-01-31\",\n \"verdicts\": {}\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "82"
+  },
+  "status": 200
+ },
+ "slug": "signals-gate-effectiveness",
+ "tag": "local-throwaway"
+}

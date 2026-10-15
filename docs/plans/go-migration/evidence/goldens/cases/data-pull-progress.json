@@ -1,0 +1,28 @@
+{
+ "note": "pull progress",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/data/pull/progress"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"message\": \"No active pull found\",\n  \"status\": \"no_active_pull\"\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:54.385257\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "53"
+  },
+  "status": 200
+ },
+ "slug": "data-pull-progress",
+ "tag": "local-throwaway"
+}

@@ -1,0 +1,28 @@
+{
+ "note": "per-symbol strategy matrix",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/symbols/RELIANCE/strategy-matrix"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"strategies\": [\n  {\n   \"closedTrades\": 0,\n   \"latestConfidence\": null,\n   \"latestSignal\": null,\n   \"latestSignalDate\": null,\n   \"mode\": \"SELECTED\",\n   \"openPosition\": null,\n   \"realizedPnl\": 0,\n   \"strategyType\": \"TOURNAMENT\",\n   \"variantId\": \"selected\",\n   \"winRate\": null\n  }\n ],\n \"symbol\": \"RELIANCE\",\n \"tournaments\": []\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "260",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "43"
+  },
+  "status": 200
+ },
+ "slug": "symbol-strategy-matrix",
+ "tag": "local-throwaway"
+}

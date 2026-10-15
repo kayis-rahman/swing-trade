@@ -1,0 +1,28 @@
+{
+ "note": "paper portfolio list",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/paper-portfolios"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "[\n {\n  \"currentCapital\": 10000000.0,\n  \"initialCapital\": 10000000.0,\n  \"openPositionCount\": 0,\n  \"portfolioId\": \"default\",\n  \"realizedPnl\": 0.0\n }\n]"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "126",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "46"
+  },
+  "status": 200
+ },
+ "slug": "paper-portfolios",
+ "tag": "local-throwaway"
+}

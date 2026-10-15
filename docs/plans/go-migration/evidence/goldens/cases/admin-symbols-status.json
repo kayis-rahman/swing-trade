@@ -1,0 +1,26 @@
+{
+ "note": "symbol universe status",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/admin/symbols/status"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"count\": 0\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:49.467071\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin"
+  },
+  "status": 200
+ },
+ "slug": "admin-symbols-status",
+ "tag": "local-throwaway"
+}

@@ -1,0 +1,28 @@
+{
+ "note": "strategy report",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/strategy-report"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"from\": \"2026-09-15\",\n \"to\": \"2026-10-15\",\n \"totals\": {\n  \"avgRegretPct\": null,\n  \"blocked\": 0,\n  \"executed\": 0,\n  \"pending\": 0,\n  \"selectedPnl\": 0.0,\n  \"selectedTradesClosed\": 0,\n  \"tournaments\": 0\n },\n \"variants\": []\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "181",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "67"
+  },
+  "status": 200
+ },
+ "slug": "strategy-report",
+ "tag": "local-throwaway"
+}

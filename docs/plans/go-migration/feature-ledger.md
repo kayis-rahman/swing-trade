@@ -12,10 +12,11 @@ the observability surface: 45 rows (35 application meters from 11 Java meter cla
 platform/auto-configured groups), one row per meter or group, characterized in
 [metrics-inventory.md](evidence/metrics-inventory.md). Section 6 expands the six cross-cutting concerns that change
 every response (API-key boundary, public rate window, Resilience4j rate limits, CORS, trace/log correlation, global
-error envelope), characterized in [security-and-error-handling.md](evidence/security-and-error-handling.md).
-Section 7 lists the areas that are **not yet expanded** (entities, indicators/strategies/gates, clients and risk
-controls, scheduling settings) — while any of those remain area-level rows, G0 cannot pass. The area table in §1 is an
-index for navigation, not a ledger row set.
+error envelope), characterized in [security-and-error-handling.md](evidence/security-and-error-handling.md). Section 7
+adds nine wire-format rows confirmed from a live run — including the finding that **the API at HEAD does not start**
+(F-API-FMT-01), which gates every runtime artifact in this plan. Section 8 lists the areas that are **not yet
+expanded** (entities, indicators/strategies/gates, clients and risk controls, scheduling settings) — while any of
+those remain area-level rows, G0 cannot pass. The area table in §1 is an index for navigation, not a ledger row set.
 
 Derived by: full read of all 28 controllers in `backend/api/src/main/java/com/swingtrade/api/controller/`,
 cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`), plus
@@ -76,11 +77,12 @@ the red-test/green/parity commit references stay empty until the TDD loop of [st
 | F-API-OFF | 13 endpoints commented out in Java (GpuHub, Upstox, Admin) | 5, 6 | F-API-OFF-01…13 | 13 |
 | F-SCHED | 15 `@Scheduled` jobs across api, data, broker, llm | 3, 6 | F-SCHED-01…15 | 15 |
 | F-API-SEC | Cross-cutting `api/config`: admin API-key boundary, public rate window, Resilience4j rate limits, CORS, trace/log correlation, global error envelope | 1, 2-7 | F-API-SEC-01…06 | 6 |
+| F-API-FMT | Wire format confirmed from the live system: JSON envelopes, `LocalDateTime`/`BigDecimal`/enum/null encoding, `text/csv` export, springdoc OpenAPI surface, HEAD startup blocker | 1, 2-7 | F-API-FMT-01…09 | 9 |
 | F-OBS | 11 Java meter classes (7 `core/metrics`, 3 `api/metrics`, 1 `api/config`) + 10 platform groups | 1, 3-7 | F-OBS-01…35, F-OBS-P01…P10 | 45 |
 
-Endpoint rows: 169. Job rows: 15. Metric rows: 45. Cross-cutting security/error rows: 6. Every endpoint row names its
-Go target file, which is where the row's implementation and its red tests land when Phase 1+ starts; the same
-convention applies to metric and cross-cutting rows.
+Endpoint rows: 169. Job rows: 15. Metric rows: 45. Cross-cutting security/error rows: 6. Wire-format rows: 9.
+Every endpoint row names its Go target file, which is where the row's implementation and its red tests land when
+Phase 1+ starts; the same convention applies to metric, cross-cutting and wire-format rows.
 
 ## 2. Endpoint rows
 
@@ -452,11 +454,31 @@ governs; `Settings` lists the property keys that change it.
 | F-API-SEC-05 | security | trace and log correlation: MDC `traceId` (8-char UUID), `module=api`, `symbol` from query params or the last URI segment of `/signals/` and `/positions/`; **no** response header is emitted | api | com.swingtrade.api.config.TraceIdFilter | `CONSOLE_LOG_PATTERN`, `LOG_FILE` | none in Java tests (consumers are `dashboard/src/api/shared.ts:192-200` and the log appenders) | api/config/trace_id_filter.go | not-started |
 | F-API-SEC-06 | security | global error envelope: `ErrorResponse` (status, code, message, offset-less `LocalDateTime` timestamp, path, `fieldErrors: []` always serialized) plus the exception → status/code map, 204 for dead SSE clients, 409 for optimistic locks, 500 fallback | api | com.swingtrade.api.config.GlobalExceptionHandler; com.swingtrade.api.dto.ErrorResponse; com.swingtrade.api.dto.ApiResponse | none | com.swingtrade.api.config.GlobalExceptionHandlerTest#testHandleTypeMismatchReturnsBadRequest, #testHandleIllegalArgumentReturnsBadRequest, #testHandleUnreadableMessageReturnsBadRequest, #testErrorResponseStaticFactoryMethods, #testErrorResponseStaticFactoryMethodsWithPath, #testGlobalExceptionHandlerInstantiates; [@D] com.swingtrade.api.controller.ErrorHandlingTest (5 nested classes, 35 methods) | api/config/global_exception_handler.go | not-started |
 
-## 7. Remaining expansion (G0 still blocked)
+## 7. Wire-format rows (F-API-FMT)
+
+The nine rules that decide whether every one of the 156 live endpoints is byte-compatible, captured from a live run of
+the API at HEAD against a throwaway database ([golden-corpus.md](evidence/golden-corpus.md), 71 case files in
+[goldens/cases/](evidence/goldens/cases)). They are rows rather than notes because each one is a Go implementation
+decision with a golden attached, and because two of them contradict assumptions this plan previously made.
+`Evidence` names the case file that pins the rule.
+
+| ID | Kind | Rule (as observed on the wire) | Java module | Java classes | Evidence | Go target | Status |
+|---|---|---|---|---|---|---|---|
+| F-API-FMT-01 | startup-blocker | **HEAD does not start**: `IntradayPaperController` constructor parameter 4 needs `com.fasterxml.jackson.databind.ObjectMapper`, which no Boot 4 auto-configuration registers; JVM exits 1 after a silent graceful shutdown. Introduced by 2ce79be0 (#136); the running stage image is older, so stage is unaffected and any new build is dead on arrival | api | com.swingtrade.api.controller.IntradayPaperController | golden-corpus.md §1 (stack trace + `git log -S` provenance) | n/a — Java ticket; gates every runtime golden | not-started |
+| F-API-FMT-02 | serialization | `LocalDateTime` serializes **without a zone offset** and with microsecond precision (`2026-10-15T07:33:23.818683`); `LocalDate` is `yyyy-MM-dd`. Timezone in play is `Asia/Kolkata` (`-Duser.timezone`), and the offset is never emitted | api | com.swingtrade.api.dto.ApiResponse, ErrorResponse, config/GlobalExceptionHandler | goldens/cases/not-found-unknown-collection.json, goldens-security/cases/admin-200-with-key.json | api/dto/time.go + api/config/json.go | not-started |
+| F-API-FMT-03 | serialization | **`BigDecimal` is emitted as a quoted JSON string, not a number**: `"trading.allocation_per_position":"100000"`, `"trading.stop_loss":"5"`. `double`/`float` are JSON numbers (`"confidence":0.5`); `int`/`long` are unquoted (`"id":12`) | api | com.swingtrade.api.controller.SettingsController (settings map), all DTOs | goldens/cases/settings-trading.json, sentiment-symbol-latest.json | api/dto/decimal.go (json.Marshal on a decimal string type) | not-started |
+| F-API-FMT-04 | envelope | Four response families coexist: `ErrorResponse{code, fieldErrors, message, path, status, timestamp}` (every 4xx), `ApiResponse{data, error, success, timestamp}` (settings, watchlist, admin/health), Spring `Page{content, first, last, pageNumber, pageSize, totalElements, totalPages}` (positions) and bare values (`[]` for signals/latest, `{"cleared":0,"symbol":…}` for the signal deletes) | api | com.swingtrade.api.dto.ApiResponse, ErrorResponse | goldens/cases/{settings, positions, signals-latest}.json plus the other 68 case files in goldens/index.md | api/dto/*.go | not-started |
+| F-API-FMT-05 | serialization | Nullable fields are always present with an explicit `null`, never omitted (`"error":null`, `"signalType":null`, `"averageTrade":null` vs `"averageLoss":0` — zero-valued and absent aggregates are distinguishable) | api | com.swingtrade.api.dto.ApiResponse and the DTOs | goldens/cases/positions-performance.json, signals-combined.json | api/dto/*.go (no `omitempty`) | not-started |
+| F-API-FMT-06 | error map | Statuses actually emitted: 400 for a missing query/request parameter (`Missing required parameter: symbol`), for a range guard (`reconciliation range must be at most 10 calendar days`), for an unknown id (`Strategy variant not found: …`) **and** for the reserved signal path segment (bare `{"error": …}` with no envelope); 404 for an unmapped path; 401+`WWW-Authenticate: X-API-Key` with an empty body; 429+`Retry-After` with an empty body; 500 leaks an internal message through the legacy `ApiResponse` envelope | api | com.swingtrade.api.config.GlobalExceptionHandler; com.swingtrade.api.controller.SignalController | goldens/cases/{validation-watchlist-empty-body, ingestion-reconcile-out-of-range, strategy-config-variant, reserved-segment-signals-delete-latest, not-found-unknown-collection, admin-data-status}.json, goldens-security/cases/admin-401-no-key.json | api/config/global_exception_handler.go | not-started |
+| F-API-FMT-07 | rate limit | The public 429 body is empty and carries `Retry-After: 17` (remaining window seconds), `X-RateLimit-Limit: 100`, `X-RateLimit-Remaining: 0`, `Connection: close`. The window is one counter per JVM across all paths and methods: the probe was rejected on attempt 33 because a preceding 71-case capture had already used 67 requests | api | com.swingtrade.api.config.ApiSecurityInterceptor | goldens/cases/rate-limit-429.json | api/config/api_security_interceptor.go | not-started |
+| F-API-FMT-08 | openapi | Live springdoc 3.1.1 export: **142 path keys carrying exactly 156 operations** (13 multi-method paths) and 109 component schemas — it agrees exactly with the 156-mapping static inventory, which cross-validates both. Export lives at `/api-docs` (no `/v3/api-docs` alias) and is disabled in the stage profile, so nothing in stage consumes it | api | springdoc-openapi-starter-webmvc-ui | goldens/openapi3.json | api/openapi (decide whether the Go port ships one) | not-started |
+| F-API-FMT-09 | non-json | `GET /api/data/export` answers `text/csv`, not JSON, and its header row ends with a trailing space (`symbol,date,open,high,low,close,volume␠`) | api | com.swingtrade.api.controller.DataExportController | goldens/cases/data-export.json | api/controller/data_export.go | not-started |
+
+## 8. Remaining expansion (G0 still blocked)
 
 These area rows are not yet expanded. Until they are, G0 cannot pass, because the exit criterion is "one row per
-endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), metric (§5) and cross-cutting security/error (§6)
-surfaces are done.
+endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), metric (§5), cross-cutting security/error (§6)
+and wire-format (§7) surfaces are done.
 
 | Area | What must be expanded | Source of truth | Rows expected |
 |---|---|---|---|

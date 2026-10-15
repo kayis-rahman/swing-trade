@@ -1,0 +1,28 @@
+{
+ "note": "per-symbol read for a symbol with no rows (empty list, not 404)",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/signals/symbol/UNKNOWN"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "[]"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "39"
+  },
+  "status": 200
+ },
+ "slug": "not-found-signals-symbol",
+ "tag": "local-throwaway"
+}

@@ -1,0 +1,28 @@
+{
+ "note": "successful response still carries X-RateLimit-Limit/Remaining",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/signals/latest"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "[]"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:23:38 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100000",
+   "X-RateLimit-Remaining": "99999"
+  },
+  "status": 200
+ },
+ "slug": "rate-limit-headers-on-success",
+ "tag": "local-throwaway-security"
+}

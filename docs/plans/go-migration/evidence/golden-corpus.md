@@ -9,7 +9,7 @@ the API at HEAD (`15766cca`) against an isolated throwaway database on this mach
 |---|---|
 | [scripts/capture-goldens.py](scripts/capture-goldens.py) | the reproducible capture script |
 | [goldens/openapi3.json](goldens/openapi3.json) | the live springdoc 3.1 export (142 paths, 109 schemas) |
-| [goldens/index.md](goldens/index.md) | generated index of the 71 default-profile cases + the rate-limit probe |
+| [goldens/index.md](goldens/index.md) | generated index of the 71 default-profile cases + the rate-limit probe, plus the 4 `intraday-paper-*` cases captured after the fix |
 | [goldens/cases/*.json](goldens/cases) | per-case request, status, full response headers and body |
 | [goldens-security/](goldens-security) | the 5 security cases captured against an API-key-enabled instance |
 
@@ -29,8 +29,9 @@ psql -h 127.0.0.1 -p 55432 -U postgres -c "create database swingtrade_golden own
 #    run and is not part of any diff.
 cd backend && ./gradlew :api:bootJar --offline -q
 
-# 3. run it. The command below EXITS 1 at HEAD (finding 1) unless the Jackson 2 ObjectMapper bean is
-#    supplied from outside the product tree; that external launcher is what produced this corpus.
+# 3. run it. The Jackson 3 fix in §1 landed after the first capture, so a plain
+#    `java -jar` now starts the API; the very first corpus (tag `local-throwaway`) was
+#    captured with an external launcher that registered the missing Jackson 2 bean.
 #    Scheduling and the LLM are disabled and the LLM base URL points at a dead local port: without
 #    llm.backend=local the local profile's default pi_ssh backend SSHes to the Pi and tries to
 #    START llama-server (finding 7).
@@ -45,6 +46,12 @@ python3 docs/plans/go-migration/evidence/scripts/capture-goldens.py \
   --base http://127.0.0.1:8080 --out docs/plans/go-migration/evidence/goldens \
   --tag local-throwaway --rate-limit-probe 130
 
+# 4b. partial re-capture of a few cases (the public rate window is one bucket per minute,
+#     so a full capture can exhaust it): add --only with slug substrings
+python3 docs/plans/go-migration/evidence/scripts/capture-goldens.py \
+  --base http://127.0.0.1:8080 --out /tmp/goldens-intraday \
+  --tag local-throwaway-fixed --only intraday-paper
+
 # 5. the security cases need a second instance with the gate on (as stage runs it)
 java ... --server.port=8081 --app.security.api-key.enabled=true \
   --app.security.api-key=gnhf-test-key --app.security.public-rate-limit-per-minute=100000
@@ -55,11 +62,11 @@ python3 docs/plans/go-migration/evidence/scripts/capture-goldens.py --base http:
 The script exits non-zero when a case does not return the status recorded here, so it doubles
 as a regression check for the Go port.
 
-## 1. BLOCKING FINDING: the API at HEAD does not start
+## 1. FINDING, NOW FIXED: the API at HEAD did not start
 
-`IntradayPaperController` requires a `com.fasterxml.jackson.databind.ObjectMapper` bean
+`IntradayPaperController` required a `com.fasterxml.jackson.databind.ObjectMapper` bean
 (constructor parameter 4) that no Spring Boot 4.1.1 auto-configuration provides, so
-`preInstantiateSingletons` aborts and the JVM exits with code 1 after a *silent* graceful
+`preInstantiateSingletons` aborted and the JVM exited with code 1 after a *silent* graceful
 shutdown (Hikari + Tomcat stop, no `APPLICATION FAILED TO START` line, because the failure
 is reported by Boot's `LoggingFailureAnalysisReporter` on the application logger and the
 process is torn down before anything else useful is printed):
@@ -77,20 +84,39 @@ Caused by: NoSuchBeanDefinitionException: No qualifying bean of type
 - Both Jackson 2 (2.21.5) and Jackson 3 (3.1.5) are on the runtime classpath, but Boot 4's
   `JacksonAutoConfiguration` (spring-boot-jackson 4.1.1) only registers the Jackson 3
   `tools.jackson.databind.ObjectMapper`/`JsonMapper`; there is no Jackson 2 bean source.
+  `javap` on the auto-configuration class confirms the only mapper bean it declares is
+  `tools.jackson.databind.json.JsonMapper jacksonJsonMapper(JsonMapper$Builder)`.
 - The container that is running stage was built 2026-10-10 from `fe3cc3f1` and therefore
-  predates #136, which is why stage still looks healthy. Any build from HEAD is dead on
+  predates #136, which is why stage still looks healthy. Any build from HEAD was dead on
   arrival: `dev-stack.sh` and `infra/Dockerfile` both start the same entry point.
-- Tests do not catch it: `IntradayPaperControllerTest` instantiates the controller directly
+- Tests did not catch it: `IntradayPaperControllerTest` instantiates the controller directly
   (per the iteration-1 inventory) and the three full-context `@SpringBootTest` classes are
   `@Disabled`, so nothing ever refreshes the context in CI.
 - `SettingsAwareChatModels` (llm) also imports Jackson 2's ObjectMapper but builds its own
   static instance, so it is unaffected.
 
-The capture above was produced by registering the missing bean from an external launcher
-(`/tmp`, outside the product tree) — a read-only workaround for characterization only. For
-Phase 0 to complete against HEAD, someone must land the product fix (inject nothing and build
-the mapper where it is used, or use `Jackson2ObjectMapperBuilder`); this is a Java-side ticket,
-recorded here because it gates every runtime evidence artifact in this plan.
+### Fix landed (this iteration)
+
+The controller now injects the Jackson 3 `tools.jackson.databind.ObjectMapper` bean Boot 4
+does register — the same convention `BacktestController:51` and `NewsIngestionService` already
+use — and catches `tools.jackson.core.JacksonException` instead of the Jackson 2 checked
+`JsonProcessingException`. Nothing about the wire shape changes: the mapper that persists
+`resultJson` is the mapper Spring uses to serialize HTTP responses, so the read path round-trips.
+
+Verified by rebuilding `:api:bootJar` and running the real jar against a fresh throwaway
+cluster (a *new* cluster, not the one used for the first capture — `/tmp/throwaway9`, port
+55432): the JVM stays up, `GET /api/health` answers 200, and both previously-unreachable
+routes behave (`goldens/cases/intraday-paper-*.json`, tag `local-throwaway-fixed`):
+
+| Request | Status | Body |
+|---|---|---|
+| `GET /api/intraday/paper/sessions/gnhf-unknown-run` | 404 | Spring's default `ErrorResponse` |
+| `POST /api/intraday/paper/sessions` with `{}` | 400 | `VALIDATION_ERROR` listing `sessionDate`, `symbol`, `strategyType` — with `fieldErrors:[]` |
+| `POST .../sessions` with `{"symbol":"TCS","sessionDate":"2026-10-09","strategyType":"INTRADAY_ORB"}` | 200 | `status: "INCOMPLETE_DATA"`, `expectedBars: 25`, `receivedBars: 0` (no stored bars, no row persisted) |
+| `POST .../sessions` with `strategyType: "BREAKOUT"` (non-`INTRADAY_`) | 400 | **empty body** — `ResponseEntity.badRequest().build()`, a 400 with no envelope at all |
+
+The two empty-bodied 400s are a third 400 shape on this API and the Go port's handler must
+return a body-less 400 rather than the `ErrorResponse` envelope.
 
 ## 2. Step 2: the live OpenAPI export
 
@@ -116,7 +142,7 @@ recorded here because it gates every runtime evidence artifact in this plan.
 |---|---|
 | `LocalDateTime` has **no zone offset** and **microsecond precision** (6 fractional digits) | `"timestamp":"2026-10-15T07:33:23.818683"` on every error envelope, `settings`, `positions-performance` |
 | `LocalDate` is a bare `yyyy-MM-dd` | `"analyzedAt":"2026-10-15"`, `"date":"2026-10-15"` |
-| **`BigDecimal` is emitted as a quoted JSON string, not a number** | `settings-trading`: `"trading.allocation_per_position":"100000"`, `"trading.initial_capital":"500000"`, `"trading.stop_loss":"5"`, `"trading.take_profit":"15"` — this contradicts the plan's "BigDecimal as number" assumption and is the single highest-risk parity rule for the Go port |
+| `BigDecimal` is emitted as a **JSON number**, never quoted, and keeps its scale | `paper-portfolios`: `"currentCapital":10000000.0`, `"initialCapital":10000000.0`, `"realizedPnl":0.0` (entity fields typed `BigDecimal`; a `double` would print `1.0E7`); `intraday-paper-session-no-bars`: `"initialCapital":100000`, `"finalCapital":100000`, `"netPnl":0`. **Correction to the first capture**, which claimed BigDecimal was quoted because `settings-trading` shows `"trading.initial_capital":"500000"` — that endpoint returns `Map<String,String>` built from `app_settings`, so those values are Java Strings, not BigDecimal |
 | `double`/`float` values are emitted as JSON numbers | `sentiment/RELIANCE/latest`: `"confidence":0.5` |
 | `int`/`long` are unquoted numbers, ids included | `"id":12`, `"articleCount":10`, `"defaultValue":20` |
 | Enums are upper-case strings | `"score":"NEUTRAL"`, `"type":"INT"` |

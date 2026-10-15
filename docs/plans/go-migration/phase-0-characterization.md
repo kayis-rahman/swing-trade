@@ -42,13 +42,19 @@ repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 
 | 2026-10-14 | 12 (cross-cutting) | Six cross-cutting security/error concerns expanded (admin API-key boundary, public fixed-window rate limit, Resilience4j endpoint rate limits, CORS, trace/log correlation, global error envelope) with dev/stage property defaults, every emitted header, both 429 shapes and 12 findings; ledger `F-API-SEC` expanded to 6 rows and `F-API-SECURITY` dropped from §7; corrected the earlier claim that the backend emits correlation response headers | [evidence/security-and-error-handling.md](evidence/security-and-error-handling.md), [feature-ledger.md](feature-ledger.md) |
 
-Still outstanding for G0 (in dependency order): golden corpus and OpenAPI export (steps 2 remainder, 4), time/decimal
-formatting rules (5), numeric golden vectors (6), schema snapshot and table ownership sheet (7), runtime confirmation
-of the metrics inventory against the live `/actuator/prometheus` (8, checklist in §7 of the inventory), log-field
-inventory (9), Pi and native-image measurements (10, 11), the runtime half of the scheduling-off test (12a), the
-remaining ledger rows for entities, indicators/strategies, clients/risk controls and scheduling settings (12), the
-test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16). Steps 1 and 4-14 need a
-throwaway stack or Pi hardware that this environment does not provide.
+| 2026-10-15 | 1, 2, 4, 5 | Stood up an isolated throwaway Postgres cluster and ran the real API against it; captured the live springdoc export (142 paths / 156 operations), 71 response goldens plus the 401/429/OPTIONS security goldens and the first confirmed time/decimal/enum/null formatting rules. Found that the API **cannot start at HEAD**: `IntradayPaperController` needs a Jackson 2 `ObjectMapper` bean that Boot 4 no longer supplies (introduced by 2ce79be0/#136); the stage image predates it, which is why stage looks healthy | [evidence/golden-corpus.md](evidence/golden-corpus.md), [evidence/goldens/](evidence/goldens), [evidence/scripts/capture-goldens.py](evidence/scripts/capture-goldens.py) |
+| 2026-10-15 | 7 (first half) | `pg_dump --schema-only` of the throwaway cluster committed as `evidence/schema-snapshot.sql`: 42 tables, 78 indexes, no TimescaleDB extension anywhere, 53 Flyway rows whose versions are not contiguous (V1→V25, V71 missing), and `V1` seeds a non-empty database | [evidence/golden-corpus.md](evidence/golden-corpus.md) §9, [evidence/schema-snapshot.sql](evidence/schema-snapshot.sql) |
+
+Still outstanding for G0 (in dependency order): the product fix for the HEAD startup failure
+(evidence/golden-corpus.md §1 gates every runtime artifact), golden vectors for money paths and the
+three SSE streams, the 409/422 shapes, schema snapshot and table ownership sheet (step 7 — the
+throwaway cluster now makes this possible), runtime confirmation of the metrics inventory against the
+live `/actuator/prometheus` (step 8, checklist in §7 of the inventory), log-field inventory (9), Pi and
+native-image measurements (10, 11), the runtime half of the scheduling-off test (12a), the remaining
+ledger rows for entities, indicators/strategies, clients/risk controls and scheduling settings (12),
+the test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16). A local
+throwaway stack now works (see evidence/golden-corpus.md §0), so steps 4-14 are no longer blocked by
+the environment — only the Pi measurements (10, 11) need hardware.
 
 ## Entry
 Captain authorization (given 2026-10-13). A seeded local or throwaway stack (never shared or stage infrastructure without explicit confirmation).

@@ -14,17 +14,18 @@ Goal: produce the evidence needed for the Gate G0 go/no-go. Read-only against th
 
 | 2026-10-15 | 1, 2, 4, 5 | Stood up an isolated throwaway Postgres cluster and ran the real API against it; captured the live springdoc export (142 paths / 156 operations), 71 response goldens plus the 401/429/OPTIONS security goldens and the first confirmed time/decimal/enum/null formatting rules. Found that the API **cannot start at HEAD**: `IntradayPaperController` needs a Jackson 2 `ObjectMapper` bean that Boot 4 no longer supplies (introduced by 2ce79be0/#136); the stage image predates it, which is why stage looks healthy | [evidence/golden-corpus.md](evidence/golden-corpus.md), [evidence/goldens/](evidence/goldens), [evidence/scripts/capture-goldens.py](evidence/scripts/capture-goldens.py) |
 | 2026-10-15 | 7 (first half) | `pg_dump --schema-only` of the throwaway cluster committed as `evidence/schema-snapshot.sql`: 42 tables, 78 indexes, no TimescaleDB extension anywhere, 53 Flyway rows whose versions are not contiguous (V1→V25, V71 missing), and `V1` seeds a non-empty database | [evidence/golden-corpus.md](evidence/golden-corpus.md) §9, [evidence/schema-snapshot.sql](evidence/schema-snapshot.sql) |
+| 2026-10-15 | 1, 4, 5 (startup blocker fixed) | **Landed the Java-side product fix for the HEAD startup failure** (Jackson 2 `ObjectMapper` → the Jackson 3 bean Boot 4 registers, same convention as `BacktestController`), rebuilt the jar and ran it against a fresh throwaway cluster: the API starts and answers, and the two routes of the fixed controller produced 4 new goldens (404 on an unknown runId, 400 empty body, 200 `INCOMPLETE_DATA`, 400 with no body at all). Corrected the `BigDecimal`-as-string claim (it is an unquoted, scale-preserving number) and added 10 wire-format rows to the ledger | [evidence/golden-corpus.md](evidence/golden-corpus.md) §1, [goldens/cases/intraday-paper-\*](evidence/goldens/cases), [feature-ledger.md](feature-ledger.md) §7 |
 
-Still outstanding for G0 (in dependency order): the product fix for the HEAD startup failure
-(evidence/golden-corpus.md §1 gates every runtime artifact), golden vectors for money paths and the
-three SSE streams, the 409/422 shapes, schema snapshot and table ownership sheet (step 7 — the
-throwaway cluster now makes this possible), runtime confirmation of the metrics inventory against the
-live `/actuator/prometheus` (step 8, checklist in §7 of the inventory), log-field inventory (9), Pi and
-native-image measurements (10, 11), the runtime half of the scheduling-off test (12a), the remaining
-ledger rows for entities, indicators/strategies, clients/risk controls and scheduling settings (12),
-the test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16). A local
-throwaway stack now works (see evidence/golden-corpus.md §0), so steps 4-14 are no longer blocked by
-the environment — only the Pi measurements (10, 11) need hardware.
+Still outstanding for G0 (in dependency order): golden vectors for money paths and the
+three SSE streams, the 409/422 shapes, the table ownership sheet (step 7 — the throwaway
+cluster makes this possible), runtime confirmation of the metrics inventory against the
+live `/actuator/prometheus` (step 8, checklist in §7 of the inventory), log-field inventory (9),
+Pi and native-image measurements (10, 11 — the only steps that need hardware), the runtime
+half of the scheduling-off test (12a), the remaining ledger rows for entities,
+indicators/strategies, clients/risk controls and scheduling settings (12),
+the test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
+The HEAD startup failure that gated every runtime artifact is fixed and verified, so a local
+throwaway stack now runs the real jar end to end (see evidence/golden-corpus.md §0 and §1).
 
 ## Entry
 Captain authorization (given 2026-10-13). A seeded local or throwaway stack (never shared or stage infrastructure without explicit confirmation).

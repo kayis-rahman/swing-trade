@@ -237,5 +237,7 @@ produce, 2 990 lines.
 | Flyway rows | 53, `max(version) = 77` | the version numbers are **not contiguous**: the file set jumps `V1` → `V25` and skips `V71`, so the goose "no-op V76 baseline" from the cutover decision must preserve these 53 exact rows rather than renumbering, or the schema-history table stops matching the Java history |
 | Seeded data in `V1__swing_trade_schema.sql` | watchlist (20 NSE symbols), `app_settings`, the single `kill_switch` row, the 2026 NSE holiday calendar, one paper-trading portfolio | a "fresh" database is never empty; every empty-collection golden in §5 is therefore a *seeded-empty* state, and the ownership sheet must treat these as write-once baseline rows |
 
-Still owed for step 7: the table ownership sheet (writers, readers, retention, unique keys and the
-ingestion idempotency proof), which is a source-analysis artifact and does not need a database.
+Step 7 is complete: the table ownership sheet (writers, readers, retention, unique keys, foreign
+keys, insert ordering and the ingestion idempotency proof) is in
+[table-ownership.md](table-ownership.md). What still needs a running database is only the row-count
+confirmation of the six tables that have no production writer.

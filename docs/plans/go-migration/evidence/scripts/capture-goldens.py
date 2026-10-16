@@ -77,7 +77,7 @@ CASES = [
     ("signals-gate-effectiveness", "GET", "/api/signals/gate-effectiveness?from=2026-01-01&to=2026-01-31", 200, None, "gate effectiveness report (from/to required)"),
     ("signals-symbol", "GET", "/api/signals/symbol/RELIANCE", 200, None, "per-symbol signals, empty symbol"),
     ("signals-combined", "GET", "/api/signals/combined/RELIANCE", 200, None,
-     "combined signal view: does not answer within 30s on an empty DB with no LLM, so no golden is possible yet (see evidence doc, finding 2)"),
+     "captured 200 degradation response with keyword fallback when the LLM is unreachable; live news content is network-dependent"),
     ("signals-analysis", "GET", "/api/signals/analysis/RELIANCE", 200, None, "stored analysis for a symbol"),
     ("positions", "GET", "/api/positions", 200, None, "open positions list"),
     ("positions-closed", "GET", "/api/positions/closed", 200, None, "closed positions list"),

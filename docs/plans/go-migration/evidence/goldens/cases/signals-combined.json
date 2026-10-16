@@ -1,5 +1,5 @@
 {
- "note": "combined signal view: does not answer within 30s on an empty DB with no LLM, so no golden is possible yet (see evidence doc, finding 2)",
+ "note": "captured 200 degradation response with keyword fallback when the LLM is unreachable; live news content is network-dependent",
  "request": {
   "body": null,
   "method": "GET",

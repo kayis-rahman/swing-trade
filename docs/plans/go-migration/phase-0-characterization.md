@@ -47,13 +47,14 @@ repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 | 2026-10-15 | 7 (ownership sheet) | **Closed step 7**: the table ownership sheet is complete — 42 tables with the production writer and reader of each (derived from every `JpaRepository` call site in `backend/*/src/main`), the HTTP write surface and scheduled writers per table, all 8 foreign keys and the insert-ordering rules, the keys/uniqueness/idempotency matrix, the file-system state that lives outside Postgres (`backtest.reports.dir`, intraday readiness CSV/MD), and 13 findings — including the ingestion-idempotency proof (`ohlcv_candles` is the only table whose idempotency is database-enforced), 6 tables with no production writer, zero retention jobs, and 3 duplicate-unique-constraint pairs the goose baseline must preserve | [evidence/table-ownership.md](evidence/table-ownership.md), [feature-ledger.md](feature-ledger.md) §8 |
 
 | 2026-10-15 | 1, 4, 5 (startup blocker fixed) | **Landed the Java-side product fix for the HEAD startup failure** (Jackson 2 `ObjectMapper` → the Jackson 3 bean Boot 4 registers, same convention as `BacktestController`), rebuilt the jar and ran it against a fresh throwaway cluster: the API starts and answers, and the two routes of the fixed controller produced 4 new goldens (404 on an unknown runId, 400 empty body, 200 `INCOMPLETE_DATA`, 400 with no body at all). Corrected the `BigDecimal`-as-string claim (it is an unquoted, scale-preserving number) and added 10 wire-format rows to the ledger | [evidence/golden-corpus.md](evidence/golden-corpus.md) §1, [goldens/cases/intraday-paper-\*](evidence/goldens/cases), [feature-ledger.md](feature-ledger.md) §7 |
+| 2026-10-16 | 12 (entity half) | **Ledger `F-DATA-ENTITIES` entity half closed**: 39 rows, one per `@Entity` class (34 data, 3 broker, 1 llm) plus the one dead PK POJO (`OhlcvCandlePK` is a plain class, never referenced by main code); each row carries the access point (repository / store facade / owning service), the key and idempotency contract from §8, the referencing test classes and the Go entity file. 16 of the 38 entities carry a `fromDomain`/`toDomain` bridge to the core domain model (15 in data, both directions except `SignalEntity`'s 3 `fromDomain` overloads; `SynthesisEvaluationEntity` is one-way `toDomain`). Outstanding for this area: 38 repository/store rows and the 60 core domain-model rows | [feature-ledger.md](feature-ledger.md) §9 |
 
 Still outstanding for G0 (in dependency order): golden vectors for money paths and the
 three SSE streams, the 409/422 shapes, runtime confirmation of the metrics inventory against the
 live `/actuator/prometheus` (step 8, checklist in §7 of the inventory), log-field inventory (9),
-Pi and native-image measurements (10, 11 — the only steps that need hardware), the runtime
-half of the scheduling-off test (12a), the remaining ledger rows for entities,
-indicators/strategies, clients/risk controls and scheduling settings (12),
+Pi and native-image measurements (10, 11 - the only steps that need hardware), the runtime
+half of the scheduling-off test (12a), the remaining ledger rows for repositories/stores,
+domain models, indicators/strategies, clients/risk controls and scheduling settings (12),
 the test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
 Step 7 is now complete (snapshot + ownership sheet); the only parts of it that still need the
 running stack are the row counts of the six never-written tables, named in the sheet's last section.

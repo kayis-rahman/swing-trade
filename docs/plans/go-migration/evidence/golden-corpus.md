@@ -3,7 +3,7 @@
 Phase 0 steps 2 (OpenAPI export), 4 (golden request/response pairs) and 5 (time and
 decimal formatting rules). Everything in this document was captured from a real run of
 the API at HEAD (`15766cca`) against an isolated throwaway database on this machine, on
-2026-10-15. No product code was modified.
+2026-10-15. A subsequent Jackson 3 startup fix enabled the final captures; see §1.
 
 | Artifact | What it is |
 |---|---|

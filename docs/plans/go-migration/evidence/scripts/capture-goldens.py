@@ -135,9 +135,9 @@ CASES = [
      "DELETE on the reserved segment 'latest': bare 400 {\"error\": ...} body, not the ApiResponse envelope"),
 
     # --- intraday paper sessions (POST /api/intraday/paper/sessions) --------
-    # This controller is the one that cannot be instantiated by Boot 4's
-    # Jackson 3 auto-configuration (evidence doc §1), so its two routes only
-    # became capturable after the Jackson 3 fix.
+    # This controller previously could not be instantiated by Boot 4's
+    # Jackson 3 auto-configuration (evidence doc §1); its two routes became
+    # capturable after the Jackson 3 fix.
     ("intraday-paper-session-not-found", "GET", "/api/intraday/paper/sessions/gnhf-unknown-run", 404, None,
      "unknown runId: Spring's default 404 error body"),
     ("intraday-paper-session-empty-body", "POST", "/api/intraday/paper/sessions", 400, {},

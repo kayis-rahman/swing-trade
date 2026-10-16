@@ -1,6 +1,6 @@
 # Phase 0: Characterization and baseline (AUTHORIZED)
 
-Goal: produce the evidence needed for the Gate G0 go/no-go. Read-only against the Java system. No product code or dependency changes.
+Goal: produce the evidence needed for the Gate G0 go/no-go. Characterization steps are read-only against the Java system; a separate startup-blocker fix was made to enable runtime evidence collection.
 
 ## Progress log (added by implementation runs; not part of the plan spec)
 

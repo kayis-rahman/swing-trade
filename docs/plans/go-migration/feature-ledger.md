@@ -18,16 +18,20 @@ fixed and verified by running the rebuilt jar**, so every runtime artifact in th
 expands the persistence surface: 42 rows, one per table, from the ownership sheet in
 [evidence/table-ownership.md](evidence/table-ownership.md) — writers, readers, keys and the idempotency mechanism
 per table. Section 9 expands the entity surface: 39 rows, one per `@Entity` class plus the one dead PK POJO,
-with the access point, key contract and Go file per row. Section 10 lists the areas that are **not yet expanded**
-(repository/store rows, core domain models, indicators/strategies/gates, clients and risk controls, scheduling
-settings) — while any of those remain area-level rows, G0 cannot pass. The area table in §1 is an index for
-navigation, not a ledger row set.
+with the access point, key contract and Go file per row. Section 10 expands the persistence-access surface:
+39 rows - the 38 repository interfaces (34 data, 3 broker, 1 llm) plus the `PositionSummaryProjection`
+interface projection, each with its custom-query surface, store facade, direct consumers, Java tests and Go
+file; the 15 store facades ride along as the `Facade / core port` column. Section 11 lists the areas that are
+**not yet expanded** (core domain models, indicators/strategies/gates, backtest engines, clients and risk
+controls, scheduling settings) - while any of those remain area-level rows, G0 cannot pass. The area table in
+§1 is an index for navigation, not a ledger row set.
 
 Derived by: full read of all 28 controllers in `backend/api/src/main/java/com/swingtrade/api/controller/`,
 cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`), plus
 the `Counter.builder`/`Timer.builder`/`Gauge.builder`/`meterRegistry.` call sites under `backend/*/src/main`.
 Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-OBS-<NN>` / `F-OBS-P<NN>` (metrics),
-`F-API-SEC-<NN>` (cross-cutting security/error concerns), `F-DATA-ENT-<NN>` (entities).
+`F-API-SEC-<NN>` (cross-cutting security/error concerns), `F-DATA-ENT-<NN>` (entities), `F-DATA-REPO-<NN>`
+(repository interfaces and the one interface projection).
 
 ## Row template
 
@@ -86,9 +90,10 @@ the red-test/green/parity commit references stay empty until the TDD loop of [st
 | F-OBS | 11 Java meter classes (7 `core/metrics`, 3 `api/metrics`, 1 `api/config`) + 10 platform groups | 1, 3-7 | F-OBS-01…35, F-OBS-P01…P10 | 45 |
 | F-DATA-DB | 42 tables (`schema-snapshot.sql`: 41 application + `flyway_schema_history`), 39 entities, 38 repositories, 15 store facades | 1, 3-7 | F-DATA-DB-01…42 | 42 |
 | F-DATA-ENTITIES | 38 `@Entity` classes (34 data, 3 broker, 1 llm) + 1 dead PK POJO; 16 carry a `fromDomain`/`toDomain` bridge to the core domain model | 1, 3-7 | F-DATA-ENT-01…39 | 39 |
+| F-DATA-REPO | 38 repository interfaces (34 data, 3 broker, 1 llm) + 1 interface projection; 15 store facades in `data/store` implement 15 of the 17 core store ports | 1, 3-7 | F-DATA-REPO-01…39 | 39 |
 
-Endpoint rows: 169. Job rows: 15. Table rows: 42. Entity rows: 39. Metric rows: 45. Cross-cutting
-security/error rows: 6. Wire-format rows: 10.
+Endpoint rows: 169. Job rows: 15. Table rows: 42. Entity rows: 39. Repository rows: 39. Metric rows: 45.
+Cross-cutting security/error rows: 6. Wire-format rows: 10.
 Every endpoint row names its Go target file, which is where the row's implementation and its red tests land when
 Phase 1+ starts; the same convention applies to metric, cross-cutting and wire-format rows.
 
@@ -348,6 +353,7 @@ what it drives.
 | Ledger cross-cutting security/error rows | 6 (`F-API-SEC-01…06`) |
 | Ledger table rows | 42 (`F-DATA-DB-01…42`) |
 | Ledger entity rows | 39 (`F-DATA-ENT-01…39`; 33 of them have at least one Java test reference, 16 carry a domain bridge) |
+| Ledger repository rows | 39 (`F-DATA-REPO-01…39`; 32 of them have at least one Java test reference, 7 have none) |
 | Metric rows with at least one Java test reference | 33 — every `core/metrics` and `api/metrics` row except F-OBS-29 and F-OBS-30 (`PiThermalMetrics` has no test) |
 | Metric rows with no test reference at all | 12 (F-OBS-29, F-OBS-30 and all 10 platform groups; the e2e stage-sanity spec asserts only `application_`/`jvm_` prefixes) |
 | Application metric rows with no production writer | 4 rows / 7 exported series (`trades_duration_seconds_count`,`_sum`, `trades_pnl_seconds_count`,`_sum`, `data_ingestion_duration_seconds_count`,`_sum`, `signals_filtered_total`) |
@@ -591,15 +597,79 @@ stays empty.
 | F-DATA-ENT-38 | PaperTradingSnapshotEntity | `paper_trading_portfolio_snapshots` | broker | PaperTradingSnapshotRepository | PK id; **no unique constraint** - duplicate daily snapshots are correct output | PaperTradingStateServiceTest | broker/entity/paper_trading_snapshot.go | not-started |
 | F-DATA-ENT-39 | SynthesisEvaluationEntity | `synthesis_evaluations` | llm | SynthesisEvaluationRepository · SynthesisEvaluationService | PK id; UNIQUE (symbol, analysis_date); read-then-write | SynthesisEvaluationServiceTest | llm/synthesis_evaluation.go | not-started |
 
-## 10. Remaining expansion (G0 still blocked)
+## 10. Repository and store-facade rows (F-DATA-REPO)
+
+The persistence-access layer, one row per repository interface: 38 repositories (34 in `data`, 3 in `broker`,
+1 in `llm`) plus the `PositionSummaryProjection` interface projection that `PositionRepository#findOpenSummaries`
+returns - 39 rows, cross-checked against the §8 table sheet, the §9 entity rows and `evidence/schema-snapshot.sql`.
+`Custom query surface` is the parity-critical column: it lists every non-CRUD method, because derived queries
+and JPQL are what the Go repository must re-derive as pgx/sqlc - `@Modifying` bulk UPDATEs bypass the JPA
+persistence context, `Object[]` and record projections change the row shape, and the two window/LIMIT tricks
+(`findLatestSignalPerSymbol`'s `ROW_NUMBER()`, the native `LIMIT :n OFFSET` read) have no Spring Data
+equivalent the Go code can lean on. `Facade / core port` names the `data/store` implementation (15 facades
+implement 15 of the 17 `core` store interfaces; `AppSettingsStore` is implemented by `AppSettingsService` and
+`BenchmarkDataAdapter` by `NiftyBenchmarkDataAdapter`, so those two ports have no facade row here) - the port
+interfaces themselves are core domain-model rows, owed by §11. `Direct consumers` are the main-code classes
+that inject the repository without going through a facade; a consumer listed in parentheses under the facade
+column reaches the repository only through it. `OhlcvCandleRepository` is the row to watch: its `insertIfAbsent`
+native `INSERT ... ON CONFLICT (symbol, timeframe, date, bar_time) DO NOTHING` is the only ingestion
+idempotency the database enforces (§8). `SignalRepository`'s five `@Modifying` deletes are the delete-then-insert
+family that `SignalStoreImpl` drives; `TradeLabelRepository` and `CorporateActionRepository` serve dormant
+tables (§9) and `NewsItemRepository` is dead - their Go rows port the interface only if the dormant writer ever
+activates. The broker and llm repositories are plain `JpaRepository`s with at most two derived queries.
+
+| ID | Repository | Table | Java module | Custom query surface | Facade / core port | Direct consumers | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| F-DATA-REPO-01 | AppSettingRepository | `app_settings` | data | `findByKey`; one `@Modifying` JPQL bulk `UPDATE ... WHERE key` (bypasses the persistence context) | none - `AppSettingsService` implements the `core` `AppSettingsStore` port itself | AppSettingsService | AppSettingsServiceTest | data/repository/app_setting.go | not-started |
+| F-DATA-REPO-02 | BacktestResultRepository | `backtest_result` | data | `findBySymbolAndRunDate` | BacktestResultStoreImpl → `BacktestResultStore` (`saveOrUpdate` = read-then-write preserving the id) | - | none | data/repository/backtest_result.go | not-started |
+| F-DATA-REPO-03 | CandidateHistoryEligibilityRepository | `candidate_history_eligibility` | data | none (plain `JpaRepository`, PK is the `symbol` string) | none | CandidateScanService | CandidateScanServiceTest, CandidateScanDataQualityTest | data/repository/candidate_history_eligibility.go | not-started |
+| F-DATA-REPO-04 | CandidateScanResultRepository | `candidate_scan_results` | data | `findByRunIdOrderBySymbolAsc`; `search` (paged; `(:symbol = '' or upper(...) like ...)` empty-param filters on symbol and signalType) | none | CandidateScanService, CandidateScanHandoffDispatcher | CandidateScanServiceTest, CandidateScanDataQualityTest, CandidateScanHandoffDispatcherTest | data/repository/candidate_scan_result.go | not-started |
+| F-DATA-REPO-05 | CandidateScanRunRepository | `candidate_scan_runs` | data | `findByRunId`, `findByStatus`, `findTop20ByOrderByStartedAtDesc`, `findByStatusAndOrchestrationStatus` | none | CandidateScanService, CandidateScanHandoffDispatcher | CandidateScanServiceTest, CandidateScanDataQualityTest, CandidateScanHandoffDispatcherTest | data/repository/candidate_scan_run.go | not-started |
+| F-DATA-REPO-06 | CorporateActionRepository | `corporate_actions` | data | `findBySymbolAndEffectiveDateBetweenOrderByEffectiveDateAsc`, `findBySymbolAndEffectiveDateAndActionType` | CorporateActionStoreImpl → `CorporateActionStore`; **dormant** - no production writer (§9) | - | CorporateActionStoreImplTest | data/repository/corporate_action.go | not-started |
+| F-DATA-REPO-07 | DailyLossCircuitBreakerStateRepository | `daily_loss_circuit_breaker_state` | data | none (plain `JpaRepository`) | none | DailyLossCircuitBreaker (broker/risk) | none | data/repository/daily_loss_circuit_breaker_state.go | not-started |
+| F-DATA-REPO-08 | FyersSymbolRepository | `fyers_symbol_master` | data | `findByTradingSymbolIgnoreCase`, `findByExchangeIgnoreCaseOrderByTradingSymbolAsc`, `search` (paged, case-insensitive prefix `LIKE`) | none; the wipe-and-replace sync is owned by FyersSymbolMasterService | FyersSymbolMasterService, CandidateScanService, AdminController, FyersResilienceConfig | FyersSymbolMasterServiceTest, CandidateScanServiceTest, CandidateScanDataQualityTest, AdminControllerDataQualityTest | data/repository/fyers_symbol.go | not-started |
+| F-DATA-REPO-09 | GateEffectivenessAuditRepository | `gate_effectiveness_audit` | data | none (plain `JpaRepository`) | none | GateEffectivenessAuditService | GateEffectivenessAuditServiceTest | data/repository/gate_effectiveness_audit.go | not-started |
+| F-DATA-REPO-10 | IntradayPaperSessionRepository | `intraday_paper_sessions` | data | none (plain `JpaRepository`, PK is the `run_id` string) | none | IntradayPaperController | IntradayPaperControllerTest | data/repository/intraday_paper_session.go | not-started |
+| F-DATA-REPO-11 | JobRunRepository | `job_runs` | data | `findByRunId`, `findFirstByCandidateScanRunIdOrderByStartedAtDesc`; two `@Modifying` bulk UPDATEs (`clearCandidateScanRunId`, `incrementCompletedCount`) that bypass the persistence context | none | JobOrchestratorService, CandidateScanHandoffDispatcher, OrphanedRunReaper | JobOrchestratorServiceTest, JobOrchestratorRunScopeTest, JobOrchestratorDegradedStatusTest, JobOrchestratorConfiguredStrategiesTest, JobOrchestratorLlmAnalysisTest, CandidateScanHandoffDispatcherTest, DailySchedulerIntegrationTest (@Disabled) | data/repository/job_run.go | not-started |
+| F-DATA-REPO-12 | JobRunStageRepository | `job_run_stages` | data | four derived reads: `findByRunIdOrderBySymbolAscStageNameAsc`, `findByRunIdAndSymbol`, `findByRunIdAndStageName`, `findByRunIdAndSymbolAndStageName` | none | JobOrchestratorService, OrphanedRunReaper | JobOrchestratorServiceTest, JobOrchestratorRunScopeTest, JobOrchestratorDegradedStatusTest, JobOrchestratorConfiguredStrategiesTest, JobOrchestratorLlmAnalysisTest, DailySchedulerIntegrationTest (@Disabled) | data/repository/job_run_stage.go | not-started |
+| F-DATA-REPO-13 | LlmAnalysisAuditRepository | `llm_analysis_audit` | data | none (plain `JpaRepository`, append-only sink) | none | SentimentService (llm) | none | data/repository/llm_analysis_audit.go | not-started |
+| F-DATA-REPO-14 | LlmAnalysisResultRepository | `llm_analysis_result` | data | `findBySymbolAndAnalysisDate` | LlmAnalysisResultStoreImpl → `LlmAnalysisResultStore` (read-then-write `saveOrUpdate`) | - | none | data/repository/llm_analysis_result.go | not-started |
+| F-DATA-REPO-15 | NewsArticleRepository | `news_articles` | data | `findRecentBySymbol`, `findBySymbolAndPublishedAtBetween`, `findPersistedForDecisionWindow` (all `@Query`); `findBySymbolOrderByPublishedAtDesc` | NewsArticleStoreImpl → `NewsArticleStore` | - | NewsArticleStoreImplTest | data/repository/news_article.go | not-started |
+| F-DATA-REPO-16 | NewsItemRepository | `news_items` | data | `findRecentBySymbol` | none; **dead** - superseded by `news_articles` (§9) | none | none | none - port no code | not-started |
+| F-DATA-REPO-17 | NseCalendarCoverageRepository | `nse_calendar_coverage` | data | `findByCalendarYearBetween` (derived) | none | MarketCalendar (data) | MarketCalendarTest, NseSessionCalendarTest | data/repository/nse_calendar_coverage.go | not-started |
+| F-DATA-REPO-18 | NseHolidayRepository | `nse_holidays` | data | `findByDate`, `findByDateRange`, `findUpcomingHolidays` (all `@Query`) | none | NseHolidayService | NseHolidayServiceTest | data/repository/nse_holiday.go | not-started |
+| F-DATA-REPO-19 | OhlcvCandleRepository | `ohlcv_candles` | data | 23 methods / 22 `@Query`, 3 native: `insertIfAbsent` = native `INSERT ... ON CONFLICT (symbol, timeframe, date, bar_time) DO NOTHING` (the only DB-enforced ingestion idempotency, §8); daily/interval window reads, `deleteBySymbolAndDate`, `deleteBySymbol`, count/exists, and one native `LIMIT :n OFFSET` next-bar read | CandleStoreImpl → `CandleStore` | DataIngestionService, IntradayIngestionService, DataExportController, IntradayPaperController, IntradayPaperScanService, WatchlistService, PaperTradingMonitorService, PendingOrderExecutionScheduler | 14 test classes (CandleStoreImplTest, OhlcvCandleIntervalContractTest, DataIngestionServiceTest, DataIngestionIntegrationTest, DataExportControllerTest, IntradayPaperControllerTest, IntradayIngestionServiceTest, WatchlistServiceTest, PaperTradingMonitorServiceTest, PendingOrderExecutionSchedulerTest, IntradayPaperScanServiceTest, DataPipelineE2ETest, DailySchedulerIntegrationTest @Disabled, DataPipelineFixtures) | data/repository/ohlcv_candle.go | not-started |
+| F-DATA-REPO-20 | PdfExtractionRepository | `pdf_extractions` | data | `findLatestBySymbol` (latest-per-symbol read) | none | PdfExtractionService, SentimentApiController | PdfExtractionServiceTest, PdfExtractionServiceDeepCoverageTest | data/repository/pdf_extraction.go | not-started |
+| F-DATA-REPO-21 | PositionRepository | `positions` | data | 21 methods / 17 `@Query`: four status-scoped open scans (`findAllOpenPositions`, `findAllPositionsForStopLossCheck`, `findAllTargetHitPositions`, `findAllStoppedPositions`), `findOpenSummaries` returning the aliased `PositionSummaryProjection` row shape, counts/exists, portfolio- and symbol-scoped reads | PositionStoreImpl → `PositionStore` | PositionService, PaperTradingStateService, VariantPaperTradingService, PerformanceService, PortfolioQueryServiceImpl, GateEffectivenessAuditService, MonthlyReportService, SignalArbiter | PositionRepositoryTest, PositionListContractTest, PositionServiceTest, PositionStoreImplTest, PaperTradingStateServiceTest, PerformanceServiceTest, VariantPaperTradingServiceTest, GateEffectivenessAuditServiceTest | data/repository/position.go | not-started |
+| F-DATA-REPO-22 | PriceBandRepository | `price_band` | data | none (plain `JpaRepository`) | PriceBandStoreImpl → `PriceBandStore` | - | PriceBandStoreImplTest | data/repository/price_band.go | not-started |
+| F-DATA-REPO-23 | ReconciliationAuditRepository | `reconciliation_audits` | data | none (plain `JpaRepository`, append-only sink) | none | DataIngestionService | none | data/repository/reconciliation_audit.go | not-started |
+| F-DATA-REPO-24 | SentimentAccuracyRepository | `sentiment_accuracy` | data | 13 methods / 14 `@Query`, the SQL-aggregate surface: `countSince`, `countCorrect`, `countDirectionalSince`, `countCorrectDirectionalSince`, `overallAccuracySince` (`AVG`), `calibrationData`/`scoreReturnPairsSince` (`Object[]` rows), `accuracyBySymbol`/`accuracyByRegime`/`dailyAccuracySummary` (record projections with `FLOOR`) | SentimentAccuracyStoreImpl → `SentimentAccuracyStore` | SentimentAccuracyService | SentimentAccuracyServiceTest, SentimentAccuracyStoreImplTest | data/repository/sentiment_accuracy.go | not-started |
+| F-DATA-REPO-25 | SentimentClassificationLogRepository | `sentiment_classification_log` | data | none (plain `JpaRepository`, append-only) | none | SentimentService (llm) | SentimentServiceLayaTest | data/repository/sentiment_classification_log.go | not-started |
+| F-DATA-REPO-26 | SentimentResultRepository | `sentiment_results` | data | `findBySymbolAndDate`, paged `findAllBySymbol`, `findAllByDateBetween`, `findAllDistinctSymbols`, `findLatestBySymbol`, `findAllByDateBeforeOrderByDateAsc` | SentimentStoreImpl → `SentimentStore` | - | SentimentStoreImplTest, SentimentAnalysisLiveE2ETest, WeeklyDigestE2ETest (@Disabled) | data/repository/sentiment_result.go | not-started |
+| F-DATA-REPO-27 | SignalRepository | `signals` | data | 25 methods / 23 `@Query`, 1 native: five `@Modifying` deletes (`deleteBySymbolAndDate`, `deleteBySymbolAndDateAndStrategy`, `deleteByDate`, `deleteSignalsBefore`, `deleteAllSignals`) that power the delete-then-insert pattern; `findLatestSignalPerSymbol` = native `ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY date DESC, created_at DESC, id DESC)`; 18 reads (symbol/date/type/strategy/confidence filters) | SignalStoreImpl → `SignalStore` | GateEffectivenessAuditService, MonthlyReportService | SignalStoreImplTest, GateEffectivenessAuditServiceTest | data/repository/signal.go | not-started |
+| F-DATA-REPO-28 | SignalSelectionRepository | `signal_selection` | data | none (plain `JpaRepository`) | none | SignalArbiter | none | data/repository/signal_selection.go | not-started |
+| F-DATA-REPO-29 | StockRepository | `stocks` | data | `existsBySymbol`, `findAllDistinctSymbols` (`@Query`); `findBySymbol`, `findByExchange`, `findBySector`, `findByAddedOnBefore`, `findAllByOrderBySymbol` (derived) | StockStoreImpl → `StockStore` | WatchlistService, DataIngestionService, CandidateScanService | StockStoreImplTest, WatchlistServiceTest, DataIngestionServiceTest, DataIngestionIntegrationTest, CandidateScanServiceTest, SentimentAnalysisLiveE2ETest, DailySchedulerIntegrationTest (@Disabled), WeeklyDigestE2ETest (@Disabled) | data/repository/stock.go | not-started |
+| F-DATA-REPO-30 | StrategyConfigRepository | `strategy_config` | data | `findByVariantIdAndCurrentTrue`, `findByVariantIdAndVersion`, `findByVariantIdOrderByVersionDesc` (derived; the partial-unique invariants live in the schema, §8) | StrategyConfigStoreImpl → `StrategyConfigStore` | StrategyConfigService, ActiveVariantService, JobOrchestratorService, PromotionEligibilityService, SignalArbiter | StrategyConfigServiceTest, StrategyConfigStoreImplTest, JobOrchestratorConfiguredStrategiesTest, JobOrchestratorRunScopeTest, JobOrchestratorDegradedStatusTest, PromotionEligibilityServiceTest | data/repository/strategy_config.go | not-started |
+| F-DATA-REPO-31 | TradeLabelRepository | `trade_labels` | data | `findByExitReason`, `findByTradeId`; one `@Query` `GROUP BY exitReason` histogram; PK is `UUID` | none; **dormant** - no production caller (§9) | TradeLabelService | TradeLabelServiceTest | data/repository/trade_label.go | not-started |
+| F-DATA-REPO-32 | TradeRepository | `trades` | data | ten `@Query` reads: position/symbol/date-range, `findAllOpenTrades`, `findOpenByPositionId`, `findAllClosedTrades` | TradeStoreImpl → `TradeStore` | TradeLabelService | TradeStoreImplTest, TradeLabelServiceTest | data/repository/trade.go | not-started |
+| F-DATA-REPO-33 | UniverseSnapshotRepository | `universe_snapshots` | data | none (plain `JpaRepository`) | UniverseSnapshotStoreImpl → `UniverseSnapshotStore`; **dormant** - no production writer (§9) | - | UniverseSnapshotStoreImplTest | data/repository/universe_snapshot.go | not-started |
+| F-DATA-REPO-34 | WatchlistRepository | `watchlist` | data | `findByIsActiveTrueOrderBySymbolAsc`, `findBySymbol`, `findByIsActiveAndExchange` (derived) | WatchlistStoreImpl → `WatchlistStore` | WatchlistService, DataIngestionService, EodIngestionScheduler, IntradayIngestionService, IntradayPaperScanService | WatchlistServiceTest, WatchlistStoreImplTest, EodIngestionSchedulerTest, IntradayIngestionServiceTest, IntradayPaperScanServiceTest, DataIngestionServiceTest, DailySchedulerIntegrationTest (@Disabled) | data/repository/watchlist.go | not-started |
+| F-DATA-REPO-35 | PaperTradingOrderRepository | `paper_trading_orders` | broker | none (plain `JpaRepository`) | none | PaperTradingStateService | PaperTradingStateServiceTest | broker/repository/paper_trading_order.go | not-started |
+| F-DATA-REPO-36 | PaperTradingPortfolioRepository | `paper_trading_portfolio` | broker | none (plain `JpaRepository`) | none | PaperTradingStateService, PortfolioQueryServiceImpl, VariantPaperTradingService | PaperTradingStateServiceTest, VariantPaperTradingServiceTest | broker/repository/paper_trading_portfolio.go | not-started |
+| F-DATA-REPO-37 | PaperTradingSnapshotRepository | `paper_trading_portfolio_snapshots` | broker | none (plain `JpaRepository`) | none | PaperTradingStateService | PaperTradingStateServiceTest | broker/repository/paper_trading_snapshot.go | not-started |
+| F-DATA-REPO-38 | SynthesisEvaluationRepository | `synthesis_evaluations` | llm | `findBySymbolAndAnalysisDate`; `findByOutcomeMeasuredAtIsNullAndAnalysisDateBeforeOrderByAnalysisDateAsc` (the re-measurement scan over unmeasured rows) | none | SynthesisEvaluationService | SynthesisEvaluationServiceTest | llm/synthesis_evaluation_repository.go | not-started |
+| F-DATA-REPO-39 | PositionSummaryProjection | `positions` (interface projection) | data | aliased read-model columns for `PositionRepository#findOpenSummaries`; the Go row is the matching struct plus a raw `SELECT` with the same alias list | n/a | PositionRepository via PositionStoreImpl | PositionRepositoryTest | data/repository/position_summary_projection.go | not-started |
+
+## 11. Remaining expansion (G0 still blocked)
 
 These area rows are not yet expanded. Until they are, G0 cannot pass, because the exit criterion is "one row per
-endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), table (§8), entity (§9), metric (§5),
-cross-cutting security/error (§6) and wire-format (§7) surfaces are done.
+endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), table (§8), entity (§9),
+repository/store-facade (§10), metric (§5), cross-cutting security/error (§6) and wire-format (§7) surfaces
+are done.
 
 | Area | What must be expanded | Source of truth | Rows expected |
 |---|---|---|---|
-| F-DATA-ENTITIES | the **entity** half is done (§9, 39 rows, one per `@Entity` class plus the dead PK POJO); what remains is one row per **repository/store facade** and per core domain model | `backend/data/src/main/java/com/swingtrade/data/repository/` + `store/`, plus `backend/core/src/main/java/com/swingtrade/domain/` (60 model classes) | 38 repository rows; 60 domain-model rows |
+| F-DATA-ENTITIES | the **entity** half is done (§9, 39 rows) and the **repository** half is done (§10, 39 rows); what remains is one row per **core domain model**: 81 files under `core/domain` (56 root: 39 records, 8 classes, 6 enums, 3 port interfaces; plus 28 port interfaces in `policy`/`service`/`store`/`source`) | `backend/core/src/main/java/com/swingtrade/domain/` | 81 domain-model rows |
 | F-STRAT-IND | one row per indicator and one per strategy/gate | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 (numeric golden vectors) |
 | F-STRAT-BT | one row per backtest engine, walk-forward, DSR and cost model | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 |
 | F-LLM-*, F-BRK-*, F-DATA-CLIENTS | one row per client, news source, prompt, risk control | `backend/llm/`, `backend/broker/`, `backend/data/client/` | ~40 rows |

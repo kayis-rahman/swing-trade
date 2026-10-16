@@ -17,8 +17,9 @@ adds ten wire-format rows confirmed from a live run — including the startup bl
 fixed and verified by running the rebuilt jar**, so every runtime artifact in this plan is unblocked. Section 8
 expands the persistence surface: 42 rows, one per table, from the ownership sheet in
 [evidence/table-ownership.md](evidence/table-ownership.md) — writers, readers, keys and the idempotency mechanism
-per table. Section 9 lists the areas that are **not yet
-expanded** (entity fields and domain models, indicators/strategies/gates, clients and risk controls, scheduling
+per table. Section 9 expands the entity surface: 39 rows, one per `@Entity` class plus the one dead PK POJO,
+with the access point, key contract and Go file per row. Section 10 lists the areas that are **not yet expanded**
+(repository/store rows, core domain models, indicators/strategies/gates, clients and risk controls, scheduling
 settings) — while any of those remain area-level rows, G0 cannot pass. The area table in §1 is an index for
 navigation, not a ledger row set.
 
@@ -26,7 +27,7 @@ Derived by: full read of all 28 controllers in `backend/api/src/main/java/com/sw
 cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`), plus
 the `Counter.builder`/`Timer.builder`/`Gauge.builder`/`meterRegistry.` call sites under `backend/*/src/main`.
 Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-OBS-<NN>` / `F-OBS-P<NN>` (metrics),
-`F-API-SEC-<NN>` (cross-cutting security/error concerns).
+`F-API-SEC-<NN>` (cross-cutting security/error concerns), `F-DATA-ENT-<NN>` (entities).
 
 ## Row template
 
@@ -84,9 +85,10 @@ the red-test/green/parity commit references stay empty until the TDD loop of [st
 | F-API-FMT | Wire format confirmed from the live system: JSON envelopes, `LocalDateTime`/`BigDecimal`/enum/null encoding, `text/csv` export, springdoc OpenAPI surface, HEAD startup blocker (fixed) | 1, 2-7 | F-API-FMT-01…10 | 10 |
 | F-OBS | 11 Java meter classes (7 `core/metrics`, 3 `api/metrics`, 1 `api/config`) + 10 platform groups | 1, 3-7 | F-OBS-01…35, F-OBS-P01…P10 | 45 |
 | F-DATA-DB | 42 tables (`schema-snapshot.sql`: 41 application + `flyway_schema_history`), 39 entities, 38 repositories, 15 store facades | 1, 3-7 | F-DATA-DB-01…42 | 42 |
+| F-DATA-ENTITIES | 38 `@Entity` classes (34 data, 3 broker, 1 llm) + 1 dead PK POJO; 16 carry a `fromDomain`/`toDomain` bridge to the core domain model | 1, 3-7 | F-DATA-ENT-01…39 | 39 |
 
-Endpoint rows: 169. Job rows: 15. Table rows: 42. Metric rows: 45. Cross-cutting security/error rows: 6.
-Wire-format rows: 10.
+Endpoint rows: 169. Job rows: 15. Table rows: 42. Entity rows: 39. Metric rows: 45. Cross-cutting
+security/error rows: 6. Wire-format rows: 10.
 Every endpoint row names its Go target file, which is where the row's implementation and its red tests land when
 Phase 1+ starts; the same convention applies to metric, cross-cutting and wire-format rows.
 
@@ -344,6 +346,8 @@ what it drives.
 | `@Disabled` test classes | 6; no individual `@Test` method is disabled |
 | Ledger metric rows | 45 (35 application meters + 10 platform groups) |
 | Ledger cross-cutting security/error rows | 6 (`F-API-SEC-01…06`) |
+| Ledger table rows | 42 (`F-DATA-DB-01…42`) |
+| Ledger entity rows | 39 (`F-DATA-ENT-01…39`; 33 of them have at least one Java test reference, 16 carry a domain bridge) |
 | Metric rows with at least one Java test reference | 33 — every `core/metrics` and `api/metrics` row except F-OBS-29 and F-OBS-30 (`PiThermalMetrics` has no test) |
 | Metric rows with no test reference at all | 12 (F-OBS-29, F-OBS-30 and all 10 platform groups; the e2e stage-sanity spec asserts only `application_`/`jvm_` prefixes) |
 | Application metric rows with no production writer | 4 rows / 7 exported series (`trades_duration_seconds_count`,`_sum`, `trades_pnl_seconds_count`,`_sum`, `data_ingestion_duration_seconds_count`,`_sum`, `signals_filtered_total`) |
@@ -530,15 +534,72 @@ The persistence surface, one row per table, from the ownership sheet in [evidenc
 | F-DATA-DB-41 | `universe_snapshots` | data | UniverseSnapshotEntity · repository · UniverseSnapshotStoreImpl | **none** — `save` has no production caller | BacktestEngine:269 (point-in-time universe membership) | PK `id`; UNIQUE `(symbol, snapshot_date)` | data/store/universe_snapshot.go | not-started |
 | F-DATA-DB-42 | `watchlist` | data | WatchlistEntity · WatchlistRepository · WatchlistStoreImpl | WatchlistService — `POST /api/watchlist`, `DELETE /api/watchlist/{symbol}`, `PATCH …/toggle` | WatchlistService, IntradayPaperScanService, EodIngestionScheduler, IntradayIngestionService | PK `id`; **two** unique constraints on `symbol`; `V1` seeds 20 symbols | data/store/watchlist.go | not-started |
 
-## 9. Remaining expansion (G0 still blocked)
+## 9. Entity rows (F-DATA-ENT)
+
+The persistence-model layer, one row per JPA `@Entity` class (38: 34 in `data`, 3 in `broker`, 1 in `llm`) plus
+the one non-entity class in that layer (the dead `OhlcvCandlePK` POJO) - 39 rows, cross-checked against the §8
+table sheet and `evidence/schema-snapshot.sql`. `Keys / idempotency` carries the constraint contract from §8;
+`Java classes` names the access point (repository, store facade or owning service) the Go file replaces; `Java
+tests` lists the test classes that reference the entity (method-level mapping belongs to the traceability matrix,
+step 13). Two structural facts the Go layer must inherit: **16 of the 38 entities carry a `fromDomain`/`toDomain`
+bridge** to a `core` domain model (15 in `data`, both directions except `SignalEntity` whose `fromDomain` has 3
+overloads; `SynthesisEvaluationEntity` in `llm` is one-way, `toDomain` only), the other 22 are persistence-only.
+In Go the entity structs and their bridges live in `data/entity` (and `broker/entity` for the three paper-trading
+entities, `llm` for synthesis) per the module layout in [standards.md](standards.md); the two dead classes
+(`NewsItemEntity`, `OhlcvCandlePK`) port no code, their tables stay in the goose baseline so the rollback diff
+stays empty.
+
+| ID | Entity | Table | Java module | Java classes (access point) | Keys / idempotency | Java tests | Go module and file | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-DATA-ENT-01 | AppSettingEntity | `app_settings` | data | AppSettingRepository · AppSettingsService | PK id; UNIQUE `key`; `set` no-ops when an env var overrides the key | EntityPersistenceContractTest, AppSettingsServiceTest | data/entity/app_setting.go | not-started |
+| F-DATA-ENT-02 | BacktestResultEntity | `backtest_result` | data | BacktestResultRepository · BacktestResultStoreImpl | PK id; UNIQUE (symbol, run_date); read-then-write | none (class not referenced in the test tree) | data/entity/backtest_result.go | not-started |
+| F-DATA-ENT-03 | CandidateHistoryEligibilityEntity | `candidate_history_eligibility` | data | repository (no facade) | PK **symbol** (business key, no surrogate) | none (class not referenced in the test tree) | data/entity/candidate_history_eligibility.go | not-started |
+| F-DATA-ENT-04 | CandidateScanResultEntity | `candidate_scan_results` | data | repository; the `@CollectionTable` child `candidate_scan_strategy_outcomes` has no entity | PK id; no unique - a re-scan appends | CandidateScanResultEntityTest, CandidateScanServiceTest, CandidateScanDataQualityTest, CandidateScanHandoffDispatcherTest | data/entity/candidate_scan_result.go | not-started |
+| F-DATA-ENT-05 | CandidateScanRunEntity | `candidate_scan_runs` | data | repository | PK id; UNIQUE `run_id`; every fire is a new row | CandidateScanServiceTest, CandidateScanDataQualityTest, CandidateScanHandoffDispatcherTest, EntityPersistenceContractTest | data/entity/candidate_scan_run.go | not-started |
+| F-DATA-ENT-06 | CorporateActionEntity | `corporate_actions` | data | repository · CorporateActionStoreImpl | PK id; UNIQUE (symbol, effective_date, action_type); **dormant** - no production writer | CorporateActionEntityTest, CorporateActionStoreImplTest | data/entity/corporate_action.go | not-started |
+| F-DATA-ENT-07 | DailyLossCircuitBreakerStateEntity | `daily_loss_circuit_breaker_state` | data | repository | PK id; no unique - append-only, latest row wins | none (class not referenced in the test tree) | data/entity/daily_loss_circuit_breaker_state.go | not-started |
+| F-DATA-ENT-08 | FyersSymbolEntity | `fyers_symbol_master` | data | FyersSymbolRepository · FyersSymbolMasterService | PK id; UNIQUE `fy_token`; UNIQUE `symbol`; wipe-and-replace | FyersServiceClientTest, CandidateScanServiceTest | data/entity/fyers_symbol.go | not-started |
+| F-DATA-ENT-09 | GateEffectivenessAuditEntity | `gate_effectiveness_audit` | data | repository | PK id; **two identical** UNIQUE (symbol, signal_date, gate_name, strategy) | GateEffectivenessAuditEntityTest, GateEffectivenessAuditServiceTest | data/entity/gate_effectiveness_audit.go | not-started |
+| F-DATA-ENT-10 | IntradayPaperSessionEntity | `intraday_paper_sessions` | data | repository (controller writes directly) | PK **run_id** (business key, no surrogate) | none (class not referenced in the test tree) | data/entity/intraday_paper_session.go | not-started |
+| F-DATA-ENT-11 | JobRunEntity | `job_runs` | data | JobRunRepository | PK id; UNIQUE `run_id`; never deleted | JobOrchestratorServiceTest, JobOrchestratorRunScopeTest, JobRunSummaryAssemblerTest, DailySchedulerIntegrationTest (@Disabled), EntityPersistenceContractTest | data/entity/job_run.go | not-started |
+| F-DATA-ENT-12 | JobRunStageEntity | `job_run_stages` | data | repository | PK id; FK `run_id` ON DELETE CASCADE; never deleted | JobOrchestratorServiceTest, JobOrchestratorDegradedStatusTest, JobRunSummaryAssemblerTest, DailySchedulerIntegrationTest (@Disabled), EntityPersistenceContractTest | data/entity/job_run_stage.go | not-started |
+| F-DATA-ENT-13 | LlmAnalysisAuditEntity | `llm_analysis_audit` | data | repository | PK id; append-only write-only sink | none (class not referenced in the test tree) | data/entity/llm_analysis_audit.go | not-started |
+| F-DATA-ENT-14 | LlmAnalysisResultEntity | `llm_analysis_result` | data | repository · LlmAnalysisResultStoreImpl | PK id; UNIQUE (symbol, analysis_date); read-then-write | none (class not referenced in the test tree) | data/entity/llm_analysis_result.go | not-started |
+| F-DATA-ENT-15 | NewsArticleEntity | `news_articles` | data | repository · NewsArticleStoreImpl | PK id; UNIQUE (symbol, article_key) | NewsArticleStoreImplTest | data/entity/news_article.go | not-started |
+| F-DATA-ENT-16 | NewsItemEntity | `news_items` | data | NewsItemRepository (dead) | PK id; **dead table**, superseded by `news_articles` | EntityPersistenceContractTest | none - port no code | not-started |
+| F-DATA-ENT-17 | NseCalendarCoverageEntity | `nse_calendar_coverage` | data | repository | PK **calendar_year**; seeded by V30/V72 SQL, no Java writer | NseSessionCalendarTest, MarketCalendarTest | data/entity/nse_calendar_coverage.go | not-started |
+| F-DATA-ENT-18 | NseHolidayEntity | `nse_holidays` | data | repository · NseHolidayService | PK id; UNIQUE `holiday_date`; upsert by date | NseHolidayServiceTest, NseSessionCalendarTest, MarketCalendarTest, EntityPersistenceContractTest | data/entity/nse_holiday.go | not-started |
+| F-DATA-ENT-19 | OhlcvCandleEntity | `ohlcv_candles` | data | OhlcvCandleRepository · CandleStoreImpl | PK id (surrogate) + `@Version` optimistic lock; UNIQUE (symbol, timeframe, date, bar_time) - the only DB-enforced ingestion idempotency | 14 test classes (CandleStoreImplTest, OhlcvCandleIntervalContractTest, DataIngestionServiceTest, DataIngestionIntegrationTest, WatchlistServiceTest, IntradayIngestionServiceTest, DataExportControllerTest, IntradayPaperControllerTest, PendingOrderExecutionSchedulerTest, IntradayPaperScanServiceTest, PaperTradingMonitorServiceTest, DataPipelineE2ETest, DailySchedulerIntegrationTest @Disabled, DataPipelineFixtures) | data/entity/ohlcv_candle.go | not-started |
+| F-DATA-ENT-20 | OhlcvCandlePK | none (not an `@Entity`) | data | **dead** plain POJO (symbol, date); not an `@IdClass`, no main-code reference | n/a | OhlcvCandlePKTest | none - port no code | not-started |
+| F-DATA-ENT-21 | PdfExtractionEntity | `pdf_extractions` | data | PdfExtractionRepository | PK id; no unique - index (symbol, extraction_date), latest-per-symbol read | PdfExtractionServiceTest, PdfExtractionServiceDeepCoverageTest, EntityPersistenceContractTest | data/entity/pdf_extraction.go | not-started |
+| F-DATA-ENT-22 | PositionEntity | `positions` | data | PositionRepository · PositionStoreImpl | PK id; **no unique constraint**; FK `symbol` to stocks ON DELETE CASCADE | PositionEntityTest, PositionRepositoryTest, PositionStoreImplTest, PositionServiceTest, PerformanceServiceTest, PaperTradingStateServiceTest, VariantPaperTradingServiceTest, GateEffectivenessAuditServiceTest | data/entity/position.go | not-started |
+| F-DATA-ENT-23 | PriceBandEntity | `price_band` | data | repository · PriceBandStoreImpl | PK id; UNIQUE (symbol, band_date) | PriceBandEntityTest, PriceBandStoreImplTest | data/entity/price_band.go | not-started |
+| F-DATA-ENT-24 | ReconciliationAuditEntity | `reconciliation_audits` | data | repository | PK id; append-only write-only sink | EntityPersistenceContractTest | data/entity/reconciliation_audit.go | not-started |
+| F-DATA-ENT-25 | SentimentAccuracyEntity | `sentiment_accuracy` | data | repository · SentimentAccuracyStoreImpl | PK id; no unique (index symbol, analysis_date); Java `existsBy` guard | SentimentAccuracyStoreImplTest, SentimentAccuracyServiceTest, EntityPersistenceContractTest | data/entity/sentiment_accuracy.go | not-started |
+| F-DATA-ENT-26 | SentimentClassificationLogEntity | `sentiment_classification_log` | data | repository | PK id; append-only | SentimentServiceLayaTest | data/entity/sentiment_classification_log.go | not-started |
+| F-DATA-ENT-27 | SentimentResultEntity | `sentiment_results` | data | repository · SentimentStoreImpl | PK id; UNIQUE (symbol, date) - constraint *named* idx_sentiment_symbol_date | SentimentResultEntityTest, SentimentStoreImplTest, SectorDigestTest, WeeklyDigestE2ETest (@Disabled), SentimentAnalysisLiveE2ETest | data/entity/sentiment_result.go | not-started |
+| F-DATA-ENT-28 | SignalEntity | `signals` | data | SignalRepository · SignalStoreImpl | PK id; **no unique constraint** - Java delete-then-insert | SignalEntityTest, SignalStoreImplTest, SignalPipelineTest, JobOrchestratorServiceTest | data/entity/signal.go | not-started |
+| F-DATA-ENT-29 | SignalSelectionEntity | `signal_selection` | data | repository | PK id; UNIQUE (symbol, selection_date) | VariantPaperTradeStageTest, ArbitrationComparisonServiceTest, StrategyAttributionServiceTest | data/entity/signal_selection.go | not-started |
+| F-DATA-ENT-30 | StockEntity | `stocks` | data | StockRepository · StockStoreImpl | PK id; **two** unique constraints on `symbol`; FK parent of signals/positions/trades (CASCADE) | StockStoreImplTest, WatchlistServiceTest, DailySchedulerIntegrationTest (@Disabled), WeeklyDigestE2ETest (@Disabled), SentimentAnalysisLiveE2ETest, EntityPersistenceContractTest | data/entity/stock.go | not-started |
+| F-DATA-ENT-31 | StrategyConfigEntity | `strategy_config` | data | repository · StrategyConfigStoreImpl | PK id; UNIQUE (variant_id, version); partial uniques ux_strategy_config_current / ux_strategy_config_champion | StrategyConfigEntityTest, StrategyConfigStoreImplTest, StrategyConfigServiceTest, JobOrchestratorConfiguredStrategiesTest, JobOrchestratorRunScopeTest, JobOrchestratorDegradedStatusTest, PromotionEligibilityServiceTest | data/entity/strategy_config.go | not-started |
+| F-DATA-ENT-32 | TradeEntity | `trades` | data | TradeRepository · TradeStoreImpl | PK id; no unique; FK `position_id` ON DELETE SET NULL; FK `symbol` CASCADE | TradeEntityTest, TradeStoreImplTest, TradeLabelServiceTest | data/entity/trade.go | not-started |
+| F-DATA-ENT-33 | TradeLabel | `trade_labels` | data | TradeLabelRepository · TradeLabelService | PK id; no unique; FK `position_id` to positions.id; **dormant** - no production caller | TradeLabelServiceTest | data/entity/trade_label.go | not-started |
+| F-DATA-ENT-34 | UniverseSnapshotEntity | `universe_snapshots` | data | repository · UniverseSnapshotStoreImpl | PK id; UNIQUE (symbol, snapshot_date); **dormant** - no production writer | UniverseSnapshotEntityTest, UniverseSnapshotStoreImplTest | data/entity/universe_snapshot.go | not-started |
+| F-DATA-ENT-35 | WatchlistEntity | `watchlist` | data | repository · WatchlistStoreImpl | PK id; **two** unique constraints on `symbol`; V1 seeds 20 symbols | WatchlistStoreImplTest, WatchlistServiceTest, WatchlistControllerTest, EodIngestionSchedulerTest, IntradayIngestionServiceTest, IntradayPaperScanServiceTest, DailySchedulerIntegrationTest (@Disabled) | data/entity/watchlist.go | not-started |
+| F-DATA-ENT-36 | PaperTradingOrderEntity | `paper_trading_orders` | broker | PaperTradingOrderRepository | PK id; UNIQUE `order_id` | PaperTradingStateServiceTest | broker/entity/paper_trading_order.go | not-started |
+| F-DATA-ENT-37 | PaperTradingPortfolioEntity | `paper_trading_portfolio` | broker | PaperTradingPortfolioRepository | PK id; UNIQUE `portfolio_id` | PaperTradingStateServiceTest, VariantPaperTradingServiceTest | broker/entity/paper_trading_portfolio.go | not-started |
+| F-DATA-ENT-38 | PaperTradingSnapshotEntity | `paper_trading_portfolio_snapshots` | broker | PaperTradingSnapshotRepository | PK id; **no unique constraint** - duplicate daily snapshots are correct output | PaperTradingStateServiceTest | broker/entity/paper_trading_snapshot.go | not-started |
+| F-DATA-ENT-39 | SynthesisEvaluationEntity | `synthesis_evaluations` | llm | SynthesisEvaluationRepository · SynthesisEvaluationService | PK id; UNIQUE (symbol, analysis_date); read-then-write | SynthesisEvaluationServiceTest | llm/synthesis_evaluation.go | not-started |
+
+## 10. Remaining expansion (G0 still blocked)
 
 These area rows are not yet expanded. Until they are, G0 cannot pass, because the exit criterion is "one row per
-endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), table (§8), metric (§5), cross-cutting
-security/error (§6) and wire-format (§7) surfaces are done.
+endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), table (§8), entity (§9), metric (§5),
+cross-cutting security/error (§6) and wire-format (§7) surfaces are done.
 
 | Area | What must be expanded | Source of truth | Rows expected |
 |---|---|---|---|
-| F-DATA-ENTITIES | one row per JPA entity and per repository/store — the **table** half is done (§8, 42 tables / 39 entities / 38 repositories; the area row's "35 entities / 37 repositories" counts only `data/entity` and is stale); what remains is one row per **entity field** and per core domain model | `backend/data/src/main/java/com/swingtrade/data/entity/`, `repository/`, `store/`, plus `backend/core/src/main/java/com/swingtrade/domain/` (60 model classes) | 39 entity rows; 38 repository rows; 60 domain-model rows |
+| F-DATA-ENTITIES | the **entity** half is done (§9, 39 rows, one per `@Entity` class plus the dead PK POJO); what remains is one row per **repository/store facade** and per core domain model | `backend/data/src/main/java/com/swingtrade/data/repository/` + `store/`, plus `backend/core/src/main/java/com/swingtrade/domain/` (60 model classes) | 38 repository rows; 60 domain-model rows |
 | F-STRAT-IND | one row per indicator and one per strategy/gate | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 (numeric golden vectors) |
 | F-STRAT-BT | one row per backtest engine, walk-forward, DSR and cost model | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 |
 | F-LLM-*, F-BRK-*, F-DATA-CLIENTS | one row per client, news source, prompt, risk control | `backend/llm/`, `backend/broker/`, `backend/data/client/` | ~40 rows |

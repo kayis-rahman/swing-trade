@@ -1,0 +1,28 @@
+{
+ "note": "fyers auth status",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/fyers/status"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"clientId\": \"\",\n \"connected\": false\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "42"
+  },
+  "status": 200
+ },
+ "slug": "fyers-status",
+ "tag": "local-throwaway"
+}

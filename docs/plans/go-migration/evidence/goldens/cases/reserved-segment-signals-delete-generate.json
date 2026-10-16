@@ -1,0 +1,28 @@
+{
+ "note": "DELETE on 'generate': answered by the {symbol} handler, so 'generate' is NOT a reserved segment",
+ "request": {
+  "body": null,
+  "method": "DELETE",
+  "path": "/api/signals/generate"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"cleared\": 0,\n \"symbol\": \"generate\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "34"
+  },
+  "status": 200
+ },
+ "slug": "reserved-segment-signals-delete-generate",
+ "tag": "local-throwaway"
+}

@@ -1,0 +1,28 @@
+{
+ "note": "position statistics",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/positions/stats"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"averageHoldingPeriod\": null,\n \"closedPositions\": 0,\n \"message\": null,\n \"openPositions\": 0,\n \"stoppedOut\": 0,\n \"targetHit\": 0,\n \"todayPnL\": 0,\n \"todayPnLPercent\": 0.0,\n \"totalPnL\": 0,\n \"totalPositions\": 0,\n \"unrealizedPnL\": 0,\n \"winRate\": 0.0\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "75"
+  },
+  "status": 200
+ },
+ "slug": "positions-stats",
+ "tag": "local-throwaway"
+}

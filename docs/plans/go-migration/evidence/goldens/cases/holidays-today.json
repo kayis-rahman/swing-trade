@@ -1,0 +1,28 @@
+{
+ "note": "today's holiday state",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/holidays/today"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"date\": \"2026-10-15\",\n  \"marketClosed\": false,\n  \"reason\": {}\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:54.373389\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "57"
+  },
+  "status": 200
+ },
+ "slug": "holidays-today",
+ "tag": "local-throwaway"
+}

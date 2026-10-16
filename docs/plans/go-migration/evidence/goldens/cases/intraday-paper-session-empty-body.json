@@ -1,0 +1,28 @@
+{
+ "note": "POST with an empty JSON object: bean-validation errors, fieldErrors still serialized as []",
+ "request": {
+  "body": {},
+  "method": "POST",
+  "path": "/api/intraday/paper/sessions"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"code\": \"VALIDATION_ERROR\",\n \"fieldErrors\": [],\n \"message\": \"Validation failed: sessionDate: must not be null, strategyType: must not be blank, symbol: must not be blank\",\n \"path\": \"/api/intraday/paper/sessions\",\n \"status\": 400,\n \"timestamp\": \"2026-10-15T09:01:56.42269\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 400,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 03:31:56 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "98"
+  },
+  "status": 400
+ },
+ "slug": "intraday-paper-session-empty-body",
+ "tag": "local-throwaway-fixed"
+}

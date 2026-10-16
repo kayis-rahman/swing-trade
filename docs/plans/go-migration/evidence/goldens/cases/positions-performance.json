@@ -1,0 +1,28 @@
+{
+ "note": "performance summary",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/positions/performance"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"annualizedReturn\": 0.0,\n \"asOfDate\": \"2026-10-15T07:43:54.347024\",\n \"averageHoldingPeriod\": null,\n \"averageLoss\": 0,\n \"averageTrade\": null,\n \"averageWin\": 0,\n \"closedTrades\": null,\n \"longestLossStreak\": null,\n \"longestWinStreak\": null,\n \"losingTrades\": null,\n \"maxDrawdown\": 0,\n \"profitFactor\": 0,\n \"sharpeRatio\": 0,\n \"sortinoRatio\": null,\n \"totalCapitalGained\": null,\n \"totalFeesPaid\": null,\n \"totalPnL\": 0,\n \"totalReturn\": 0.0,\n \"totalTrades\": 0,\n \"totalValue\": 10000000.0,\n \"winRate\": null,\n \"winningTrades\": 0\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "76"
+  },
+  "status": 200
+ },
+ "slug": "positions-performance",
+ "tag": "local-throwaway"
+}

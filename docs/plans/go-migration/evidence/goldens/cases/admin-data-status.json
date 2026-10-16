@@ -1,0 +1,26 @@
+{
+ "note": "admin ingestion status (symbol and days are required)",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/admin/data/status?symbol=RELIANCE&days=30"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": null,\n \"error\": \"Failed to get data status: null\",\n \"success\": false,\n \"timestamp\": \"2026-10-15T07:43:49.465726\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 500,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin"
+  },
+  "status": 500
+ },
+ "slug": "admin-data-status",
+ "tag": "local-throwaway"
+}

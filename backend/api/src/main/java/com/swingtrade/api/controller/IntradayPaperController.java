@@ -7,8 +7,8 @@ import com.swingtrade.data.entity.OhlcvCandleEntity;
 import com.swingtrade.data.repository.OhlcvCandleRepository;
 import com.swingtrade.data.entity.IntradayPaperSessionEntity;
 import com.swingtrade.data.repository.IntradayPaperSessionRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.swingtrade.data.service.Interval;
 import com.swingtrade.strategy.IntradayBar;
 import com.swingtrade.strategy.StrategyParamsView;
@@ -76,7 +76,7 @@ public class IntradayPaperController {
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Unable to persist paper session result", e);
         }
     }
@@ -86,7 +86,7 @@ public class IntradayPaperController {
         return sessions.findByRunId(runId).map(record -> {
             try {
                 return ResponseEntity.ok(objectMapper.readValue(record.getResultJson(), IntradayPaperSessionResult.class));
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 throw new IllegalStateException("Unable to load paper session result", e);
             }
         }).orElseGet(() -> ResponseEntity.notFound().build());

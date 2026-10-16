@@ -1,0 +1,26 @@
+{
+ "note": "admin endpoint with no X-API-Key: empty body plus WWW-Authenticate: X-API-Key",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/admin/health"
+ },
+ "response": {
+  "body": {
+   "kind": "empty",
+   "value": ""
+  },
+  "body_truncated": false,
+  "expected_status": 401,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "0",
+   "Date": "Thu, 15 Oct 2026 02:23:38 GMT",
+   "Vary": "Origin",
+   "WWW-Authenticate": "X-API-Key"
+  },
+  "status": 401
+ },
+ "slug": "admin-401-no-key",
+ "tag": "local-throwaway-security"
+}

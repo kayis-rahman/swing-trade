@@ -1,0 +1,32 @@
+{
+ "note": "paper replay with no stored bars: 200 with status INCOMPLETE_DATA and no session row persisted",
+ "request": {
+  "body": {
+   "sessionDate": "2026-10-09",
+   "strategyType": "INTRADAY_ORB",
+   "symbol": "TCS"
+  },
+  "method": "POST",
+  "path": "/api/intraday/paper/sessions"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"executionMode\": \"PAPER_SIMULATION\",\n \"expectedBars\": 25,\n \"finalCapital\": 100000,\n \"initialCapital\": 100000,\n \"killSwitchActive\": false,\n \"liveBrokerCalls\": 0,\n \"maxConcurrentPositions\": 0,\n \"netPnl\": 0,\n \"openPositionsAtEnd\": 0,\n \"orders\": [],\n \"positions\": [],\n \"receivedBars\": 0,\n \"runId\": \"fc8c6422-fb7d-4169-ae4e-dda443564a32\",\n \"sessionDate\": \"2026-10-09\",\n \"status\": \"INCOMPLETE_DATA\",\n \"strategy\": \"INTRADAY_ORB\",\n \"symbol\": \"TCS\",\n \"trades\": []\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 03:31:56 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "97"
+  },
+  "status": 200
+ },
+ "slug": "intraday-paper-session-no-bars",
+ "tag": "local-throwaway-fixed"
+}

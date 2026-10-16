@@ -1,0 +1,28 @@
+{
+ "note": "news for a symbol",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/news/RELIANCE/latest"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": [\n  {\n   \"description\": \"<a href=\\\"https://news.google.com/rss/articles/CBMiW0FVX3lxTFB1UDZIUDhFZW9XLXg2c2J0LVI1aDE2SVJCcVBOZGJMbDlpdmlfaHRPeWZIZjlqQkNzWEtOUmtsa19NUVpGcnRwazJ1djQ4ckYtZm1TQVpkb3MzaTg?oc=5\\\" target=\\\"_blank\\\">Reliance Industries Limited (RELIANCE.NS) stock price, news, quote and history</a>\\u00a0\\u00a0<font color=\\\"#6f6f6f\\\">Yahoo Finance Singapore</font>\",\n   \"link\": \"https://news.google.com/rss/articles/CBMiW0FVX3lxTFB1UDZIUDhFZW9XLXg2c2J0LVI1aDE2SVJCcVBOZGJMbDlpdmlfaHRPeWZIZjlqQkNzWEtOUmtsa19NUVpGcnRwazJ1djQ4ckYtZm1TQVpkb3MzaTg?oc=5\",\n   \"publishedDate\": \"2026-10-12T13:25:20Z\",\n   \"rawContent\": \"<a href=\\\"https://news.google.com/rss/articles/CBMiW0FVX3lxTFB1UDZIUDhFZW9XLXg2c2J0LVI1aDE2SVJCcVBOZGJMbDlpdmlfaHRPeWZIZjlqQkNzWEtOUmtsa19NUVpGcnRwazJ1djQ4ckYtZm1TQVpkb3MzaTg?oc=5\\\" target=\\\"_blank\\\">Reliance Industries Limited (RELIANCE.NS) stock price, news, quote and history</a>\\u00a0\\u00a0<font color=\\\"#6f6f6f\\\">Yahoo Finance Singapore</font>\",\n   \"source\": \"google_news\",\n   \"symbol\": \"RELIANCE\",\n   \"title\": \"Reliance Industries Limited (RELIANCE.NS) stock price, news, quote and history - Yahoo Finance Singapore\"\n  },\n  {\n   \"description\": \"<a href=\\\"https:\n...TRUNCATED"
+  },
+  "body_truncated": true,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "41"
+  },
+  "status": 200
+ },
+ "slug": "news-symbol-latest",
+ "tag": "local-throwaway"
+}

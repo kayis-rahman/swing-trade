@@ -1,0 +1,28 @@
+{
+ "note": "risk summary",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/positions/risk-summary"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"availableCapital\": 10000000.0,\n \"numberOfPositions\": 0,\n \"sectorExposure\": {},\n \"stopLossExposure\": 0,\n \"totalExposure\": 0,\n \"usedCapital\": 0\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "73"
+  },
+  "status": 200
+ },
+ "slug": "positions-risk-summary",
+ "tag": "local-throwaway"
+}

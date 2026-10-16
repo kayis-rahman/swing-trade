@@ -1,0 +1,31 @@
+{
+ "note": "non-INTRADAY_ strategy: empty-bodied 400, no bars loaded and no execution",
+ "request": {
+  "body": {
+   "sessionDate": "2026-10-09",
+   "strategyType": "BREAKOUT",
+   "symbol": "TCS"
+  },
+  "method": "POST",
+  "path": "/api/intraday/paper/sessions"
+ },
+ "response": {
+  "body": {
+   "kind": "empty",
+   "value": ""
+  },
+  "body_truncated": false,
+  "expected_status": 400,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "0",
+   "Date": "Thu, 15 Oct 2026 03:31:56 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "96"
+  },
+  "status": 400
+ },
+ "slug": "intraday-paper-session-non-intraday-strategy",
+ "tag": "local-throwaway-fixed"
+}

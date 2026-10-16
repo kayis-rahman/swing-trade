@@ -1,0 +1,28 @@
+{
+ "note": "strategy type registry",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/strategy-types"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": [\n  {\n   \"paramSchema\": {\n    \"params\": [\n     {\n      \"defaultValue\": 20,\n      \"description\": \"Fast EMA period\",\n      \"group\": \"trend\",\n      \"max\": 100,\n      \"min\": 5,\n      \"name\": \"emaFast\",\n      \"type\": \"INT\"\n     },\n     {\n      \"defaultValue\": 50,\n      \"description\": \"Slow EMA period\",\n      \"group\": \"trend\",\n      \"max\": 250,\n      \"min\": 20,\n      \"name\": \"emaSlow\",\n      \"type\": \"INT\"\n     },\n     {\n      \"defaultValue\": 14,\n      \"description\": \"RSI lookback period\",\n      \"group\": \"momentum\",\n      \"max\": 50,\n      \"min\": 2,\n      \"name\": \"rsiPeriod\",\n      \"type\": \"INT\"\n     },\n     {\n      \"defaultValue\": 50,\n      \"description\": \"RSI entry band lower bound\",\n      \"group\": \"momentum\",\n      \"max\": 80,\n      \"min\": 30,\n      \"name\": \"rsiMin\",\n      \"type\": \"DECIMAL\"\n     },\n     {\n      \"defaultValue\": 65,\n      \"description\": \"RSI entry band upper bound\",\n      \"group\": \"momentum\",\n      \"max\": 80,\n      \"min\": 30,\n      \"name\": \"rsiMax\",\n      \"type\": \"DECIMAL\"\n     },\n     {\n      \"defaultValue\": 20,\n      \"description\": \"Volume moving-average period\",\n      \"group\": \"volume\",\n      \"max\": 60,\n      \"min\": 5,\n      \"name\": \"volumeMaPeriod\",\n      \"t\n...TRUNCATED"
+  },
+  "body_truncated": true,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "69"
+  },
+  "status": 200
+ },
+ "slug": "strategy-types",
+ "tag": "local-throwaway"
+}

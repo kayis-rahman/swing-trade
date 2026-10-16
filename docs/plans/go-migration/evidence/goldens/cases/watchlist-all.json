@@ -1,0 +1,28 @@
+{
+ "note": "full watchlist read",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/watchlist/all"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": [\n  {\n   \"addedAt\": \"2026-10-15T06:49:42.140204\",\n   \"candleCount\": 0,\n   \"exchange\": \"NSE\",\n   \"id\": 1,\n   \"isActive\": true,\n   \"lastSyncedAt\": null,\n   \"name\": \"Reliance Industries Limited\",\n   \"symbol\": \"RELIANCE\"\n  },\n  {\n   \"addedAt\": \"2026-10-15T06:49:42.140204\",\n   \"candleCount\": 0,\n   \"exchange\": \"NSE\",\n   \"id\": 2,\n   \"isActive\": true,\n   \"lastSyncedAt\": null,\n   \"name\": \"Tata Consultancy Services Limited\",\n   \"symbol\": \"TCS\"\n  },\n  {\n   \"addedAt\": \"2026-10-15T06:49:42.140204\",\n   \"candleCount\": 0,\n   \"exchange\": \"NSE\",\n   \"id\": 3,\n   \"isActive\": true,\n   \"lastSyncedAt\": null,\n   \"name\": \"Infosys Limited\",\n   \"symbol\": \"INFY\"\n  },\n  {\n   \"addedAt\": \"2026-10-15T06:49:42.140204\",\n   \"candleCount\": 0,\n   \"exchange\": \"NSE\",\n   \"id\": 4,\n   \"isActive\": true,\n   \"lastSyncedAt\": null,\n   \"name\": \"HDFC Bank Limited\",\n   \"symbol\": \"HDFCBANK\"\n  },\n  {\n   \"addedAt\": \"2026-10-15T06:49:42.140204\",\n   \"candleCount\": 0,\n   \"exchange\": \"NSE\",\n   \"id\": 5,\n   \"isActive\": true,\n   \"lastSyncedAt\": null,\n   \"name\": \"ICICI Bank Limited\",\n   \"symbol\": \"ICICIBANK\"\n  },\n  {\n   \"addedAt\": \"2026-10-15T06:49:42.140204\",\n   \"candleCount\": 0,\n   \"exchange\": \"NSE\",\n   \"id\": 7,\n   \"isActive\": tr\n...TRUNCATED"
+  },
+  "body_truncated": true,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "70"
+  },
+  "status": 200
+ },
+ "slug": "watchlist-all",
+ "tag": "local-throwaway"
+}

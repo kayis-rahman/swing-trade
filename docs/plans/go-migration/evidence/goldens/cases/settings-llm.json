@@ -1,0 +1,28 @@
+{
+ "note": "llm settings",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/settings/llm"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"gpuhub.api_key.configured\": \"false\",\n  \"laya.base_url\": \"https://gpu-hub.example.invalid/v1\",\n  \"laya.model\": \"Ornith-1.5-35B-A3B-AWQ\",\n  \"llamacpp.model\": \"<local-model-path>\",\n  \"llm.backend\": \"local\",\n  \"llm.base_url\": \"http://127.0.0.1:1/v1\",\n  \"llm.pdf.base_url\": \"\",\n  \"llm.pdf.model\": \"gemma-4-E2B\",\n  \"ollama.api_key.configured\": \"false\",\n  \"ollama.base_url\": \"http://localhost:11434/v1\",\n  \"ollama.model\": \"qwen3.5:4b\",\n  \"openai.api_key.configured\": \"false\",\n  \"openai.base_url\": \"https://api.openai.com/v1\",\n  \"openai.model\": \"gpt-4o\",\n  \"pi-agent.model\": \"<configured-model>\",\n  \"pi-agent.provider\": \"openai-codex\"\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:49.470325\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "91"
+  },
+  "status": 200
+ },
+ "slug": "settings-llm",
+ "tag": "local-throwaway"
+}

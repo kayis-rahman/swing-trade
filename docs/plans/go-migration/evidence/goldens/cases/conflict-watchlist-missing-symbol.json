@@ -1,0 +1,30 @@
+{
+ "note": "POST with a body that omits the required symbol",
+ "request": {
+  "body": {
+   "foo": "bar"
+  },
+  "method": "POST",
+  "path": "/api/watchlist"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"code\": \"VALIDATION_ERROR\",\n \"fieldErrors\": [],\n \"message\": \"Missing required parameter: symbol\",\n \"path\": \"/api/watchlist\",\n \"status\": 400,\n \"timestamp\": \"2026-10-15T07:44:09.76146\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 400,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "36"
+  },
+  "status": 400
+ },
+ "slug": "conflict-watchlist-missing-symbol",
+ "tag": "local-throwaway"
+}

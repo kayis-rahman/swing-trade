@@ -1,0 +1,25 @@
+{
+ "note": "actuator health, unauthenticated",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/actuator/health"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"components\": {\n  \"db\": {\n   \"details\": {\n    \"database\": \"PostgreSQL\",\n    \"validationQuery\": \"isValid()\"\n   },\n   \"status\": \"UP\"\n  },\n  \"diskSpace\": {\n   \"details\": {\n    \"exists\": true,\n    \"free\": 12063916032,\n    \"path\": \"/private/tmp/gnhf-golden/.\",\n    \"threshold\": 10485760,\n    \"total\": 245054767104\n   },\n   \"status\": \"UP\"\n  },\n  \"livenessState\": {\n   \"status\": \"UP\"\n  },\n  \"ping\": {\n   \"status\": \"UP\"\n  },\n  \"readinessState\": {\n   \"status\": \"UP\"\n  },\n  \"ssl\": {\n   \"details\": {\n    \"expiringChains\": [],\n    \"invalidChains\": [],\n    \"validChains\": []\n   },\n   \"status\": \"UP\"\n  }\n },\n \"groups\": [\n  \"liveness\",\n  \"readiness\"\n ],\n \"status\": \"UP\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/vnd.spring-boot.actuator.v3+json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked"
+  },
+  "status": 200
+ },
+ "slug": "actuator-health",
+ "tag": "local-throwaway"
+}

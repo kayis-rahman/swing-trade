@@ -1,0 +1,28 @@
+{
+ "note": "pi ssh status",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/settings/pi/status"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"failureReason\": \"\",\n  \"idleStops\": 0,\n  \"inFlightRequests\": 0,\n  \"message\": \"Pi llama-server is not running\",\n  \"modelPath\": \"<local-model-path>\",\n  \"readinessMillis\": -1,\n  \"running\": false,\n  \"startAttempts\": 0,\n  \"state\": \"STOPPED\",\n  \"success\": true\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:49.474276\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "86"
+  },
+  "status": 200
+ },
+ "slug": "settings-pi-status",
+ "tag": "local-throwaway"
+}

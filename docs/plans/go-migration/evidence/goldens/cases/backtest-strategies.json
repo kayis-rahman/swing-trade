@@ -1,0 +1,28 @@
+{
+ "note": "backtest strategies",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/backtest/strategies"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "[\n \"52W_HIGH_BREAKOUT\",\n \"PRICE_ACTION\",\n \"PRICE_ACTION_3_OF_4\",\n \"PULLBACK_UPTREND\",\n \"RSI2_MEAN_REVERSION\",\n \"RS_NIFTY_MOMENTUM\",\n \"VOLATILITY_SQUEEZE\"\n]"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "65"
+  },
+  "status": 200
+ },
+ "slug": "backtest-strategies",
+ "tag": "local-throwaway"
+}

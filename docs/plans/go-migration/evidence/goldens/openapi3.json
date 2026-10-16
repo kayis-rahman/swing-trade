@@ -1,0 +1,8014 @@
+{
+ "components": {
+  "schemas": {
+   "AccuracyByRegime": {
+    "properties": {
+     "accuracy": {
+      "format": "double",
+      "type": "number"
+     },
+     "avgConfidence": {
+      "format": "double",
+      "type": "number"
+     },
+     "regime": {
+      "type": "string"
+     },
+     "total": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "AccuracyBySymbol": {
+    "properties": {
+     "accuracy": {
+      "format": "double",
+      "type": "number"
+     },
+     "avgConfidence": {
+      "format": "double",
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "totalSignals": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "AccuracyByWindow": {
+    "properties": {
+     "accuracy": {
+      "format": "double",
+      "type": "number"
+     },
+     "avgReturn": {
+      "format": "double",
+      "type": "number"
+     },
+     "total": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "window": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "AnalysisScopeRequest": {
+    "properties": {
+     "scope": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseDataQualityReport": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/DataQualityReport"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseECEStats": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/ECEStats"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseEarningsData": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/EarningsData"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseKillSwitchState": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/KillSwitchState"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListAccuracyByRegime": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/AccuracyByRegime"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListAccuracyBySymbol": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/AccuracyBySymbol"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListAccuracyByWindow": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/AccuracyByWindow"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListCalibrationData": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/CalibrationData"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListMapStringObject": {
+    "properties": {
+     "data": {
+      "items": {
+       "additionalProperties": {},
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListNewsArticle": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/NewsArticle"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListRollingICResult": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/RollingICResult"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListSentimentResult": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/SentimentResult"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListStrategyConfigResponse": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/StrategyConfigResponse"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseListStrategyTypeResponse": {
+    "properties": {
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/StrategyTypeResponse"
+      },
+      "type": "array"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseMapStringBoolean": {
+    "properties": {
+     "data": {
+      "additionalProperties": {
+       "type": "boolean"
+      },
+      "type": "object"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseMapStringObject": {
+    "properties": {
+     "data": {
+      "additionalProperties": {},
+      "type": "object"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseMapStringString": {
+    "properties": {
+     "data": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseObject": {
+    "properties": {
+     "data": {},
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponsePromotionEligibilityResponse": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/PromotionEligibilityResponse"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseSentimentResult": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/SentimentResult"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseSignalVolumeStats": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/SignalVolumeStats"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseStrategyConfigResponse": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/StrategyConfigResponse"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseString": {
+    "properties": {
+     "data": {
+      "type": "string"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ApiResponseSynthesisEvaluationSummary": {
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/SynthesisEvaluationSummary"
+     },
+     "error": {
+      "type": "string"
+     },
+     "success": {
+      "type": "boolean"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "BacktestConfig": {
+    "properties": {
+     "atrMultiplierStop": {
+      "format": "double",
+      "type": "number"
+     },
+     "brokeragePerTrade": {
+      "type": "number"
+     },
+     "initialCapital": {
+      "type": "number"
+     },
+     "maxConcurrentPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "maxHoldingDays": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "portfolioExposurePolicy": {
+      "$ref": "#/components/schemas/PortfolioExposurePolicy"
+     },
+     "rewardRiskRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "riskManagementPolicy": {
+      "$ref": "#/components/schemas/RiskManagementPolicy"
+     },
+     "riskPerTradePct": {
+      "type": "number"
+     },
+     "signalExitEnabled": {
+      "type": "boolean"
+     },
+     "slippagePct": {
+      "type": "number"
+     },
+     "trendBreakStreakDays": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "BacktestReportSummary": {
+    "properties": {
+     "generatedAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "overallSharpeRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "overallWinRate": {
+      "format": "double",
+      "type": "number"
+     },
+     "results": {
+      "items": {
+       "$ref": "#/components/schemas/BacktestResult"
+      },
+      "type": "array"
+     },
+     "symbolsBacktested": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "top10ByTotalReturn": {
+      "items": {
+       "$ref": "#/components/schemas/BacktestResult"
+      },
+      "type": "array"
+     },
+     "top10ByWinRate": {
+      "items": {
+       "$ref": "#/components/schemas/BacktestResult"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "BacktestResult": {
+    "properties": {
+     "avgGainPct": {
+      "type": "number"
+     },
+     "avgLossPct": {
+      "type": "number"
+     },
+     "benchmarkComparison": {
+      "$ref": "#/components/schemas/BenchmarkComparison"
+     },
+     "cagrPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "calmarRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "expectancy": {
+      "format": "double",
+      "type": "number"
+     },
+     "losingTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "maxDrawdownPct": {
+      "type": "number"
+     },
+     "sharpeRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "sortinoRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "totalReturn": {
+      "type": "number"
+     },
+     "totalTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "trades": {
+      "items": {
+       "$ref": "#/components/schemas/BacktestTrade"
+      },
+      "type": "array"
+     },
+     "winRate": {
+      "format": "double",
+      "type": "number"
+     },
+     "winningTrades": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "BacktestTrade": {
+    "properties": {
+     "entryDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "exitDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "exitPrice": {
+      "type": "number"
+     },
+     "exitReason": {
+      "enum": [
+       "STOP_LOSS",
+       "TARGET_HIT",
+       "SIGNAL_EXIT",
+       "TIME_STOP",
+       "TREND_BREAK",
+       "BREAKEVEN_STOP",
+       "TRAILING_STOP",
+       "MANUAL"
+      ],
+      "type": "string"
+     },
+     "holdingDays": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "pnl": {
+      "type": "number"
+     },
+     "pnlPct": {
+      "type": "number"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "stopLoss": {
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "target": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "BenchmarkComparison": {
+    "properties": {
+     "availability": {
+      "enum": [
+       "AVAILABLE",
+       "UNAVAILABLE"
+      ],
+      "type": "string"
+     },
+     "benchmarkName": {
+      "type": "string"
+     },
+     "benchmarkReturnPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "excessReturnPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "strategyReturnPct": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "CalibrationData": {
+    "properties": {
+     "actualAccuracy": {
+      "format": "double",
+      "type": "number"
+     },
+     "confidenceBin": {
+      "format": "double",
+      "type": "number"
+     },
+     "count": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "error": {
+      "format": "double",
+      "type": "number"
+     },
+     "predictedConfidence": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "Candidate": {
+    "properties": {
+     "completedTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "expectedBars": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "netPnl": {
+      "type": "number"
+     },
+     "openEntryPrice": {
+      "type": "number"
+     },
+     "openEntryTime": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "receivedBars": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "status": {
+      "type": "string"
+     },
+     "strategy": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "CandidateScanRunEntity": {
+    "properties": {
+     "completedAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "completedSymbols": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "errorMessage": {
+      "type": "string"
+     },
+     "failedSymbols": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "id": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "orchestrationError": {
+      "type": "string"
+     },
+     "orchestrationJobRunId": {
+      "format": "uuid",
+      "type": "string"
+     },
+     "orchestrationStatus": {
+      "type": "string"
+     },
+     "qualifiedSymbols": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "runId": {
+      "format": "uuid",
+      "type": "string"
+     },
+     "scanScope": {
+      "type": "string"
+     },
+     "scanTrigger": {
+      "type": "string"
+     },
+     "startedAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "totalSymbols": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "ClosePositionRequest": {
+    "properties": {
+     "exitReason": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "CombinedSignalResponse": {
+    "properties": {
+     "analysisDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "sentimentAnalysis": {
+      "$ref": "#/components/schemas/SentimentAnalysisResponse"
+     },
+     "signalType": {
+      "enum": [
+       "BUY",
+       "SELL",
+       "HOLD"
+      ],
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "technicalAnalysis": {
+      "$ref": "#/components/schemas/TechnicalAnalysisResponse"
+     }
+    },
+    "type": "object"
+   },
+   "Comparison": {
+    "properties": {
+     "from": {
+      "format": "date",
+      "type": "string"
+     },
+     "rules": {
+      "items": {
+       "$ref": "#/components/schemas/RuleResult"
+      },
+      "type": "array"
+     },
+     "to": {
+      "format": "date",
+      "type": "string"
+     },
+     "tournaments": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "ComponentStatus": {
+    "properties": {
+     "description": {
+      "type": "string"
+     },
+     "details": {
+      "additionalProperties": {},
+      "type": "object"
+     },
+     "name": {
+      "type": "string"
+     },
+     "responseTimeMs": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "status": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ConditionResult": {
+    "properties": {
+     "actualValue": {
+      "type": "string"
+     },
+     "met": {
+      "type": "boolean"
+     },
+     "name": {
+      "type": "string"
+     },
+     "note": {
+      "type": "string"
+     },
+     "threshold": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "DataGap": {
+    "properties": {
+     "description": {
+      "type": "string"
+     },
+     "endDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "startDate": {
+      "format": "date",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "DataQualityReport": {
+    "properties": {
+     "actualTradingDays": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "anomalies": {
+      "items": {
+       "$ref": "#/components/schemas/PriceAnomaly"
+      },
+      "type": "array"
+     },
+     "critical": {
+      "type": "boolean"
+     },
+     "expectedTradingDays": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "fromDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "gapPercentage": {
+      "format": "double",
+      "type": "number"
+     },
+     "gaps": {
+      "items": {
+       "$ref": "#/components/schemas/DataGap"
+      },
+      "type": "array"
+     },
+     "hasIssues": {
+      "type": "boolean",
+      "writeOnly": true
+     },
+     "stockSymbol": {
+      "type": "string"
+     },
+     "toDate": {
+      "format": "date",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "DataQualityValidationRequest": {
+    "properties": {
+     "fromDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "toDate": {
+      "format": "date",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ECEStats": {
+    "properties": {
+     "bins": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "ece": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "EarningsData": {
+    "properties": {
+     "ebitda": {
+      "type": "number"
+     },
+     "eps": {
+      "type": "number"
+     },
+     "extractionDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "guidance": {
+      "type": "string"
+     },
+     "netProfit": {
+      "type": "number"
+     },
+     "quarter": {
+      "type": "string"
+     },
+     "revenue": {
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "GenerateAllResponse": {
+    "properties": {
+     "signals": {
+      "items": {
+       "$ref": "#/components/schemas/SignalResponse"
+      },
+      "type": "array"
+     },
+     "skipped": {
+      "items": {
+       "$ref": "#/components/schemas/SymbolResult"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "HealthStatus": {
+    "properties": {
+     "components": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/ComponentStatus"
+      },
+      "type": "object"
+     },
+     "status": {
+      "type": "string"
+     },
+     "systemInfo": {
+      "$ref": "#/components/schemas/SystemInfo"
+     },
+     "timestamp": {
+      "format": "date-time",
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "IntradayBacktestConfig": {
+    "properties": {
+     "initialCapital": {
+      "type": "number"
+     },
+     "maxDailyLoss": {
+      "type": "number"
+     },
+     "maxTradesPerDay": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "IntradayPaperScanRequest": {
+    "properties": {
+     "asOfBarTime": {
+      "format": "time-local",
+      "type": "string"
+     },
+     "riskConfig": {
+      "$ref": "#/components/schemas/IntradayBacktestConfig"
+     },
+     "sessionDate": {
+      "format": "date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "asOfBarTime",
+     "sessionDate"
+    ],
+    "type": "object"
+   },
+   "IntradayPaperScanResult": {
+    "properties": {
+     "asOfBarTime": {
+      "format": "time-local",
+      "type": "string"
+     },
+     "candidateCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "excludedSymbols": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "liveBrokerCalls": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "mode": {
+      "type": "string"
+     },
+     "results": {
+      "items": {
+       "$ref": "#/components/schemas/Candidate"
+      },
+      "type": "array"
+     },
+     "scannedSymbols": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "sessionDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "universe": {
+      "type": "string"
+     },
+     "watchlistSize": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "IntradayPaperSessionRequest": {
+    "properties": {
+     "asOfBarTime": {
+      "format": "time-local",
+      "type": "string"
+     },
+     "riskConfig": {
+      "$ref": "#/components/schemas/IntradayBacktestConfig"
+     },
+     "sessionDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "strategyType": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "symbol": {
+      "minLength": 1,
+      "type": "string"
+     }
+    },
+    "required": [
+     "sessionDate",
+     "strategyType",
+     "symbol"
+    ],
+    "type": "object"
+   },
+   "IntradayPaperSessionResult": {
+    "properties": {
+     "executionMode": {
+      "type": "string"
+     },
+     "expectedBars": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "finalCapital": {
+      "type": "number"
+     },
+     "initialCapital": {
+      "type": "number"
+     },
+     "killSwitchActive": {
+      "type": "boolean"
+     },
+     "liveBrokerCalls": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "maxConcurrentPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "netPnl": {
+      "type": "number"
+     },
+     "openPositionsAtEnd": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "orders": {
+      "items": {
+       "$ref": "#/components/schemas/PaperOrderRecord"
+      },
+      "type": "array"
+     },
+     "positions": {
+      "items": {
+       "$ref": "#/components/schemas/PaperPositionRecord"
+      },
+      "type": "array"
+     },
+     "receivedBars": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "runId": {
+      "type": "string"
+     },
+     "sessionDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "strategy": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "trades": {
+      "items": {
+       "$ref": "#/components/schemas/PaperTradeRecord"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "JobRunResponse": {
+    "properties": {
+     "completedAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "completedCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "errorMessage": {
+      "type": "string"
+     },
+     "failedCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "runId": {
+      "format": "uuid",
+      "type": "string"
+     },
+     "startedAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "symbolsCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "triggerType": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "JsonNode": {
+    "properties": {
+     "array": {
+      "type": "boolean"
+     },
+     "bigDecimal": {
+      "type": "boolean"
+     },
+     "bigInteger": {
+      "type": "boolean"
+     },
+     "binary": {
+      "type": "boolean"
+     },
+     "boolean": {
+      "type": "boolean"
+     },
+     "container": {
+      "type": "boolean"
+     },
+     "double": {
+      "type": "boolean"
+     },
+     "embeddedValue": {
+      "type": "boolean"
+     },
+     "empty": {
+      "type": "boolean"
+     },
+     "float": {
+      "type": "boolean"
+     },
+     "floatingPointNumber": {
+      "type": "boolean"
+     },
+     "int": {
+      "type": "boolean"
+     },
+     "integralNumber": {
+      "type": "boolean"
+     },
+     "long": {
+      "type": "boolean"
+     },
+     "missingNode": {
+      "type": "boolean"
+     },
+     "nodeType": {
+      "enum": [
+       "ARRAY",
+       "BINARY",
+       "BOOLEAN",
+       "MISSING",
+       "NULL",
+       "NUMBER",
+       "OBJECT",
+       "POJO",
+       "STRING"
+      ],
+      "type": "string"
+     },
+     "null": {
+      "type": "boolean"
+     },
+     "number": {
+      "type": "boolean"
+     },
+     "object": {
+      "type": "boolean"
+     },
+     "pojo": {
+      "type": "boolean"
+     },
+     "short": {
+      "type": "boolean"
+     },
+     "string": {
+      "type": "boolean"
+     },
+     "textual": {
+      "deprecated": true,
+      "type": "boolean"
+     },
+     "valueNode": {
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   },
+   "KillSwitchRequest": {
+    "properties": {
+     "enabled": {
+      "type": "boolean"
+     },
+     "reason": {
+      "type": "string"
+     },
+     "valid": {
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   },
+   "KillSwitchState": {
+    "properties": {
+     "active": {
+      "type": "boolean"
+     },
+     "enabledAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "NewsArticle": {
+    "properties": {
+     "description": {
+      "type": "string"
+     },
+     "link": {
+      "type": "string"
+     },
+     "publishedDate": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "rawContent": {
+      "type": "string"
+     },
+     "source": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "PaginatedResponsePositionResponse": {
+    "properties": {
+     "content": {
+      "items": {
+       "$ref": "#/components/schemas/PositionResponse"
+      },
+      "type": "array"
+     },
+     "first": {
+      "type": "boolean"
+     },
+     "last": {
+      "type": "boolean"
+     },
+     "pageNumber": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "pageSize": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "totalElements": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "totalPages": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "PaperOrderRecord": {
+    "properties": {
+     "executionMode": {
+      "type": "string"
+     },
+     "fillPrice": {
+      "type": "number"
+     },
+     "fillSource": {
+      "type": "string"
+     },
+     "filledAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "orderId": {
+      "type": "string"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "side": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "PaperPortfolioSummary": {
+    "properties": {
+     "currentCapital": {
+      "type": "number"
+     },
+     "initialCapital": {
+      "type": "number"
+     },
+     "openPositionCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "portfolioId": {
+      "type": "string"
+     },
+     "realizedPnl": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "PaperPositionRecord": {
+    "properties": {
+     "carriedOvernight": {
+      "type": "boolean"
+     },
+     "costs": {
+      "type": "number"
+     },
+     "currentPrice": {
+      "type": "number"
+     },
+     "entryOrderId": {
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "entryTime": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "exitOrderId": {
+      "type": "string"
+     },
+     "exitPrice": {
+      "type": "number"
+     },
+     "exitReason": {
+      "type": "string"
+     },
+     "exitTime": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "positionId": {
+      "type": "string"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "realizedPnl": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "unrealizedPnl": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "PaperTradeRecord": {
+    "properties": {
+     "costs": {
+      "type": "number"
+     },
+     "entryOrderId": {
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "entryTime": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "exitOrderId": {
+      "type": "string"
+     },
+     "exitPrice": {
+      "type": "number"
+     },
+     "exitReason": {
+      "type": "string"
+     },
+     "exitTime": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "pnl": {
+      "type": "number"
+     },
+     "positionId": {
+      "type": "string"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "strategy": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ParamDef": {
+    "properties": {
+     "defaultValue": {},
+     "description": {
+      "type": "string"
+     },
+     "group": {
+      "type": "string"
+     },
+     "max": {
+      "type": "number"
+     },
+     "min": {
+      "type": "number"
+     },
+     "name": {
+      "type": "string"
+     },
+     "type": {
+      "enum": [
+       "INT",
+       "DECIMAL",
+       "BOOL",
+       "ENUM"
+      ],
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ParamSchema": {
+    "properties": {
+     "params": {
+      "items": {
+       "$ref": "#/components/schemas/ParamDef"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "PerformanceResponse": {
+    "properties": {
+     "annualizedReturn": {
+      "type": "number"
+     },
+     "asOfDate": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "averageHoldingPeriod": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "averageLoss": {
+      "type": "number"
+     },
+     "averageTrade": {
+      "type": "number"
+     },
+     "averageWin": {
+      "type": "number"
+     },
+     "closedTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "longestLossStreak": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "longestWinStreak": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "losingTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "maxDrawdown": {
+      "type": "number"
+     },
+     "profitFactor": {
+      "type": "number"
+     },
+     "sharpeRatio": {
+      "type": "number"
+     },
+     "sortinoRatio": {
+      "type": "number"
+     },
+     "totalCapitalGained": {
+      "type": "number"
+     },
+     "totalFeesPaid": {
+      "type": "number"
+     },
+     "totalPnL": {
+      "type": "number"
+     },
+     "totalReturn": {
+      "type": "number"
+     },
+     "totalTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "totalValue": {
+      "type": "number"
+     },
+     "winRate": {
+      "type": "number"
+     },
+     "winningTrades": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "PortfolioBacktestConfigRequest": {
+    "properties": {
+     "atrMultiplierStop": {
+      "format": "double",
+      "type": "number"
+     },
+     "brokeragePerTrade": {
+      "type": "number"
+     },
+     "initialCapital": {
+      "type": "number"
+     },
+     "maxConcurrentPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "maxHoldingDays": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "rewardRiskRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "riskPerTradePct": {
+      "type": "number"
+     },
+     "signalExitEnabled": {
+      "type": "boolean"
+     },
+     "slippagePct": {
+      "type": "number"
+     },
+     "trendBreakStreakDays": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "PortfolioBacktestRequest": {
+    "properties": {
+     "config": {
+      "$ref": "#/components/schemas/PortfolioBacktestConfigRequest"
+     },
+     "evaluationEnd": {
+      "format": "date",
+      "type": "string"
+     },
+     "evaluationStart": {
+      "format": "date",
+      "type": "string"
+     },
+     "exchange": {
+      "type": "string"
+     },
+     "strategyName": {
+      "type": "string"
+     },
+     "symbols": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "PortfolioBacktestResponse": {
+    "properties": {
+     "benchmarkComparison": {
+      "$ref": "#/components/schemas/BenchmarkComparison"
+     },
+     "cagrPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "calmarRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "equityCurve": {
+      "items": {
+       "$ref": "#/components/schemas/PortfolioEquityPointResponse"
+      },
+      "type": "array"
+     },
+     "evaluationEnd": {
+      "format": "date",
+      "type": "string"
+     },
+     "evaluationStart": {
+      "format": "date",
+      "type": "string"
+     },
+     "finalCapital": {
+      "type": "number"
+     },
+     "initialCapital": {
+      "type": "number"
+     },
+     "maxDrawdownPct": {
+      "type": "number"
+     },
+     "rejectedTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "sharpeRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "sortinoRatio": {
+      "format": "double",
+      "type": "number"
+     },
+     "totalReturn": {
+      "type": "number"
+     },
+     "totalTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "trades": {
+      "items": {
+       "$ref": "#/components/schemas/PortfolioBacktestTradeResponse"
+      },
+      "type": "array"
+     },
+     "winningTrades": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "PortfolioBacktestTradeResponse": {
+    "properties": {
+     "entryDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "string"
+     },
+     "exitDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "exitPrice": {
+      "type": "string"
+     },
+     "exitReason": {
+      "type": "string"
+     },
+     "holdingDays": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "pnl": {
+      "type": "number"
+     },
+     "pnlPct": {
+      "type": "number"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "stopLoss": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "target": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "PortfolioEquityPointResponse": {
+    "properties": {
+     "date": {
+      "format": "date",
+      "type": "string"
+     },
+     "equity": {
+      "type": "number"
+     },
+     "positionMarketValue": {
+      "type": "number"
+     },
+     "settledCash": {
+      "type": "number"
+     },
+     "unsettledProceeds": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "PortfolioExposurePolicy": {},
+   "PositionResponse": {
+    "properties": {
+     "averagePrice": {
+      "type": "number"
+     },
+     "currentPrice": {
+      "type": "number"
+     },
+     "entryDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "entryReason": {
+      "type": "string"
+     },
+     "id": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "status": {
+      "enum": [
+       "OPEN",
+       "CLOSED",
+       "PENDING_CLOSE",
+       "STOPPED",
+       "TARGET_HIT"
+      ],
+      "type": "string"
+     },
+     "stopLoss": {
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "target": {
+      "type": "number"
+     },
+     "totalValue": {
+      "type": "number"
+     },
+     "unrealizedPnL": {
+      "type": "number"
+     },
+     "unrealizedPnLPercent": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "PositionStats": {
+    "properties": {
+     "averageHoldingPeriod": {
+      "format": "double",
+      "type": "number"
+     },
+     "closedPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "message": {
+      "type": "string"
+     },
+     "openPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "stoppedOut": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "targetHit": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "todayPnL": {
+      "type": "number"
+     },
+     "todayPnLPercent": {
+      "type": "number"
+     },
+     "totalPnL": {
+      "type": "number"
+     },
+     "totalPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "unrealizedPnL": {
+      "type": "number"
+     },
+     "winRate": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "PriceAnomaly": {
+    "properties": {
+     "date": {
+      "format": "date",
+      "type": "string"
+     },
+     "details": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "PromotionEligibilityResponse": {
+    "properties": {
+     "challengerVariantId": {
+      "type": "string"
+     },
+     "championVariantId": {
+      "type": "string"
+     },
+     "conditions": {
+      "items": {
+       "$ref": "#/components/schemas/ConditionResult"
+      },
+      "type": "array"
+     },
+     "dataLimitations": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "status": {
+      "enum": [
+       "ELIGIBLE",
+       "NOT_ELIGIBLE",
+       "INSUFFICIENT_SAMPLE"
+      ],
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "Report": {
+    "properties": {
+     "from": {
+      "format": "date",
+      "type": "string"
+     },
+     "to": {
+      "format": "date",
+      "type": "string"
+     },
+     "totals": {
+      "$ref": "#/components/schemas/Totals"
+     },
+     "variants": {
+      "items": {
+       "$ref": "#/components/schemas/VariantReport"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "RiskManagementPolicy": {},
+   "RiskSummary": {
+    "properties": {
+     "availableCapital": {
+      "type": "number"
+     },
+     "numberOfPositions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "sectorExposure": {
+      "additionalProperties": {
+       "format": "int32",
+       "type": "integer"
+      },
+      "type": "object"
+     },
+     "stopLossExposure": {
+      "type": "number"
+     },
+     "totalExposure": {
+      "type": "number"
+     },
+     "usedCapital": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "RollingICResult": {
+    "properties": {
+     "date": {
+      "type": "string"
+     },
+     "spearmanIC": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "RuleResult": {
+    "properties": {
+     "avgReturnPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "decisions": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "decisionsWithOutcome": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "differsFromHighestConfidence": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "rule": {
+      "type": "string"
+     },
+     "winRatePct": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "RunRequest": {
+    "properties": {
+     "dryRun": {
+      "type": "boolean"
+     },
+     "empty": {
+      "type": "boolean"
+     },
+     "skipLlm": {
+      "type": "boolean"
+     },
+     "stages": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "symbols": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "variantIds": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "ScanRequest": {
+    "properties": {
+     "includeSentiment": {
+      "type": "boolean"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "ScanResponse": {
+    "properties": {
+     "buySignals": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "holdSignals": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "message": {
+      "type": "string"
+     },
+     "scanResults": {
+      "items": {
+       "$ref": "#/components/schemas/ScanSignalResult"
+      },
+      "type": "array"
+     },
+     "scanTime": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "scannedSymbols": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "sellSignals": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "signalsFound": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "status": {
+      "enum": [
+       "COMPLETED",
+       "IN_PROGRESS",
+       "FAILED",
+       "NO_SIGNALS"
+      ],
+      "type": "string"
+     },
+     "symbolsScanned": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "ScanSignalResult": {
+    "properties": {
+     "confidence": {
+      "type": "number"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "indicators": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "reasoning": {
+      "type": "string"
+     },
+     "signalType": {
+      "enum": [
+       "BUY",
+       "SELL",
+       "HOLD"
+      ],
+      "type": "string"
+     },
+     "stopLoss": {
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "target": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "SectorAllocation": {
+    "properties": {
+     "allocation": {
+      "additionalProperties": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "object"
+     },
+     "message": {
+      "type": "string"
+     },
+     "numberOfSectors": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "totalExposure": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "SelectionResponse": {
+    "properties": {
+     "candidates": {
+      "items": {
+       "additionalProperties": {},
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "id": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "reason": {
+      "type": "string"
+     },
+     "selectionDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "statusDetail": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "winnerConfidence": {
+      "type": "number"
+     },
+     "winnerVariantId": {
+      "type": "string"
+     },
+     "winnerVersion": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "SelectionRow": {
+    "properties": {
+     "selectionDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "winnerConfidence": {
+      "type": "number"
+     },
+     "winnerVariantId": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "SentimentAnalysisResponse": {
+    "properties": {
+     "analyzedAt": {
+      "format": "date",
+      "type": "string"
+     },
+     "articleCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "confidence": {
+      "format": "double",
+      "type": "number"
+     },
+     "score": {
+      "enum": [
+       "POSITIVE",
+       "NEUTRAL",
+       "NEGATIVE"
+      ],
+      "type": "string"
+     },
+     "summary": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "SentimentResult": {
+    "properties": {
+     "analyzedAt": {
+      "format": "date",
+      "type": "string"
+     },
+     "articleCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "articleIds": {
+      "items": {
+       "format": "int64",
+       "type": "integer"
+      },
+      "type": "array"
+     },
+     "auditRequestId": {
+      "type": "string"
+     },
+     "catalysts": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "confidence": {
+      "format": "double",
+      "type": "number"
+     },
+     "date": {
+      "format": "date",
+      "type": "string"
+     },
+     "degradedReason": {
+      "type": "string"
+     },
+     "id": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "modelVersion": {
+      "type": "string"
+     },
+     "negative": {
+      "type": "boolean"
+     },
+     "neutral": {
+      "type": "boolean"
+     },
+     "positive": {
+      "type": "boolean"
+     },
+     "promptHash": {
+      "type": "string"
+     },
+     "rawContent": {
+      "type": "string"
+     },
+     "redFlags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "score": {
+      "enum": [
+       "POSITIVE",
+       "NEUTRAL",
+       "NEGATIVE",
+       "UNKNOWN"
+      ],
+      "type": "string"
+     },
+     "source": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "unknown": {
+      "type": "boolean"
+     }
+    },
+    "type": "object"
+   },
+   "ShadowPositionView": {
+    "properties": {
+     "entryDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "exitDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "exitPrice": {
+      "type": "number"
+     },
+     "exitReason": {
+      "type": "string"
+     },
+     "pnl": {
+      "type": "number"
+     },
+     "portfolioId": {
+      "type": "string"
+     },
+     "quantity": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "status": {
+      "type": "string"
+     },
+     "stopLoss": {
+      "type": "number"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "target": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "SignalResponse": {
+    "properties": {
+     "confidence": {
+      "type": "number"
+     },
+     "date": {
+      "format": "date",
+      "type": "string"
+     },
+     "entryPrice": {
+      "type": "number"
+     },
+     "generatedAt": {
+      "format": "date",
+      "type": "string"
+     },
+     "id": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "indicators": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "reasoning": {
+      "type": "string"
+     },
+     "riskRewardRatio": {
+      "type": "number"
+     },
+     "sentimentReasoning": {
+      "type": "string"
+     },
+     "sentimentScore": {
+      "type": "string"
+     },
+     "signalType": {
+      "enum": [
+       "BUY",
+       "SELL",
+       "HOLD"
+      ],
+      "type": "string"
+     },
+     "stopLoss": {
+      "type": "number"
+     },
+     "strategy": {
+      "type": "string"
+     },
+     "strategyVersion": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "target": {
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "SignalVolumeStats": {
+    "properties": {
+     "sevenDayAvg": {
+      "format": "double",
+      "type": "number"
+     },
+     "sevenDayCount": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "thirtyDayAvg": {
+      "format": "double",
+      "type": "number"
+     },
+     "todayCount": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "SseEmitter": {
+    "properties": {
+     "timeout": {
+      "format": "int64",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "StrategyConfigRequest": {
+    "properties": {
+     "mode": {
+      "enum": [
+       "OFF",
+       "BACKTEST_ONLY",
+       "SHADOW",
+       "CHAMPION"
+      ],
+      "type": "string"
+     },
+     "notes": {
+      "type": "string"
+     },
+     "overlays": {
+      "additionalProperties": {},
+      "type": "object"
+     },
+     "paperCapital": {
+      "minimum": 0.0,
+      "type": "number"
+     },
+     "params": {
+      "additionalProperties": {},
+      "type": "object"
+     },
+     "strategyType": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "variantId": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "version": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "mode",
+     "paperCapital",
+     "params",
+     "strategyType",
+     "variantId"
+    ],
+    "type": "object"
+   },
+   "StrategyConfigResponse": {
+    "properties": {
+     "createdAt": {
+      "format": "date-time",
+      "type": "string"
+     },
+     "current": {
+      "type": "boolean"
+     },
+     "id": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "mode": {
+      "enum": [
+       "OFF",
+       "BACKTEST_ONLY",
+       "SHADOW",
+       "CHAMPION"
+      ],
+      "type": "string"
+     },
+     "notes": {
+      "type": "string"
+     },
+     "overlays": {
+      "additionalProperties": {},
+      "type": "object"
+     },
+     "paperCapital": {
+      "type": "number"
+     },
+     "params": {
+      "additionalProperties": {},
+      "type": "object"
+     },
+     "paramsHash": {
+      "type": "string"
+     },
+     "strategyType": {
+      "type": "string"
+     },
+     "variantId": {
+      "type": "string"
+     },
+     "version": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "StrategyMatrixResponse": {
+    "properties": {
+     "strategies": {
+      "items": {
+       "$ref": "#/components/schemas/StrategyRow"
+      },
+      "type": "array"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "tournaments": {
+      "items": {
+       "$ref": "#/components/schemas/SelectionRow"
+      },
+      "type": "array"
+     }
+    },
+    "type": "object"
+   },
+   "StrategyModeRequest": {
+    "properties": {
+     "mode": {
+      "enum": [
+       "OFF",
+       "BACKTEST_ONLY",
+       "SHADOW",
+       "CHAMPION"
+      ],
+      "type": "string"
+     },
+     "notes": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "mode"
+    ],
+    "type": "object"
+   },
+   "StrategyRow": {
+    "properties": {
+     "closedTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "latestConfidence": {
+      "type": "number"
+     },
+     "latestSignal": {
+      "type": "string"
+     },
+     "latestSignalDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "mode": {
+      "type": "string"
+     },
+     "openPosition": {
+      "$ref": "#/components/schemas/ShadowPositionView"
+     },
+     "realizedPnl": {
+      "type": "number"
+     },
+     "strategyType": {
+      "type": "string"
+     },
+     "variantId": {
+      "type": "string"
+     },
+     "winRate": {
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "type": "object"
+   },
+   "StrategyTypeResponse": {
+    "properties": {
+     "paramSchema": {
+      "$ref": "#/components/schemas/ParamSchema"
+     },
+     "requiredIndicators": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "type": {
+      "type": "string"
+     },
+     "warmupBars": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "StreamingResponseBody": {},
+   "SymbolRequest": {
+    "properties": {
+     "symbol": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "valid": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "symbol"
+    ],
+    "type": "object"
+   },
+   "SymbolResult": {
+    "properties": {
+     "reason": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "SynthesisEvaluationSummary": {
+    "properties": {
+     "accuracyPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "correctEvaluations": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "measuredByRecommendation": {
+      "additionalProperties": {
+       "format": "int64",
+       "type": "integer"
+      },
+      "type": "object"
+     },
+     "measuredEvaluations": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "totalEvaluations": {
+      "format": "int64",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "SystemInfo": {
+    "properties": {
+     "architecture": {
+      "type": "string"
+     },
+     "availableProcessors": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "freeMemoryMB": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "javaVersion": {
+      "type": "string"
+     },
+     "maxMemoryMB": {
+      "format": "int64",
+      "type": "integer"
+     },
+     "osName": {
+      "type": "string"
+     },
+     "osVersion": {
+      "type": "string"
+     },
+     "totalMemoryMB": {
+      "format": "int64",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "TechnicalAnalysisResponse": {
+    "properties": {
+     "analysisDate": {
+      "format": "date",
+      "type": "string"
+     },
+     "indicators": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "signal": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   },
+   "Totals": {
+    "properties": {
+     "avgRegretPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "blocked": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "executed": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "pending": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "selectedPnl": {
+      "type": "number"
+     },
+     "selectedTradesClosed": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "tournaments": {
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "type": "object"
+   },
+   "TradeRequest": {
+    "properties": {
+     "direction": {
+      "enum": [
+       "LONG",
+       "SHORT"
+      ],
+      "type": "string"
+     },
+     "entryReason": {
+      "type": "string"
+     },
+     "limitPrice": {
+      "minimum": 0.01,
+      "type": "number"
+     },
+     "orderType": {
+      "enum": [
+       "MARKET",
+       "LIMIT",
+       "STOP_LOSS",
+       "TAKE_PROFIT",
+       "STOP",
+       "STOP_LIMIT"
+      ],
+      "type": "string"
+     },
+     "price": {
+      "minimum": 0.01,
+      "type": "number"
+     },
+     "quantity": {
+      "format": "int32",
+      "minimum": 1,
+      "type": "integer"
+     },
+     "riskTolerance": {
+      "format": "double",
+      "minimum": 0.0,
+      "type": "number"
+     },
+     "stopPrice": {
+      "minimum": 0.01,
+      "type": "number"
+     },
+     "symbol": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "target": {
+      "minimum": 0.01,
+      "type": "number"
+     },
+     "valid": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "direction",
+     "orderType",
+     "quantity",
+     "symbol"
+    ],
+    "type": "object"
+   },
+   "VariantReport": {
+    "properties": {
+     "agreementRatePct": {
+      "format": "double",
+      "type": "number"
+     },
+     "avgRegretPct": {
+      "format": "double",
+      "type": "number"
+     },
+     "buySignals": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "llmVetoes": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "mode": {
+      "type": "string"
+     },
+     "otherBlocks": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "selectedPnl": {
+      "type": "number"
+     },
+     "selectedTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "selectedWinRatePct": {
+      "format": "double",
+      "type": "number"
+     },
+     "selectedWins": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "selectionRatePct": {
+      "format": "double",
+      "type": "number"
+     },
+     "sentimentVetoes": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "shadowPnl": {
+      "type": "number"
+     },
+     "shadowTrades": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "shadowWinRatePct": {
+      "format": "double",
+      "type": "number"
+     },
+     "shadowWins": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "signalsGenerated": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "strategyType": {
+      "type": "string"
+     },
+     "timesSelected": {
+      "format": "int32",
+      "type": "integer"
+     },
+     "variantId": {
+      "type": "string"
+     }
+    },
+    "type": "object"
+   }
+  },
+  "securitySchemes": {
+   "apiKey": {
+    "description": "Required for administrative routes when API-key enforcement is enabled.",
+    "in": "header",
+    "name": "X-API-Key",
+    "type": "apiKey"
+   }
+  }
+ },
+ "info": {
+  "description": "Market data, analysis, paper trading, and risk-control APIs.",
+  "title": "Swing Trade API",
+  "version": "1.0"
+ },
+ "openapi": "3.1.0",
+ "paths": {
+  "/api/admin/data/status": {
+   "get": {
+    "operationId": "getDataStatus",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "days",
+      "required": true,
+      "schema": {
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/data/validate": {
+   "post": {
+    "operationId": "validateData",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DataQualityValidationRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseDataQualityReport"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/health": {
+   "get": {
+    "operationId": "adminHealth",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/kill-switch": {
+   "post": {
+    "operationId": "killSwitch",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/KillSwitchRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/kill-switch/status": {
+   "get": {
+    "operationId": "getKillSwitchStatus",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseKillSwitchState"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/kill-switch/toggle": {
+   "post": {
+    "operationId": "toggleKillSwitch",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "enable",
+      "required": true,
+      "schema": {
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/symbols/refresh": {
+   "post": {
+    "operationId": "refreshSymbolMaster",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/admin/symbols/status": {
+   "get": {
+    "operationId": "getSymbolMasterStatus",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "admin-controller"
+    ]
+   }
+  },
+  "/api/analysis/analyze": {
+   "post": {
+    "operationId": "analyze",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "analysis-controller"
+    ]
+   }
+  },
+  "/api/analysis/run-full": {
+   "post": {
+    "operationId": "runFullAnalysis",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "backfillYears",
+      "required": false,
+      "schema": {
+       "default": 5,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SseEmitter"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "analysis-orchestration-controller"
+    ]
+   }
+  },
+  "/api/backtest/portfolio": {
+   "post": {
+    "operationId": "runPortfolioBacktest",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PortfolioBacktestRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PortfolioBacktestResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/reports": {
+   "get": {
+    "operationId": "listReports",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "type": "string"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/reports/{filename}": {
+   "get": {
+    "operationId": "getReport",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "filename",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/JsonNode"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/run": {
+   "post": {
+    "operationId": "runBacktest",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "exchange",
+      "required": false,
+      "schema": {
+       "default": "NSE",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "strategyName",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/BacktestResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/run-all": {
+   "post": {
+    "operationId": "runBacktestAll",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "exchange",
+      "required": false,
+      "schema": {
+       "default": "NSE",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "strategyName",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/BacktestReportSummary"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/run-all-tune": {
+   "post": {
+    "operationId": "runTunedBacktestAll",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "exchange",
+      "required": false,
+      "schema": {
+       "default": "NSE",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "strategyName",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BacktestConfig"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/BacktestReportSummary"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/run-tune": {
+   "post": {
+    "operationId": "runTunedBacktest",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "exchange",
+      "required": false,
+      "schema": {
+       "default": "NSE",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "strategyName",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BacktestConfig"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/BacktestResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/backtest/strategies": {
+   "get": {
+    "operationId": "listStrategies",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "type": "string"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "backtest-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans": {
+   "get": {
+    "operationId": "history",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CandidateScanRunEntity"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   },
+   "post": {
+    "operationId": "start",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/settings": {
+   "get": {
+    "operationId": "getSettings",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   },
+   "put": {
+    "operationId": "updateSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}": {
+   "get": {
+    "operationId": "run",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}/analysis": {
+   "post": {
+    "operationId": "startAnalysis",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AnalysisScopeRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}/cancel": {
+   "post": {
+    "operationId": "cancel",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}/pause": {
+   "post": {
+    "operationId": "pause",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}/results": {
+   "get": {
+    "operationId": "results",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "offset",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "format": "int32",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 100,
+       "format": "int32",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": false,
+      "schema": {
+       "default": "",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "signalType",
+      "required": false,
+      "schema": {
+       "default": "",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}/resume": {
+   "post": {
+    "operationId": "resume",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/candidate-scans/{runId}/stream": {
+   "get": {
+    "operationId": "stream",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SseEmitter"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "candidate-scan-controller"
+    ]
+   }
+  },
+  "/api/data/backfill": {
+   "post": {
+    "operationId": "backfillSymbol",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "yearsBack",
+      "required": false,
+      "schema": {
+       "default": 2,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/data/export": {
+   "get": {
+    "operationId": "export",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": false,
+      "schema": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "fromDate",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "toDate",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "format",
+      "required": false,
+      "schema": {
+       "default": "CSV",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/StreamingResponseBody"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "data-export-controller"
+    ]
+   }
+  },
+  "/api/data/pull": {
+   "post": {
+    "operationId": "triggerDataPull",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "yearsBack",
+      "required": false,
+      "schema": {
+       "default": 1,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/data/pull/cancel": {
+   "post": {
+    "operationId": "cancelPull",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/data/pull/incremental": {
+   "post": {
+    "operationId": "incrementalPull",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "from",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/data/pull/progress": {
+   "get": {
+    "operationId": "getPullProgress",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "pullId",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/data/status": {
+   "get": {
+    "operationId": "getIngestionStatus_1",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/fyers/auth": {
+   "post": {
+    "operationId": "authenticate",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "fyers-auth-controller"
+    ]
+   }
+  },
+  "/api/fyers/callback": {
+   "get": {
+    "operationId": "handleCallback",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "fyers-auth-controller"
+    ]
+   }
+  },
+  "/api/fyers/login": {
+   "get": {
+    "operationId": "getLoginUrl",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "fyers-auth-controller"
+    ]
+   }
+  },
+  "/api/fyers/logout": {
+   "post": {
+    "operationId": "logout",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "fyers-auth-controller"
+    ]
+   }
+  },
+  "/api/fyers/status": {
+   "get": {
+    "operationId": "getStatus",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "fyers-auth-controller"
+    ]
+   }
+  },
+  "/api/health": {
+   "get": {
+    "operationId": "health",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthStatus"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "health-controller"
+    ]
+   }
+  },
+  "/api/health/database": {
+   "get": {
+    "operationId": "databaseHealth",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthStatus"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "health-controller"
+    ]
+   }
+  },
+  "/api/health/details": {
+   "get": {
+    "operationId": "detailedHealth",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "verbose",
+      "required": false,
+      "schema": {
+       "default": false,
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthStatus"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "health-controller"
+    ]
+   }
+  },
+  "/api/health/full": {
+   "get": {
+    "operationId": "fullHealth",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthStatus"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "health-controller"
+    ]
+   }
+  },
+  "/api/health/llm": {
+   "get": {
+    "operationId": "llmHealth",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthStatus"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "health-controller"
+    ]
+   }
+  },
+  "/api/health/market-data": {
+   "get": {
+    "operationId": "marketDataHealth",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthStatus"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "health-controller"
+    ]
+   }
+  },
+  "/api/holidays": {
+   "get": {
+    "operationId": "listHolidays",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   },
+   "post": {
+    "operationId": "addHoliday",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "date",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "occasion",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "type",
+      "required": false,
+      "schema": {
+       "default": "FULL",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/holidays/today": {
+   "get": {
+    "operationId": "checkToday",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/holidays/{date}": {
+   "delete": {
+    "operationId": "removeHoliday",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "date",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/backfill": {
+   "post": {
+    "operationId": "backfillStock",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "years",
+      "required": false,
+      "schema": {
+       "default": 5,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/backfill-all": {
+   "post": {
+    "operationId": "backfillAll",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "years",
+      "required": false,
+      "schema": {
+       "default": 5,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/date": {
+   "post": {
+    "operationId": "ingestDate",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "date",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/latest": {
+   "post": {
+    "operationId": "ingestLatest",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "exchange",
+      "required": false,
+      "schema": {
+       "default": "NSE",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/range": {
+   "post": {
+    "operationId": "ingestRange",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/reconcile": {
+   "get": {
+    "operationId": "reconcile",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   },
+   "post": {
+    "operationId": "applyReconcile",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "apply",
+      "required": true,
+      "schema": {
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "X-Reconcile-Token",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/ingestion/status": {
+   "get": {
+    "operationId": "getIngestionStatus",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "ingestion-controller"
+    ]
+   }
+  },
+  "/api/intraday/paper/scans": {
+   "post": {
+    "operationId": "scan",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/IntradayPaperScanRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/IntradayPaperScanResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "intraday-paper-scan-controller"
+    ]
+   }
+  },
+  "/api/intraday/paper/sessions": {
+   "post": {
+    "operationId": "runSession",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/IntradayPaperSessionRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/IntradayPaperSessionResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "intraday-paper-controller"
+    ]
+   }
+  },
+  "/api/intraday/paper/sessions/{runId}": {
+   "get": {
+    "operationId": "getSession",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/IntradayPaperSessionResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "intraday-paper-controller"
+    ]
+   }
+  },
+  "/api/job/runs": {
+   "get": {
+    "operationId": "listRuns",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/JobRunResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "job-run-controller"
+    ]
+   }
+  },
+  "/api/job/runs/start": {
+   "post": {
+    "operationId": "startRun",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "triggerType",
+      "required": false,
+      "schema": {
+       "default": "MANUAL",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "symbols",
+      "required": false,
+      "schema": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "variantIds",
+      "required": false,
+      "schema": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "stages",
+      "required": false,
+      "schema": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     {
+      "in": "query",
+      "name": "skipLlm",
+      "required": false,
+      "schema": {
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "query",
+      "name": "dryRun",
+      "required": false,
+      "schema": {
+       "type": "boolean"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RunRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "job-run-controller"
+    ]
+   }
+  },
+  "/api/job/runs/{runId}/cancel": {
+   "post": {
+    "operationId": "cancelRun",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "job-run-controller"
+    ]
+   }
+  },
+  "/api/job/runs/{runId}/progress": {
+   "get": {
+    "operationId": "getProgress",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "job-run-controller"
+    ]
+   }
+  },
+  "/api/job/runs/{runId}/summary": {
+   "get": {
+    "operationId": "getSummary",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "runId",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "job-run-controller"
+    ]
+   }
+  },
+  "/api/news/{symbol}/latest": {
+   "get": {
+    "operationId": "getLatestNews",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListNewsArticle"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/paper-portfolios": {
+   "get": {
+    "operationId": "list_3",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PaperPortfolioSummary"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "paper-portfolio-controller"
+    ]
+   }
+  },
+  "/api/paper-portfolios/{portfolioId}/positions": {
+   "get": {
+    "operationId": "positions",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "portfolioId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ShadowPositionView"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "paper-portfolio-controller"
+    ]
+   }
+  },
+  "/api/pdf/{symbol}/extract": {
+   "post": {
+    "operationId": "triggerPdfExtraction",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "url",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseEarningsData"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/pdf/{symbol}/latest": {
+   "get": {
+    "operationId": "getLatestEarnings",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseEarningsData"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/positions": {
+   "get": {
+    "operationId": "getPositions",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "format": "int32",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "default": 20,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PaginatedResponsePositionResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   },
+   "post": {
+    "operationId": "createPosition",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TradeRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PositionResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/closed": {
+   "get": {
+    "operationId": "getClosedPositions",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "format": "int32",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "default": 20,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PaginatedResponsePositionResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/performance": {
+   "get": {
+    "operationId": "getPortfolioPerformance",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PerformanceResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/risk-summary": {
+   "get": {
+    "operationId": "getRiskSummary",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/RiskSummary"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/sector-allocation": {
+   "get": {
+    "operationId": "getSectorAllocation",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SectorAllocation"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/sector/{sector}": {
+   "get": {
+    "operationId": "getPositionsBySector",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "sector",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PositionResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/stats": {
+   "get": {
+    "operationId": "getPositionStats",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PositionStats"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/status/{status}": {
+   "get": {
+    "operationId": "getPositionsByStatus",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "status",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PositionResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/symbol/{symbol}": {
+   "get": {
+    "operationId": "getPositionsBySymbol",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "format": "int32",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "default": 20,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PaginatedResponsePositionResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/{symbol}": {
+   "get": {
+    "operationId": "getPosition",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PositionResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/positions/{symbol}/close": {
+   "post": {
+    "operationId": "closePosition",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClosePositionRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/PositionResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "position-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy": {
+   "get": {
+    "operationId": "getAccuracyStats",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/by-regime": {
+   "get": {
+    "operationId": "getAccuracyByRegime",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListAccuracyByRegime"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/by-symbol": {
+   "get": {
+    "operationId": "getAccuracyBySymbol",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListAccuracyBySymbol"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/by-window": {
+   "get": {
+    "operationId": "getAccuracyByWindow",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListAccuracyByWindow"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/calibration": {
+   "get": {
+    "operationId": "getCalibration",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListCalibrationData"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/ece": {
+   "get": {
+    "operationId": "getECE",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseECEStats"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/rolling-ic": {
+   "get": {
+    "operationId": "getRollingIC",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "windowDays",
+      "required": false,
+      "schema": {
+       "default": 30,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListRollingICResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/signal-volume": {
+   "get": {
+    "operationId": "getSignalVolume",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseSignalVolumeStats"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/accuracy/summary": {
+   "get": {
+    "operationId": "getAccuracySummary",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/evaluate/status": {
+   "get": {
+    "operationId": "getJobStatus",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/evaluate/trigger": {
+   "post": {
+    "operationId": "triggerEvaluation",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/{symbol}/analyse": {
+   "post": {
+    "operationId": "triggerAnalysis",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseSentimentResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/{symbol}/history": {
+   "get": {
+    "operationId": "getSentimentHistory",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "format": "int32",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "default": 20,
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListSentimentResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/sentiment/{symbol}/latest": {
+   "get": {
+    "operationId": "getLatestSentiment",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseSentimentResult"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "sentiment-api-controller"
+    ]
+   }
+  },
+  "/api/settings": {
+   "get": {
+    "operationId": "getSettings_1",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/broker": {
+   "post": {
+    "operationId": "setBroker",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/discord": {
+   "get": {
+    "operationId": "getDiscordSettings",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   },
+   "put": {
+    "operationId": "setDiscordSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/gpuhub": {
+   "get": {
+    "operationId": "getGpuHubSettings",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   },
+   "put": {
+    "operationId": "setGpuHubSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/llm": {
+   "get": {
+    "operationId": "getLlmSettings",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   },
+   "put": {
+    "operationId": "setLlmSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/pi/start": {
+   "post": {
+    "operationId": "startPiServer",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/pi/status": {
+   "get": {
+    "operationId": "getPiServerStatus",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/pi/stop": {
+   "post": {
+    "operationId": "stopPiServer",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/save": {
+   "post": {
+    "operationId": "saveAllSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {},
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/scanning": {
+   "get": {
+    "operationId": "getScanningSettings",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   },
+   "put": {
+    "operationId": "setScanningSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/test/discord": {
+   "post": {
+    "operationId": "testDiscord",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringBoolean"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/test/ollama": {
+   "post": {
+    "operationId": "testOllamaConnection",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/test/openai": {
+   "post": {
+    "operationId": "testOpenAiConnection",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/test/pi": {
+   "post": {
+    "operationId": "testPiConnection",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/test/pi-agent": {
+   "post": {
+    "operationId": "testPiAgentConnection",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/settings/trading": {
+   "get": {
+    "operationId": "getTradingSettings",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   },
+   "put": {
+    "operationId": "setTradingSettings",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseMapStringString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "settings-controller"
+    ]
+   }
+  },
+  "/api/signal-selections": {
+   "get": {
+    "operationId": "list_2",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": false,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": false,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SelectionResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-selection-controller"
+    ]
+   }
+  },
+  "/api/signals": {
+   "delete": {
+    "operationId": "clearAllSignals",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/analysis/{symbol}": {
+   "get": {
+    "operationId": "getTechnicalAnalysis",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/TechnicalAnalysisResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/combined/{symbol}": {
+   "get": {
+    "operationId": "getCombinedSignal",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/CombinedSignalResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/date-range": {
+   "get": {
+    "operationId": "getSignalsByDateRange",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "startDate",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "endDate",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SignalResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/gate-effectiveness": {
+   "get": {
+    "operationId": "getGateEffectiveness",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": true,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "strategy",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "regime",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "gate",
+      "required": false,
+      "schema": {
+       "default": "SENTIMENT",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/generate": {
+   "post": {
+    "operationId": "generateSignal",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SymbolRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SignalResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/generate-all": {
+   "post": {
+    "operationId": "generateAllSignals",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/GenerateAllResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/generate-all/stream": {
+   "post": {
+    "operationId": "generateAllSignalsStream",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SseEmitter"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/high-confidence": {
+   "get": {
+    "operationId": "getHighConfidenceSignals",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "minConfidence",
+      "required": false,
+      "schema": {
+       "default": 0.7,
+       "format": "double",
+       "type": "number"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SignalResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/latest": {
+   "get": {
+    "operationId": "getLatestSignals",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SignalResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/price-action/{symbol}/generate": {
+   "post": {
+    "operationId": "generatePriceActionSignal",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SignalResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/scan": {
+   "post": {
+    "operationId": "triggerScan",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ScanRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ScanResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/scan/history": {
+   "get": {
+    "operationId": "getScanHistory",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/ScanResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/sentiment/{symbol}": {
+   "get": {
+    "operationId": "getSentimentAnalysis",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/SentimentAnalysisResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/symbol/{symbol}": {
+   "get": {
+    "operationId": "getSignalsBySymbol",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SignalResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/type/{type}": {
+   "get": {
+    "operationId": "getSignalsByType",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "type",
+      "required": true,
+      "schema": {
+       "enum": [
+        "BUY",
+        "SELL",
+        "HOLD"
+       ],
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SignalResponse"
+         },
+         "type": "array"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/signals/{symbol}": {
+   "delete": {
+    "operationId": "clearSignalForSymbol",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "signal-controller"
+    ]
+   }
+  },
+  "/api/strategy-configs": {
+   "get": {
+    "operationId": "list",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "variantId",
+      "required": false,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "mode",
+      "required": false,
+      "schema": {
+       "enum": [
+        "OFF",
+        "BACKTEST_ONLY",
+        "SHADOW",
+        "CHAMPION"
+       ],
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   },
+   "post": {
+    "operationId": "create",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StrategyConfigRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   }
+  },
+  "/api/strategy-configs/{variantId}": {
+   "delete": {
+    "operationId": "delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   },
+   "get": {
+    "operationId": "current",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   },
+   "put": {
+    "operationId": "update",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StrategyConfigRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   }
+  },
+  "/api/strategy-configs/{variantId}/mode": {
+   "put": {
+    "operationId": "mode",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/StrategyModeRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   }
+  },
+  "/api/strategy-configs/{variantId}/promotion-eligibility": {
+   "get": {
+    "operationId": "check",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponsePromotionEligibilityResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "promotion-eligibility-controller"
+    ]
+   }
+  },
+  "/api/strategy-configs/{variantId}/versions": {
+   "get": {
+    "operationId": "versions",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   }
+  },
+  "/api/strategy-configs/{variantId}/versions/{version}": {
+   "get": {
+    "operationId": "version",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "variantId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "version",
+      "required": true,
+      "schema": {
+       "format": "int32",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseStrategyConfigResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-config-controller"
+    ]
+   }
+  },
+  "/api/strategy-report": {
+   "get": {
+    "operationId": "report",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": false,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": false,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/Report"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-report-controller"
+    ]
+   }
+  },
+  "/api/strategy-report/arbitration-comparison": {
+   "get": {
+    "operationId": "arbitrationComparison",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "from",
+      "required": false,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to",
+      "required": false,
+      "schema": {
+       "format": "date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/Comparison"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-report-controller"
+    ]
+   }
+  },
+  "/api/strategy-types": {
+   "get": {
+    "operationId": "list_1",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseListStrategyTypeResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "strategy-type-controller"
+    ]
+   }
+  },
+  "/api/symbols/{symbol}/strategy-matrix": {
+   "get": {
+    "operationId": "matrix",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/StrategyMatrixResponse"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "symbol-strategy-controller"
+    ]
+   }
+  },
+  "/api/synthesis/evaluations/summary": {
+   "get": {
+    "operationId": "summary",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseSynthesisEvaluationSummary"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "synthesis-evaluation-controller"
+    ]
+   }
+  },
+  "/api/watchlist": {
+   "get": {
+    "operationId": "getWatchlist",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   },
+   "post": {
+    "operationId": "addToWatchlist",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "name",
+      "required": false,
+      "schema": {
+       "default": "",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "exchange",
+      "required": false,
+      "schema": {
+       "default": "NSE",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/watchlist/all": {
+   "get": {
+    "operationId": "getAllWatchlist",
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/watchlist/{symbol}": {
+   "delete": {
+    "operationId": "removeFromWatchlist",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseString"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  },
+  "/api/watchlist/{symbol}/toggle": {
+   "patch": {
+    "operationId": "toggleWatchlist",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "symbol",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "activate",
+      "required": false,
+      "schema": {
+       "default": false,
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "*/*": {
+        "schema": {
+         "$ref": "#/components/schemas/ApiResponseObject"
+        }
+       }
+      },
+      "description": "OK"
+     }
+    },
+    "tags": [
+     "watchlist-controller"
+    ]
+   }
+  }
+ },
+ "servers": [
+  {
+   "description": "Generated server url",
+   "url": "http://127.0.0.1:8080"
+  }
+ ]
+}

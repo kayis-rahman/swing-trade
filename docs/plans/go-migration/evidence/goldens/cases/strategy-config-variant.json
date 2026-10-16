@@ -1,0 +1,28 @@
+{
+ "note": "single config read, unknown id: 400 not 404",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/strategy-configs/unknown-variant"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"code\": \"VALIDATION_ERROR\",\n \"fieldErrors\": [],\n \"message\": \"Strategy variant not found: unknown-variant\",\n \"path\": \"/api/strategy-configs/unknown-variant\",\n \"status\": 400,\n \"timestamp\": \"2026-10-15T07:44:07.580762\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 400,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "44"
+  },
+  "status": 400
+ },
+ "slug": "strategy-config-variant",
+ "tag": "local-throwaway"
+}

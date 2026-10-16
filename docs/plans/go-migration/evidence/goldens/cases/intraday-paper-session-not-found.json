@@ -1,0 +1,27 @@
+{
+ "note": "unknown runId: Spring's default 404 error body",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/intraday/paper/sessions/gnhf-unknown-run"
+ },
+ "response": {
+  "body": {
+   "kind": "empty",
+   "value": ""
+  },
+  "body_truncated": false,
+  "expected_status": 404,
+  "headers": {
+   "Connection": "close",
+   "Content-Length": "0",
+   "Date": "Thu, 15 Oct 2026 03:31:56 GMT",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "99"
+  },
+  "status": 404
+ },
+ "slug": "intraday-paper-session-not-found",
+ "tag": "local-throwaway-fixed"
+}

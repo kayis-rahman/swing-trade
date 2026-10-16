@@ -1,0 +1,28 @@
+{
+ "note": "NSE holiday list",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/holidays"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": {\n  \"count\": 12,\n  \"holidays\": [\n   {\n    \"date\": \"2026-10-20\",\n    \"occasion\": \"Diwali (Lakshmi Pujan)\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2026-11-08\",\n    \"occasion\": \"Diwali Laxmi Pujan / Muhurat Trading\",\n    \"type\": \"PARTIAL\"\n   },\n   {\n    \"date\": \"2026-11-10\",\n    \"occasion\": \"Diwali-Balipratipada\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2026-11-24\",\n    \"occasion\": \"Prakash Gurpurb Sri Guru Nanak Dev\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2026-12-25\",\n    \"occasion\": \"Christmas\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-01-01\",\n    \"occasion\": \"New Year\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-01-26\",\n    \"occasion\": \"Republic Day\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-02-26\",\n    \"occasion\": \"Muharram\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-03-12\",\n    \"occasion\": \"Maha Shivaratri\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-03-20\",\n    \"occasion\": \"Eid ul-Fitr\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-03-22\",\n    \"occasion\": \"Holi\",\n    \"type\": \"FULL\"\n   },\n   {\n    \"date\": \"2027-03-29\",\n    \"occasion\": \"Good Friday\",\n    \"type\": \"FULL\"\n   }\n  ]\n },\n \"error\": null,\n \"success\": true,\n \"timestam\n...TRUNCATED"
+  },
+  "body_truncated": true,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "58"
+  },
+  "status": 200
+ },
+ "slug": "holidays",
+ "tag": "local-throwaway"
+}

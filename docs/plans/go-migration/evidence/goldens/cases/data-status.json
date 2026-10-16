@@ -1,0 +1,28 @@
+{
+ "note": "ingestion status",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/data/status"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"data\": [\n  {\n   \"candleCount\": 0,\n   \"dataQuality\": \"no_data\",\n   \"earliestCandleDate\": null,\n   \"exchange\": \"NSE\",\n   \"hasData\": false,\n   \"isActive\": true,\n   \"lastCandleDate\": null,\n   \"lastSyncedAt\": null,\n   \"name\": \"Axis Bank Limited\",\n   \"symbol\": \"AXISBANK\"\n  },\n  {\n   \"candleCount\": 0,\n   \"dataQuality\": \"no_data\",\n   \"earliestCandleDate\": null,\n   \"exchange\": \"NSE\",\n   \"hasData\": false,\n   \"isActive\": true,\n   \"lastCandleDate\": null,\n   \"lastSyncedAt\": null,\n   \"name\": \"Bharti Airtel Limited\",\n   \"symbol\": \"BHARTIARTL\"\n  },\n  {\n   \"candleCount\": 0,\n   \"dataQuality\": \"no_data\",\n   \"earliestCandleDate\": null,\n   \"exchange\": \"NSE\",\n   \"hasData\": false,\n   \"isActive\": true,\n   \"lastCandleDate\": null,\n   \"lastSyncedAt\": null,\n   \"name\": \"HDFC Bank Limited\",\n   \"symbol\": \"HDFCBANK\"\n  },\n  {\n   \"candleCount\": 0,\n   \"dataQuality\": \"no_data\",\n   \"earliestCandleDate\": null,\n   \"exchange\": \"NSE\",\n   \"hasData\": false,\n   \"isActive\": true,\n   \"lastCandleDate\": null,\n   \"lastSyncedAt\": null,\n   \"name\": \"ICICI Bank Limited\",\n   \"symbol\": \"ICICIBANK\"\n  },\n  {\n   \"candleCount\": 0,\n   \"dataQuality\": \"no_data\",\n   \"earliestCandleDate\": null,\n   \"exchange\": \"NSE\",\n   \"hasData\": false,\n   \n...TRUNCATED"
+  },
+  "body_truncated": true,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:54 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "56"
+  },
+  "status": 200
+ },
+ "slug": "data-status",
+ "tag": "local-throwaway"
+}

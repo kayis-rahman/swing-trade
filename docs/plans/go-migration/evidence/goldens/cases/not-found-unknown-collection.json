@@ -1,0 +1,28 @@
+{
+ "note": "unmapped path: Spring's default error body",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/definitely-not-a-real-path"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"code\": \"NOT_FOUND\",\n \"fieldErrors\": [],\n \"message\": \"The requested resource was not found\",\n \"path\": \"/api/definitely-not-a-real-path\",\n \"status\": 404,\n \"timestamp\": \"2026-10-15T07:44:09.759641\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 404,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:09 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "38"
+  },
+  "status": 404
+ },
+ "slug": "not-found-unknown-collection",
+ "tag": "local-throwaway"
+}

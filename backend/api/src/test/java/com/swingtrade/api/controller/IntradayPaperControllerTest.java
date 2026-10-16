@@ -9,6 +9,7 @@ import com.swingtrade.data.repository.IntradayPaperSessionRepository;
 import com.swingtrade.strategy.IntradayBacktestConfig;
 import com.swingtrade.strategy.IntradayOpeningRangeBreakoutStrategy;
 import com.swingtrade.strategy.StrategyTypeRegistry;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,7 @@ class IntradayPaperControllerTest {
     private static final LocalDate DAY = LocalDate.of(2026, 10, 9);
 
     @Test
-    void readsOnlyStoredFifteenMinuteBarsAndReturnsThePaperAudit() throws Exception {
+    void readsOnlyStoredFifteenMinuteBarsAndReturnsThePaperAudit() {
         OhlcvCandleRepository repository = mock(OhlcvCandleRepository.class);
         IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
         StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
@@ -44,7 +45,7 @@ class IntradayPaperControllerTest {
         when(execution.runSession(eq("TCS"), eq(DAY), any(), any(), any(), eq(IntradayBacktestConfig.defaults()), nullable(LocalTime.class)))
             .thenReturn(expected);
         IntradayPaperSessionRepository sessions = mock(IntradayPaperSessionRepository.class);
-        com.fasterxml.jackson.databind.ObjectMapper mapper = mock(com.fasterxml.jackson.databind.ObjectMapper.class);
+        ObjectMapper mapper = mock(ObjectMapper.class);
         when(mapper.writeValueAsString(expected)).thenReturn("{}");
         IntradayPaperController controller = new IntradayPaperController(repository, registry, execution, sessions, mapper);
 
@@ -64,7 +65,7 @@ class IntradayPaperControllerTest {
         IntradayPaperExecutionService execution = mock(IntradayPaperExecutionService.class);
         StrategyTypeRegistry registry = new StrategyTypeRegistry(List.of(new IntradayOpeningRangeBreakoutStrategy()));
         IntradayPaperController controller = new IntradayPaperController(repository, registry, execution,
-            mock(IntradayPaperSessionRepository.class), mock(com.fasterxml.jackson.databind.ObjectMapper.class));
+            mock(IntradayPaperSessionRepository.class), mock(ObjectMapper.class));
 
         var response = controller.runSession(new IntradayPaperSessionRequest("TCS", DAY, "BREAKOUT", null));
 
@@ -85,7 +86,7 @@ class IntradayPaperControllerTest {
             .thenReturn(incomplete);
         IntradayPaperSessionRepository sessions = mock(IntradayPaperSessionRepository.class);
         IntradayPaperController controller = new IntradayPaperController(repository, registry, execution, sessions,
-            mock(com.fasterxml.jackson.databind.ObjectMapper.class));
+            mock(ObjectMapper.class));
 
         var response = controller.runSession(new IntradayPaperSessionRequest(
             "TCS", DAY, IntradayOpeningRangeBreakoutStrategy.TYPE, null));

@@ -1,0 +1,28 @@
+{
+ "note": "candidate scan settings",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/candidate-scans/settings"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"candidate-scan.backfill-years\": \"5\",\n \"candidate-scan.max-concurrent\": \"3\",\n \"candidate-scan.min-strategy-buys\": \"2\",\n \"candidate-scan.min-total-return\": \"0.0\",\n \"candidate-scan.min-trades\": \"15\",\n \"candidate-scan.min-win-rate\": \"45.0\",\n \"candidate-scan.out-of-sample-days\": \"252\",\n \"candidate-scan.out-of-sample-folds\": \"3\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:14:07 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "47"
+  },
+  "status": 200
+ },
+ "slug": "candidate-scan-settings",
+ "tag": "local-throwaway"
+}

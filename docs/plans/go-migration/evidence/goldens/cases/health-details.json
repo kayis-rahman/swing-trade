@@ -1,0 +1,28 @@
+{
+ "note": "health details",
+ "request": {
+  "body": null,
+  "method": "GET",
+  "path": "/api/health/details"
+ },
+ "response": {
+  "body": {
+   "kind": "json",
+   "value": "{\n \"components\": {\n  \"api\": {\n   \"description\": \"REST API Service\",\n   \"details\": {},\n   \"name\": \"api\",\n   \"responseTimeMs\": null,\n   \"status\": \"UP\"\n  },\n  \"data\": {\n   \"description\": \"Data Ingestion Service\",\n   \"details\": {\n    \"serviceName\": \"DataIngestionService$$SpringCGLIB$$0\",\n    \"status\": \"Active\"\n   },\n   \"name\": \"data\",\n   \"responseTimeMs\": null,\n   \"status\": \"UP\"\n  },\n  \"llm\": {\n   \"description\": \"LLM Sentiment Service\",\n   \"details\": {\n    \"serviceName\": \"SentimentService\",\n    \"status\": \"Active\"\n   },\n   \"name\": \"llm\",\n   \"responseTimeMs\": null,\n   \"status\": \"UP\"\n  },\n  \"strategy\": {\n   \"description\": \"Price Action Signal Engine\",\n   \"details\": {\n    \"serviceName\": \"PriceActionSignalEngine\",\n    \"status\": \"Active\"\n   },\n   \"name\": \"strategy\",\n   \"responseTimeMs\": null,\n   \"status\": \"UP\"\n  }\n },\n \"status\": \"UP\",\n \"systemInfo\": {\n  \"architecture\": \"aarch64\",\n  \"availableProcessors\": 12,\n  \"freeMemoryMB\": 67,\n  \"javaVersion\": \"21.0.12.1\",\n  \"maxMemoryMB\": 8192,\n  \"osName\": \"Mac OS X\",\n  \"osVersion\": \"27.0.1\",\n  \"totalMemoryMB\": 396\n },\n \"timestamp\": \"2026-10-15T07:43:49.442165\"\n}"
+  },
+  "body_truncated": false,
+  "expected_status": 200,
+  "headers": {
+   "Connection": "close",
+   "Content-Type": "application/json",
+   "Date": "Thu, 15 Oct 2026 02:13:49 GMT",
+   "Transfer-Encoding": "chunked",
+   "Vary": "Origin",
+   "X-RateLimit-Limit": "100",
+   "X-RateLimit-Remaining": "96"
+  },
+  "status": 200
+ },
+ "slug": "health-details",
+ "tag": "local-throwaway"
+}

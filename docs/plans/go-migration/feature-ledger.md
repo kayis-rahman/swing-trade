@@ -17,7 +17,7 @@ adds ten wire-format rows confirmed from a live run — including the startup bl
 fixed and verified by running the rebuilt jar**, so every runtime artifact in this plan is unblocked. Section 8
 expands the persistence surface: 42 rows, one per table, from the ownership sheet in
 [evidence/table-ownership.md](evidence/table-ownership.md) — writers, readers, keys and the idempotency mechanism
-per table. Section 9 expands the entity surface: 39 rows, one per `@Entity` class plus the one dead PK POJO,
+per table. Section 9 expands the entity surface: 39 rows, covering 38 `@Entity` classes plus the one dead PK POJO,
 with the access point, key contract and Go file per row. Section 10 expands the persistence-access surface:
 39 rows - the 38 repository interfaces (34 data, 3 broker, 1 llm) plus the `PositionSummaryProjection`
 interface projection, each with its custom-query surface, store facade, direct consumers, Java tests and Go
@@ -493,7 +493,7 @@ decision with a golden attached, and because two of them contradict assumptions 
 
 ## 8. Table ownership rows (F-DATA-DB)
 
-The persistence surface, one row per table, from the ownership sheet in [evidence/table-ownership.md](evidence/table-ownership.md): 42 tables (41 application + `flyway_schema_history`), 39 JPA entity classes, 38 repository interfaces and 15 store facades, derived by mapping every production `JpaRepository` call site in `backend/*/src/main` against the committed schema snapshot. `Writers`/`Readers` name the production classes only; the full sheet also carries the HTTP write surface, the scheduled writers, every delete path, all 8 foreign keys, the insert-ordering rules, the file-system state that lives outside Postgres, and the 13 findings that constrain the port. Java-test coverage for these rows is tracked by the traceability matrix (Phase 0 step 13, not started), so the template's test column is deferred here and no row claims coverage.
+The persistence surface, one row per table, from the ownership sheet in [evidence/table-ownership.md](evidence/table-ownership.md): 42 tables (41 application + `flyway_schema_history`), 38 JPA entity classes, 38 repository interfaces and 15 store facades, derived by mapping every production `JpaRepository` call site in `backend/*/src/main` against the committed schema snapshot. `Writers`/`Readers` name the production classes only; the full sheet also carries the HTTP write surface, the scheduled writers, every delete path, all 8 foreign keys, the insert-ordering rules, the file-system state that lives outside Postgres, and the 13 findings that constrain the port. Java-test coverage for these rows is tracked by the traceability matrix (Phase 0 step 13, not started), so the template's test column is deferred here and no row claims coverage.
 
 | ID | Table | Java module | Java classes (entity · repository · access point) | Production writers | Production readers | Keys / idempotency | Go module and file | Status |
 |---|---|---|---|---|---|---|---|---|

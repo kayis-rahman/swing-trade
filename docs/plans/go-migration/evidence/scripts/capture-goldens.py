@@ -28,10 +28,12 @@ below, so the corpus can be re-validated in CI after the Go port exists.
 
 Preconditions
 -------------
-The Java API must be running against an isolated throwaway database with
-scheduling disabled (see phase-0-characterization.md step 1). The capture is
-deterministic only on an empty database: every list endpoint returns the empty
-collection shape rather than data-dependent rows.
+The Java API must be running against an isolated, Flyway-migrated throwaway
+database with scheduling disabled (see phase-0-characterization.md step 1).
+Flyway seeds baseline rows, so the database is not empty and response bodies
+may vary with seeded or network-dependent data (notably news) and timestamps.
+Treat these captures as characterization evidence, not byte-for-byte
+reproducible fixtures.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ import urllib.error
 import urllib.request
 
 # (slug, method, path, expected_status, body_or_None, note)
-# Expected statuses are the ones observed on an empty throwaway database;
+# Expected statuses were observed on a fresh Flyway-migrated throwaway database;
 # a mismatch is a regression signal, not a failure of this script.
 CASES = [
     # --- health / platform -------------------------------------------------

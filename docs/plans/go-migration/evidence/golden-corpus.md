@@ -166,11 +166,11 @@ Four families coexist; the dashboard branches per call site on `direct` vs `enve
 4. **Bare values** — a raw `[]` array (`signals/latest`) and a bare `Map`
    (`DELETE /api/signals/{symbol}` → `{"cleared":0,"symbol":"..."}`).
 
-## 5. Status codes observed on an empty throwaway database
+## 5. Status codes observed on a fresh Flyway-migrated throwaway database
 
 | Status | Trigger | Case |
 |---|---|---|
-| 200 | normal reads, empty collections, `DELETE` on a live symbol | most cases |
+| 200 | normal reads, collection reads, `DELETE` on a live symbol | most cases |
 | 400 | missing required query parameter | `Missing required parameter: symbol` (`admin-data-status`), `from` (`gate-effectiveness`), `fromDate` (`data/export`) |
 | 400 | missing required request parameter/body field | `POST /api/watchlist` with `{}` and with `{"foo":"bar"}` both → `Missing required parameter: symbol` (no `fieldErrors` are ever populated by this path) |
 | 400 | range guard, not a validation annotation | `ingestion/reconcile?from=2026-01-01&to=2026-01-31` → `reconciliation range must be at most 10 calendar days`; a 5-day window returns 200 |
@@ -206,8 +206,9 @@ bucket (and the `Retry-After` value is the remaining window seconds, not a fixed
 - The throwaway database is **never empty**: `V1__swing_trade_schema.sql` seeds the watchlist (20
   NSE symbols, `AXISBANK`, `BHARTIARTL`, …), `app_settings`, the kill-switch row, the 2026 NSE
   holiday calendar and one paper-trading portfolio, so Flyway alone produces a populated database.
-  Case bodies are therefore not byte-stable across runs; comparisons must normalise timestamps and
-  ids, which is why the script records the raw body rather than asserting equality.
+  Response bodies can vary with seeded or network-dependent data (notably news) and timestamps;
+  they are characterization evidence, not byte-stable fixtures. Comparisons must normalise
+  timestamps and ids, which is why the script records the raw body rather than asserting equality.
 - The capture writes to the database (the `DELETE` probes and the sentiment writes above). Only the
   throwaway cluster was used; nothing was written to the dev or stage databases.
 

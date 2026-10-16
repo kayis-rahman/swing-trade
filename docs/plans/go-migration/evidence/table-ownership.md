@@ -10,7 +10,7 @@ classes inject which repository and which methods they call.
 | Fact | Value | Note |
 |---|---|---|
 | tables | **42** (41 application + `flyway_schema_history`) | matches `CREATE TABLE` count in [schema-snapshot.sql](schema-snapshot.sql) |
-| JPA entity classes | **39** (35 `data/entity`, 3 `broker/entity`, 1 `llm`) | corrects the ledger's area row, which counted only `data/entity` |
+| JPA entity classes | **38** (34 `data/entity`, 3 `broker/entity`, 1 `llm`) | excludes the non-entity `OhlcvCandlePK` POJO; corrects the ledger's area row, which counted only `data/entity` |
 | repository interfaces | **38** (34 `data`, 3 `broker`, 1 `llm`) | corrects the ledger's "39" |
 | store facades | **15** (`data/store/*Impl.java`) | most tables are reachable only through one of these |
 | tables with **no** production writer | **6** (`corporate_actions`, `news_items`, `nse_calendar_coverage`, `sentiment_evaluation_audits`, `trade_labels`, `universe_snapshots`) | §6 |
@@ -266,7 +266,7 @@ day per portfolio, with no unique key).
 11. **A tracked backup file sits inside a source package**: `backend/data/src/main/java/com/swingtrade/data/repository/OhlcvCandleRepository.java.bak2`
     (142 lines, an older copy of the repository, tracked since `196905a6`). A mechanical "one Go file per Java
     repository" port must skip it. Worth deleting in the Java tree before G8.
-12. **The plan's area-table counts were wrong and are now corrected**: 42 tables, 39 entity classes, 38 repository
+12. **The plan's area-table counts were wrong and are now corrected**: 42 tables, 38 JPA entity classes, 38 repository
     interfaces and 53 migrations reaching V77 — not the "35 entities / 37 repositories / 76 migrations" the area
     table claimed. Any future citation of those numbers must come from this sheet.
 13. **Nothing reads `llm_analysis_audit` or `reconciliation_audits` back.** They are the only durable record of LLM

@@ -6,7 +6,7 @@ GO_BIN="$(command -v go)"
 GOPATH="$("$GO_BIN" env GOPATH)"
 LINTER="${GOLANGCI_LINT:-$GOPATH/bin/golangci-lint}"
 VULN_CHECK="${GOVULNCHECK:-$GOPATH/bin/govulncheck}"
-DEV_ENV_FILE="/Users/kayisrahman/Documents/workspace/firstmate/projects/swing-trade/infra/env/.env"
+DEV_ENV_FILE="$REPO_ROOT/infra/env/.env"
 if [[ ! -f "$DEV_ENV_FILE" ]]; then
   echo "Authorized development env file is unavailable; refusing database integration tests."
   exit 1

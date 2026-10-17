@@ -48,8 +48,10 @@ fi
 
 run_backend=false
 run_dashboard=false
+run_go=false
 if grep -q '^backend/' <<<"${changed_paths}"; then run_backend=true; fi
 if grep -q '^dashboard/' <<<"${changed_paths}"; then run_dashboard=true; fi
+if grep -qE '^(go/|go\.work($|\.sum$)|\.golangci\.yml$|bin/(go-run|go-verify|check-go-architecture)$)' <<<"${changed_paths}"; then run_go=true; fi
 
 failures=0
 
@@ -59,6 +61,17 @@ if [[ "${run_backend}" == "true" ]]; then
   else
     printf '\nRunning backend tests for changed backend files...\n'
     if ! (cd backend && ./gradlew test --no-daemon); then
+      failures=$((failures + 1))
+    fi
+  fi
+fi
+
+if [[ "${run_go}" == "true" ]]; then
+  if [[ "${dry_run}" == "true" ]]; then
+    printf '[dry-run] ./bin/go-verify\n'
+  else
+    printf '\nRunning Go unit, E2E, optional development DB, race, vet, lint, vulnerability, and architecture checks...\n'
+    if ! ./bin/go-verify; then
       failures=$((failures + 1))
     fi
   fi
@@ -75,8 +88,8 @@ if [[ "${run_dashboard}" == "true" ]]; then
   fi
 fi
 
-if [[ "${run_backend}" == "false" && "${run_dashboard}" == "false" ]]; then
-  printf 'No backend or dashboard files changed; no application checks selected.\n'
+if [[ "${run_backend}" == "false" && "${run_dashboard}" == "false" && "${run_go}" == "false" ]]; then
+  printf 'No backend, dashboard, or Go files changed; no application checks selected.\n'
 fi
 
 if [[ "${dry_run}" == "true" ]]; then

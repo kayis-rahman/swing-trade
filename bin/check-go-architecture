@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Validate Go package imports and module requirements against migration layers."""
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+MODULE_PREFIX = "github.com/kayis-rahman/swing-trade/go/"
+DEPENDENCIES = {
+    "core": set(),
+    "data": {"core"},
+    "strategy": {"core", "data", "llm"},
+    "llm": {"core", "data"},
+    "broker": {"core", "data", "strategy"},
+    "gpuhub": {"core"},
+    "api": {"core", "data", "strategy", "llm", "broker", "gpuhub"},
+}
+
+
+def run_json(command, cwd):
+    result = subprocess.run(command, cwd=cwd, check=True, text=True, capture_output=True)
+    return json.loads(result.stdout)
+
+
+def main():
+    failures = []
+    for source in (ROOT / "go").rglob("*.go"):
+        if source.name.endswith("_test.go"):
+            continue
+        text = source.read_text(encoding="utf-8")
+        relative = source.relative_to(ROOT / "go")
+        if "time.Now(" in text and relative.parts[:2] != ("core", "clock"):
+            failures.append(f"{relative}: time.Now must stay behind core/clock")
+        if "panic(" in text and relative.parts[:2] != ("api", "cmd"):
+            failures.append(f"{relative}: production panic is only allowed in the executable entry point")
+        if "log.Fatal" in text and relative.parts[:2] != ("api", "cmd"):
+            failures.append(f"{relative}: log.Fatal is forbidden outside the executable entry point")
+        if relative.parts[:2] == ("core", "decimal") or relative.parts[0] in {"strategy", "broker"}:
+            if re.search(r"\bfloat64\b", text):
+                failures.append(f"{relative}: float64 is forbidden in money/strategy packages")
+
+    for module, allowed in DEPENDENCIES.items():
+        module_dir = ROOT / "go" / module
+        mod = run_json(["go", "mod", "edit", "-json"], module_dir)
+        for requirement in mod.get("Require", []):
+            name = requirement["Path"]
+            if name.startswith(MODULE_PREFIX):
+                dependency = name[len(MODULE_PREFIX):].split("/", 1)[0]
+                if dependency != module and dependency not in allowed:
+                    failures.append(f"go/{module}/go.mod requires forbidden module {dependency}")
+
+        packages = subprocess.run(
+            ["go", "list", "-json", "./..."], cwd=module_dir,
+            check=True, text=True, capture_output=True,
+        ).stdout
+        decoder = json.JSONDecoder()
+        while packages.strip():
+            packages = packages.lstrip()
+            package, end = decoder.raw_decode(packages)
+            packages = packages[end:]
+            for imported in package.get("Imports", []):
+                if not imported.startswith(MODULE_PREFIX):
+                    continue
+                dependency = imported[len(MODULE_PREFIX):].split("/", 1)[0]
+                if dependency != module and dependency not in allowed:
+                    failures.append(f"{package['ImportPath']} imports forbidden module {dependency}")
+
+    if failures:
+        print("Go architecture check failed:", file=sys.stderr)
+        for failure in failures:
+            print(f"- {failure}", file=sys.stderr)
+        return 1
+    print("Go module and package dependencies conform to the approved layer graph.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

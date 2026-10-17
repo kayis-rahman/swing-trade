@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+GO_BIN="$(command -v go)"
+GOPATH="$("$GO_BIN" env GOPATH)"
+LINTER="${GOLANGCI_LINT:-$GOPATH/bin/golangci-lint}"
+VULN_CHECK="${GOVULNCHECK:-$GOPATH/bin/govulncheck}"
+ENV_FILE="$REPO_ROOT/infra/env/.env"
+unset SWINGTRADE_TEST_DATABASE_URL
+
+# Only the explicitly authorized local development target may run the write-isolation check.
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+  DB_HOST="${DB_HOST:-192.168.0.100}"
+  DB_PORT="${DB_PORT:-5435}"
+  DB_NAME="${DB_NAME:-swingtrade_db}"
+  if [[ "$DB_HOST:$DB_PORT/$DB_NAME" != "192.168.0.100:5435/swingtrade_db" ]]; then
+    echo "Refusing database integration tests: configured target is not the authorized development database."
+    exit 1
+  fi
+  if [[ -n "${DB_USER:-}" && -n "${DB_PASSWORD:-}" ]]; then
+    export DB_USER DB_PASSWORD
+    export SWINGTRADE_TEST_DATABASE_URL="$(python3 -c 'import os, urllib.parse; q=urllib.parse.quote; print("postgresql://" + q(os.environ["DB_USER"], safe="") + ":" + q(os.environ["DB_PASSWORD"], safe="") + "@192.168.0.100:5435/" + q(os.environ.get("DB_NAME", "swingtrade_db"), safe="") + "?sslmode=disable&application_name=go-port-test")')"
+  else
+    echo "Development database integration tests will skip: DB_USER/DB_PASSWORD are not present in infra/env/.env."
+  fi
+else
+  echo "Development database integration tests will skip: infra/env/.env is absent; no database connection attempted."
+fi
+modules=(core data strategy llm gpuhub broker api)
+for module in "${modules[@]}"; do
+  echo "== go/$module: module tidy, race tests, vet, lint, vulnerability scan =="
+  (
+    cd "$REPO_ROOT/go/$module"
+    "$GO_BIN" mod tidy -diff
+    test_output="$("$GO_BIN" test -race -cover ./...)"
+    printf '%s\n' "$test_output"
+    if ! printf '%s\n' "$test_output" | python3 -c 'import re, sys
+failed = False
+for line in sys.stdin:
+    match = re.search(r"^(?:ok|\?)\s+(\S+).*?coverage: ([0-9.]+)%", line)
+    if not match:
+        continue
+    package, percentage = match.group(1), float(match.group(2))
+    if percentage < 80:
+        print(f"Coverage gate failed: {package} has {percentage:.1f}% statements; minimum is 80%.", file=sys.stderr)
+        failed = True
+if failed:
+    sys.exit(1)'; then
+      exit 1
+    fi
+    "$GO_BIN" vet ./...
+    if [[ ! -x "$LINTER" ]]; then
+      echo "golangci-lint is required at $LINTER" >&2
+      exit 1
+    fi
+    "$LINTER" run --config "$REPO_ROOT/.golangci.yml" ./...
+    if [[ ! -x "$VULN_CHECK" ]]; then
+      echo "govulncheck is required at $VULN_CHECK" >&2
+      exit 1
+    fi
+    "$VULN_CHECK" ./...
+  )
+done
+
+"$REPO_ROOT/bin/check-go-architecture"

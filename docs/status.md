@@ -1,5 +1,9 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-17 (Go Phase 1 local verification)
+
+- [x] Implemented the no-traffic Go platform skeleton on `fm/swing-trade-go-migration-impl-v1`: workspace modules, typed environment config, IST clock, fixed-scale decimal/log foundations, read-only pgx pool configuration, isolated-schema test harness, optimistic-lock retries, health/metrics routes, and security/CORS/rate-limit middleware. `./bin/go-run` started on loopback `127.0.0.1:8081`, served liveness health, and stopped cleanly. Real-binary HTTP E2E covers every exposed route. Both `./bin/go-verify` and `./bin/verify-changes` passed: race tests, >=80% coverage for tested code packages, vet, golangci-lint, govulncheck (no reachable vulnerabilities), and module architecture checks. `infra/env/.env` is absent, so development-database integration tests skipped and no database connection was attempted. No Java code, live service, Pi, stage, tunnel, or Docker image was changed or operated. Full G1 remains incomplete pending authorized database verification and separately authorized Pi/stage measurements and restore drill.
+
 Last checked: 2026-10-11 (candidate-to-intraday handoff local verification)
 
 - [x] Added the captain-approved Candidate Explorer → Intraday paper handoff on

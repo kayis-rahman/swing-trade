@@ -23,7 +23,17 @@ func TestPercentOfAndZeroDenominatorMatchFinancialScale(t *testing.T) {
 	}
 }
 
-func TestWholeSharesTruncatesTowardZero(t *testing.T) {
+func TestIndicatorScaleUsesHalfUp(t *testing.T) {
+	got, err := RoundHalfUp("1.2345675", IndicatorScale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "1.234568" {
+		t.Fatalf("RoundHalfUp() = %s, want 1.234568", got)
+	}
+}
+
+func TestWholeSharesTruncatesAndSaturatesLikeJava(t *testing.T) {
 	value, err := Parse("12.999")
 	if err != nil {
 		t.Fatal(err)
@@ -31,6 +41,32 @@ func TestWholeSharesTruncatesTowardZero(t *testing.T) {
 	if got := WholeShares(value); got != 12 {
 		t.Fatalf("WholeShares() = %d, want 12", got)
 	}
+	overflow, err := Parse("2147483648")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := WholeShares(overflow); got != Int32Max {
+		t.Fatalf("WholeShares(overflow) = %d, want %d", got, Int32Max)
+	}
+}
+
+func FuzzParseRoundTrip(f *testing.F) {
+	for _, input := range []string{"0.1234", "-0.00005", ".5", "NaN", "1e4", "", "999999999999999999999999"} {
+		f.Add(input)
+	}
+	f.Fuzz(func(t *testing.T, input string) {
+		value, err := Parse(input)
+		if err != nil {
+			return
+		}
+		roundTrip, err := Parse(value.String())
+		if err != nil {
+			t.Fatalf("Parse(%q) failed after canonical formatting: %v", value.String(), err)
+		}
+		if roundTrip.String() != value.String() {
+			t.Fatalf("round trip = %q, want %q", roundTrip.String(), value.String())
+		}
+	})
 }
 
 func TestAddDoesNotMutateOperands(t *testing.T) {

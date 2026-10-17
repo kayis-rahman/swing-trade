@@ -1,9 +1,9 @@
-module swingtrade/strategy
+module github.com/kayis-rahman/swing-trade/go/strategy
 
 go 1.27.0
 
-require (
-	swingtrade/core v0.0.0
-	swingtrade/data v0.0.0
-	swingtrade/llm v0.0.0
-)
+replace github.com/kayis-rahman/swing-trade/go/core => ../core
+
+replace github.com/kayis-rahman/swing-trade/go/data => ../data
+
+replace github.com/kayis-rahman/swing-trade/go/llm => ../llm

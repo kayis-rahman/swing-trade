@@ -49,13 +49,15 @@ repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 | 2026-10-16 | 9 | **Closed step 9**: the log-field and consumer inventory is complete, including the runtime half confirmed live on pi-node (read-only). One logback config, two appenders, three MDC fields written only by `TraceIdFilter` and consumed by nothing; the file pattern's mid-line `%n` plus missing trailing newline makes every on-disk line an empty-metadata stub merged into the next event; the stage properties' `logging.pattern.file`/`max-size`/`max-history` are dead because Boot 4's own file appender template is never loaded; promtail scrapes container stdout only (node-local config, not in repo) into Loki (168 h retention, Loki datasource in Grafana but zero panels query it), and the file's only live readers are humans. 12 findings for the Go port, including: do not reproduce the file quirk, keep the `swing-trade-stage-api` container name for Loki stream continuity, keep IST timestamps, and carry the per-profile level map | [evidence/log-fields.md](evidence/log-fields.md) |
 | 2026-10-17 | 8 (runtime confirmation) | Read-only scrape confirmed the `swing-trade-stage` target is up; 146 live exporter metric families match Prometheus's 151 stage-job families after excluding its five scrape-health series. The two `resilience4j_ratelimiter_*` gauges are explained by the three property-configured `@RateLimiter` instances. Prometheus has no loaded rule groups. Details and output checksums: [evidence/metrics-runtime.md](evidence/metrics-runtime.md) | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
 | 2026-10-17 | 6 (partial, money paths) | Java probe emitted exact `FinancialScale`, delivery-cost and intraday-cost outputs. The existing strategy test suite passed; indicator/strategy/backtest vectors remain outstanding. | [evidence/financial-golden-vectors.md](evidence/financial-golden-vectors.md) |
+| 2026-10-17 | 10 (partial, observational stage values) | Read-only stage process RSS/HWM/heap/startup and five-minute HTTP p50/p95/p99 plus CPU metrics were recorded. They are not a controlled JVM baseline; no full-universe backtest was run on the live Pi because it would not be read-only. | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
 
 Captain decision (2026-10-17): waive the native-image comparison (step 11); do not install GraalVM or build on
 the Pi. The G0 report must state this caveat. This does not waive the JVM baseline measurement in step 10.
 
 Still outstanding for G0 (in dependency order): complete golden vectors for the money, indicator, strategy,
-gate and backtest paths and the three SSE streams; the 409/422 shapes; Pi JVM baseline measurements (step 10),
-the runtime half of the scheduling-off test (12a), the remaining ledger rows for core domain models (81 files),
+gate and backtest paths and the three SSE streams; the 409/422 shapes; a controlled Pi JVM baseline and the
+full-universe backtest wall time (step 10; stage observations above are not a substitute), the runtime half of the
+scheduling-off test (12a), the remaining ledger rows for core domain models (81 files),
 indicators/strategies/gates, backtest engines, clients and risk controls and scheduling settings (12), the test
 traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
 Step 7 is now complete (snapshot + ownership sheet); the only parts of it that still need the

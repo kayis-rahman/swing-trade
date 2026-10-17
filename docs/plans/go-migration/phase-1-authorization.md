@@ -1,0 +1,9 @@
+# Phase 1 authorization and scope
+
+Captain decision received 2026-10-17: Phase 0 and Gate G0 are waived. Do not collect more characterization evidence or write a G0 report. Existing committed and external evidence stays unchanged and may inform later parity tests.
+
+Proceed with Phase 1, the Go platform skeleton, on branch `fm/swing-trade-go-migration-impl-v1`. Keep Java code and live services untouched. No merge, stage, tunnel, or Docker image push is authorized. Verification is local to this Mac. Captain separately authorized connections only to the development database at `192.168.0.100:5435`: use read-only sessions for reads; write tests must create and drop a unique `go_port_test_<random>` schema and never touch `public`. No migrations are allowed. The required `infra/env/.env` file is absent in this worktree, so database integration is blocked until credentials are made available; do not substitute `.env.example` or another source.
+
+The Go binary must expose infrastructure endpoints only, with no production traffic. The captain's local acceptance additionally requires one documented command to start the service, one command for unit/integration/static checks, and an end-to-end test that starts the real binary and exercises every route it exposes.
+
+Phase 1 plan steps requiring deployment or operations on Pi/stage (run the skeleton on Pi and stage database backup/restore) are deferred because this authorization explicitly prohibits further Pi/stage operations. No G0 report will be created.

@@ -18,6 +18,7 @@ Source analysis: a read-only scout of the repository at `c691c504` (module sizes
 | Rollback triggers | See [rollback.md](rollback.md) |
 | End state | Retire Java at G8 |
 | Structure and process | Same module separation, same scanners, test-first (see [standards.md](standards.md)) |
+| G0 native-image comparison | Captain decision (2026-10-17): waive the native-image Java baseline; do not install GraalVM or build on the Pi. G0 must record this limitation and satisfy the remaining Phase 0 evidence before Phase 1. |
 
 ## Document map
 

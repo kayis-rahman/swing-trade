@@ -50,11 +50,14 @@ repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 | 2026-10-17 | 8 (runtime confirmation) | Read-only scrape confirmed the `swing-trade-stage` target is up; 146 live exporter metric families match Prometheus's 151 stage-job families after excluding its five scrape-health series. The two `resilience4j_ratelimiter_*` gauges are explained by the three property-configured `@RateLimiter` instances. Prometheus has no loaded rule groups. Details and output checksums: [evidence/metrics-runtime.md](evidence/metrics-runtime.md) | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
 | 2026-10-17 | 6 (partial, money paths) | Java probe emitted exact `FinancialScale`, delivery-cost and intraday-cost outputs. The existing strategy test suite passed; indicator/strategy/backtest vectors remain outstanding. | [evidence/financial-golden-vectors.md](evidence/financial-golden-vectors.md) |
 
-Still outstanding for G0 (in dependency order): golden vectors for money paths and the
-three SSE streams, the 409/422 shapes, Pi and native-image measurements (10, 11 - the only steps that need
-hardware), the runtime half of the scheduling-off test (12a), the remaining ledger rows for core domain models
-(81 files), indicators/strategies/gates, backtest engines, clients and risk controls and scheduling settings (12),
-the test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
+Captain decision (2026-10-17): waive the native-image comparison (step 11); do not install GraalVM or build on
+the Pi. The G0 report must state this caveat. This does not waive the JVM baseline measurement in step 10.
+
+Still outstanding for G0 (in dependency order): complete golden vectors for the money, indicator, strategy,
+gate and backtest paths and the three SSE streams; the 409/422 shapes; Pi JVM baseline measurements (step 10),
+the runtime half of the scheduling-off test (12a), the remaining ledger rows for core domain models (81 files),
+indicators/strategies/gates, backtest engines, clients and risk controls and scheduling settings (12), the test
+traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
 Step 7 is now complete (snapshot + ownership sheet); the only parts of it that still need the
 running stack are the row counts of the six never-written tables, named in the sheet's last section.
 The HEAD startup failure that gated every runtime artifact is fixed and verified, so a local

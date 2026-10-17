@@ -10,6 +10,7 @@ curl -fsS http://127.0.0.1:19090/api/v1/targets
 curl -fsS http://127.0.0.1:19090/api/v1/rules
 curl -fsS 'http://127.0.0.1:19090/api/v1/series?match%5B%5D=%7Bjob%3D%22swing-trade-stage%22%7D'
 curl -fsS http://piworm.local:8081/actuator/prometheus
+docker --context pi-node exec swing-trade-stage-api sh -c 'grep -E "^(VmRSS|VmHWM|VmSize):" /proc/1/status'
 ```
 
 The queries return JSON/text; raw outputs were retained outside the repository under
@@ -31,6 +32,11 @@ The queries return JSON/text; raw outputs were retained outside the repository u
   `name` values in the Go parity target.
 - Prometheus returned zero rule groups. Thus the `StrategySkipped` and `StageDegraded` alerts are not loaded
   in the queried Prometheus instance.
+- A read-only process snapshot reported `VmRSS=703488 kB`, `VmHWM=842000 kB`, and `VmSize=2514336 kB` for
+  PID 1 in the existing stage API container. Actuator reported `application_started_time_seconds=55.78` and
+  `application_ready_time_seconds=66.478`, with heap pools totaling about 338.6 MB at scrape time. These are
+  observational stage values, not a controlled Phase 0 baseline: the Java build and load are not matched to a
+  Go binary, and `docker stats` returned `0B / 0B` from this remote context, so it was not used for the RSS value.
 
 ## Raw evidence checksums
 

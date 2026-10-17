@@ -50,12 +50,13 @@ repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 | 2026-10-17 | 8 (runtime confirmation) | Read-only scrape confirmed the `swing-trade-stage` target is up; 146 live exporter metric families match Prometheus's 151 stage-job families after excluding its five scrape-health series. The two `resilience4j_ratelimiter_*` gauges are explained by the three property-configured `@RateLimiter` instances. Prometheus has no loaded rule groups. Details and output checksums: [evidence/metrics-runtime.md](evidence/metrics-runtime.md) | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
 | 2026-10-17 | 6 (partial, money paths) | Java probe emitted exact `FinancialScale`, delivery-cost and intraday-cost outputs. The existing strategy test suite passed; indicator/strategy/backtest vectors remain outstanding. | [evidence/financial-golden-vectors.md](evidence/financial-golden-vectors.md) |
 | 2026-10-17 | 10 (partial, observational stage values) | Read-only stage process RSS/HWM/heap/startup and five-minute HTTP p50/p95/p99 plus CPU metrics were recorded. They are not a controlled JVM baseline; no full-universe backtest was run on the live Pi because it would not be read-only. | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
+| 2026-10-17 | 4 (partial, SSE and error shapes) | On a throwaway local stack, captured the signal-generation SSE completion, a live candidate-scan cancellation SSE, candidate-scan 409 JSON, and oversized-watchlist 422 empty-body response. The `/api/analysis/run-full` stream was not invoked because it starts the full orchestration pipeline. Raw captures and checksums are outside the worktree. | [evidence/sse-errors-runtime.md](evidence/sse-errors-runtime.md) |
 
 Captain decision (2026-10-17): waive the native-image comparison (step 11); do not install GraalVM or build on
 the Pi. The G0 report must state this caveat. This does not waive the JVM baseline measurement in step 10.
 
 Still outstanding for G0 (in dependency order): complete golden vectors for the money, indicator, strategy,
-gate and backtest paths and the three SSE streams; the 409/422 shapes; a controlled Pi JVM baseline and the
+gate and backtest paths, plus a safe capture of the `/api/analysis/run-full` SSE stream; a controlled Pi JVM baseline and the
 full-universe backtest wall time (step 10; stage observations above are not a substitute), the runtime half of the
 scheduling-off test (12a), the remaining ledger rows for core domain models (81 files),
 indicators/strategies/gates, backtest engines, clients and risk controls and scheduling settings (12), the test
@@ -77,7 +78,7 @@ Captain authorization (given 2026-10-13). A seeded local or throwaway stack (nev
 1. Stand up an isolated local stack with a throwaway database seeded from checked-in fixtures.
 2. Export OpenAPI from springdoc; list every live endpoint (resolve the commented-out mappings) with method, path, request and response types.
 3. Diff the endpoint list against `dashboard/src/api/*.ts` to find the truly consumed surface.
-4. Record golden request and response pairs per endpoint: success, validation error, not found, conflict, rate-limit, unauthorized admin; include headers and the five SSE event streams.
+4. Record golden request and response pairs per endpoint: success, validation error, not found, conflict, rate-limit, unauthorized admin; include headers and the three SSE event streams.
 5. Record time and decimal formatting rules actually emitted (LocalDateTime without offset, BigDecimal as number, enum casing, omitted vs null fields).
 6. Generate golden numeric vectors from Java for every indicator, strategy, gate, backtest, portfolio backtest, walk-forward, DSR and cost model.
 7. Snapshot the schema (`pg_dump --schema-only`) and write a table ownership sheet: writers, readers, retention, unique keys (confirm idempotency of ingestion).

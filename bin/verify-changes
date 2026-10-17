@@ -70,7 +70,7 @@ if [[ "${run_go}" == "true" ]]; then
   if [[ "${dry_run}" == "true" ]]; then
     printf '[dry-run] ./bin/go-verify\n'
   else
-    printf '\nRunning Go unit, E2E, optional development DB, race, vet, lint, vulnerability, and architecture checks...\n'
+    printf '\nRunning Go unit, E2E, authorized development DB, race, vet, lint, vulnerability, and architecture checks...\n'
     if ! ./bin/go-verify; then
       failures=$((failures + 1))
     fi

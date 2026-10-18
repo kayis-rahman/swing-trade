@@ -20,12 +20,15 @@ type window struct {
 
 // RateLimiter applies a per-client fixed-window request limit.
 type RateLimiter struct {
-	limit int
-	clock coreclock.Clock
-	mu    sync.Mutex
-	state map[string]window
-	hits  prometheus.Counter
+	limit        int
+	clock        coreclock.Clock
+	mu           sync.Mutex
+	state        map[string]window
+	hits         prometheus.Counter
+	requestCount int
 }
+
+const cleanupInterval = 10 // clean up after 10 requests
 
 // NewRateLimiter creates a limiter without an optional Prometheus counter.
 func NewRateLimiter(limit int, clock coreclock.Clock) *RateLimiter {
@@ -40,7 +43,7 @@ func NewRateLimiterWithCounter(limit int, clock coreclock.Clock, hits prometheus
 	if limit < 1 {
 		limit = 1
 	}
-	return &RateLimiter{limit: limit, clock: clock, state: make(map[string]window), hits: hits}
+	return &RateLimiter{limit: limit, clock: clock, state: make(map[string]window), hits: hits, requestCount: 0}
 }
 
 // Middleware wraps next with the fixed-window limiter.
@@ -60,6 +63,14 @@ func (l *RateLimiter) Middleware(next http.Handler) http.Handler {
 			current.count++
 		}
 		l.state[client] = current
+		l.requestCount++
+		if l.requestCount%cleanupInterval == 0 {
+			for key, win := range l.state {
+				if !now.Before(win.started.Add(time.Minute)) {
+					delete(l.state, key)
+				}
+			}
+		}
 		l.mu.Unlock()
 
 		remaining := l.limit - current.count

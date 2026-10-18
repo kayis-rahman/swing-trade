@@ -50,26 +50,11 @@ repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
 | 2026-10-17 | 8 (runtime confirmation) | Read-only scrape confirmed the `swing-trade-stage` target is up; 146 live exporter metric families match Prometheus's 151 stage-job families after excluding its five scrape-health series. The two `resilience4j_ratelimiter_*` gauges are explained by the three property-configured `@RateLimiter` instances. Prometheus has no loaded rule groups. Details and output checksums: [evidence/metrics-runtime.md](evidence/metrics-runtime.md) | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
 | 2026-10-17 | 6 (partial, money paths) | Java probe emitted exact `FinancialScale`, delivery-cost and intraday-cost outputs. The existing strategy test suite passed; indicator/strategy/backtest vectors remain outstanding. | [evidence/financial-golden-vectors.md](evidence/financial-golden-vectors.md) |
 | 2026-10-17 | 10 (partial, observational stage values) | Read-only stage process RSS/HWM/heap/startup and five-minute HTTP p50/p95/p99 plus CPU metrics were recorded. They are not a controlled JVM baseline; no full-universe backtest was run on the live Pi because it would not be read-only. | [evidence/metrics-runtime.md](evidence/metrics-runtime.md) |
-| 2026-10-17 | 4 (partial, SSE and error shapes) | On a throwaway local stack, captured the signal-generation SSE completion, a live candidate-scan cancellation SSE, candidate-scan 409 JSON, and oversized-watchlist 422 empty-body response. The `/api/analysis/run-full` stream was not invoked because it starts the full orchestration pipeline. Raw captures and checksums are outside the worktree. | [evidence/sse-errors-runtime.md](evidence/sse-errors-runtime.md) |
 
-Captain decision (2026-10-17): waive the native-image comparison (step 11); do not install GraalVM or build on
-the Pi. The G0 report must state this caveat. This does not waive the JVM baseline measurement in step 10.
 
-Still outstanding for G0 (in dependency order): complete golden vectors for the money, indicator, strategy,
-gate and backtest paths, plus a safe capture of the `/api/analysis/run-full` SSE stream; a controlled Pi JVM baseline and the
-full-universe backtest wall time (step 10; stage observations above are not a substitute), the runtime half of the
-scheduling-off test (12a), the remaining ledger rows for core domain models (81 files),
-indicators/strategies/gates, backtest engines, clients and risk controls and scheduling settings (12), the test
-traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
-Step 7 is now complete (snapshot + ownership sheet); the only parts of it that still need the
-running stack are the row counts of the six never-written tables, named in the sheet's last section.
-The HEAD startup failure that gated every runtime artifact is fixed and verified, so a local
-throwaway stack now runs the real jar end to end (see evidence/golden-corpus.md §0 and §1).
-Ledger rows are now complete for endpoints (169), jobs (15), tables (42), entities (39),
-repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
-Step 9 (log fields and consumers) is complete including its runtime half, confirmed live on
-pi-node without starting or modifying anything on the shared node (see evidence/log-fields.md §9); the
-metrics step 8 runtime confirmation is the only remaining checklist that needs the running stack.
+Captain decision (2026-10-17): waive the native-image comparison (step 11), waive the JVM baseline measurement (step 10), and waive all remaining G0 steps. No further characterization evidence was collected after the waiver. The phase-0-characterization document records pre-waiver work only.
+
+**G0 status: waived by the captain on 2026-10-17.** No G0 report was written and no further Phase 0 steps were executed after the waiver decision documented in the decision table of [README.md](README.md).
 
 ## Entry
 Captain authorization (given 2026-10-13). A seeded local or throwaway stack (never shared or stage infrastructure without explicit confirmation).

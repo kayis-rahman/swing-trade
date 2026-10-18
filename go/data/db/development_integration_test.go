@@ -27,7 +27,7 @@ func TestDevelopmentDatabaseConnectionsAreReadOnly(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	pool, err := newIntegrationTestReadOnlyPool(ctx, databaseURL)
+	pool, err := NewLocalOrReadOnlyPool(ctx, databaseURL)
 	if err != nil {
 		t.Fatal("read-only development database connection failed")
 	}

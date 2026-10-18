@@ -43,9 +43,9 @@ func run(ctx context.Context) error {
 	logger := corelog.New(os.Stdout, slog.LevelInfo, "api")
 
 	if cfg.DatabaseURL != "" {
-		pool, err := db.NewReadOnlyPool(ctx, cfg.DatabaseURL)
+		pool, err := db.NewLocalOrReadOnlyPool(ctx, cfg.DatabaseURL)
 		if err != nil {
-			return fmt.Errorf("connect to configured read-only database: %w", err)
+			return fmt.Errorf("connect to database: %w", err)
 		}
 		defer pool.Close()
 	}

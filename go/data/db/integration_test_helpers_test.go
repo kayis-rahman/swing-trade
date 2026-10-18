@@ -1,7 +1,6 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -68,24 +67,4 @@ func TestIntegrationTestPoolConfigRequiresExplicitFixedLocalTarget(t *testing.T)
 			t.Fatal("non-fixed local test target was accepted")
 		}
 	}
-}
-
-func newIntegrationTestReadOnlyPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
-	config, err := integrationTestPoolConfig(databaseURL)
-	if err != nil {
-		return nil, err
-	}
-	if config.ConnConfig.Host == "192.168.0.100" {
-		return NewReadOnlyPool(ctx, databaseURL)
-	}
-
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return nil, fmt.Errorf("create local integration-test pool")
-	}
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("ping local integration-test database")
-	}
-	return pool, nil
 }

@@ -4,7 +4,9 @@ One row per feature, using the row template below.
 
 Status values: not-started, red, green, parity-pending, closed.
 
-**Gate G0 status of this file.** Section 2 expands the endpoint surface: 169 rows (156 live endpoints from
+**G0 status:** waived by captain decision on 2026-10-17; this ledger remains the
+characterization record, not an active gate. See the [authorization record](phase-1-authorization.md).
+Section 2 expands the endpoint surface: 169 rows (156 live endpoints from
 [endpoint-inventory.md](evidence/endpoint-inventory.md) plus the 13 endpoints Java keeps commented out), one row per
 endpoint, with Java classes, Java tests and the planned Go file. Section 3 expands the scheduling surface: 15 rows,
 one row per `@Scheduled` method, characterized in [scheduled-jobs.md](evidence/scheduled-jobs.md). Section 5 expands
@@ -23,8 +25,8 @@ with the access point, key contract and Go file per row. Section 10 expands the 
 interface projection, each with its custom-query surface, store facade, direct consumers, Java tests and Go
 file; the 15 store facades ride along as the `Facade / core port` column. Section 11 lists the areas that are
 **not yet expanded** (core domain models, indicators/strategies/gates, backtest engines, clients and risk
-controls, scheduling settings) - while any of those remain area-level rows, G0 cannot pass. The area table in
-§1 is an index for navigation, not a ledger row set.
+controls, scheduling settings) - these areas remain unexpanded. The area table in §1 is an index for navigation,
+not a ledger row set.
 
 Derived by: full read of all 28 controllers in `backend/api/src/main/java/com/swingtrade/api/controller/`,
 cross-checked against the Java test tree (`backend/*/src/test`) and the Playwright specs (`dashboard/tests`), plus

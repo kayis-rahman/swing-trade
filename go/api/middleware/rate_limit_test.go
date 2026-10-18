@@ -46,15 +46,12 @@ func TestRateLimiterBoundedMemory(t *testing.T) {
 	clock := &fixedClock{now: time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)}
 	limit := NewRateLimiter(100, clock)
 	handler := limit.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
-	httpCalls := 0
 	for i := 0; i < 50; i++ {
 		r := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 		// Use unique IPs that won't expire.
-		r.RemoteAddr = net.ParseIP(t.Name()).String() + ":" + strconv.Itoa(i)
+		r.RemoteAddr = net.IPv4(192, 0, 2, byte(i+1)).String() + ":" + strconv.Itoa(i)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
-		httpCalls++
-		_ = httpCalls
 	}
 	if len(limit.state) == 0 {
 		t.Fatal("expected some entries after 50 requests")
@@ -64,7 +61,7 @@ func TestRateLimiterBoundedMemory(t *testing.T) {
 	// Additional requests trigger cleanup.
 	for i := 50; i < 70; i++ {
 		r := httptest.NewRequest(http.MethodGet, "/api/health", nil)
-		r.RemoteAddr = net.ParseIP(t.Name()).String() + ":" + strconv.Itoa(i)
+		r.RemoteAddr = net.IPv4(192, 0, 2, byte(i+1)).String() + ":" + strconv.Itoa(i)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
 	}

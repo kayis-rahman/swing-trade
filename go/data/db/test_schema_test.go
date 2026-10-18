@@ -21,7 +21,7 @@ type TestSchema struct {
 // NewTestSchema creates a unique schema for an integration test. The returned pool cannot
 // resolve objects from public because its search_path contains only the generated schema.
 func NewTestSchema(ctx context.Context, databaseURL string) (*TestSchema, error) {
-	config, err := ReadOnlyPoolConfig(databaseURL)
+	config, err := integrationTestPoolConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse authorized test database URL")
 	}
@@ -50,7 +50,7 @@ func NewTestSchema(ctx context.Context, databaseURL string) (*TestSchema, error)
 		return nil, fmt.Errorf("create isolated test schema: %w", err)
 	}
 
-	testConfig, err := ReadOnlyPoolConfig(databaseURL)
+	testConfig, err := integrationTestPoolConfig(databaseURL)
 	if err != nil {
 		_ = dropSchema(ctx, admin, name)
 		admin.Close()

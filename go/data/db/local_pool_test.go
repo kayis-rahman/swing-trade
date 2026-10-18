@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 )
@@ -19,7 +18,8 @@ func TestNewLocalOrReadOnlyPoolTriesProductionFirst(t *testing.T) {
 
 func TestNewLocalOrReadOnlyPoolUsesLocalFallbackWhenOptedIn(t *testing.T) {
 	ctx := context.Background()
-	_ = os.Unsetenv(localTestDatabaseEnv)
+	t.Setenv(localTestDatabaseEnv, "")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "")
 	productionURL := "postgresql://dev-user@192.168.0.100:5435/swingtrade_db"
 	if _, err := NewLocalOrReadOnlyPool(ctx, productionURL); err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() succeeded without opt-in")
@@ -30,9 +30,6 @@ func TestNewLocalOrReadOnlyPoolUsesLocalFallbackWhenOptedIn(t *testing.T) {
 		t.Fatal("NewLocalOrReadOnlyPool() succeeded without local database")
 	}
 
-	localURL := "postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable"
-	_ = os.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
-	_ = os.Unsetenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL")
 	if _, err := NewLocalOrReadOnlyPool(ctx, productionURL); err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() succeeded without local database")
 	}
@@ -44,10 +41,10 @@ func TestNewLocalOrReadOnlyPoolReturnsPoolForValidLocalTarget(t *testing.T) {
 	// TestDevelopmentDatabaseWritesStayInIsolatedSchema) exercise the live local
 	// database path; this unit test only checks parameter validation.
 	localURL := "postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable"
-	_ = os.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
-	_ = os.Setenv(localTestDatabaseEnv, "1")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
+	t.Setenv(localTestDatabaseEnv, "1")
 	// Construct an intentionally bad local URL to verify error handling.
-	_ = os.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "not-a-postgres-url")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "not-a-postgres-url")
 	_, err := NewLocalOrReadOnlyPool(context.Background(), "postgresql://dev-user@192.168.0.100:5435/swingtrade_db")
 	if err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() succeeded with invalid local fallback URL")
@@ -58,7 +55,7 @@ func TestNewLocalOrReadOnlyPoolReturnsPoolForValidLocalTarget(t *testing.T) {
 	}
 
 	// Verify that a valid local URL is accepted (validation passes, connection still fails).
-	_ = os.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
 	_, err = NewLocalOrReadOnlyPool(context.Background(), "postgresql://dev-user@192.168.0.100:5435/swingtrade_db")
 	if err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() should still fail when no local database is running")
@@ -68,7 +65,7 @@ func TestNewLocalOrReadOnlyPoolReturnsPoolForValidLocalTarget(t *testing.T) {
 	}
 
 	// Verify that a non-valid local URL is rejected by validation.
-	_ = os.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "postgresql://other@localhost:55433/go_port_test?sslmode=disable")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "postgresql://other@localhost:55433/go_port_test?sslmode=disable")
 	_, err = NewLocalOrReadOnlyPool(context.Background(), "postgresql://dev-user@192.168.0.100:5435/swingtrade_db")
 	if err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() accepted non-valid local fallback URL")

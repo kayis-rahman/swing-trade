@@ -108,7 +108,7 @@ func dropSchema(ctx context.Context, pool *pgxpool.Pool, name string) error {
 	if !isTestSchemaName(name) {
 		return fmt.Errorf("refusing to drop non-test schema")
 	}
-	_, err := pool.Exec(ctx, "DROP SCHEMA "+name)
+	_, err := pool.Exec(ctx, "DROP SCHEMA "+name+" CASCADE")
 	if err != nil {
 		return fmt.Errorf("drop isolated test schema: %w", err)
 	}

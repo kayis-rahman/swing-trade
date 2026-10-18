@@ -1,4 +1,4 @@
-# Phase 0: Characterization and baseline (AUTHORIZED)
+# Phase 0: Characterization and baseline (waived)
 
 Goal: produce the evidence needed for the Gate G0 go/no-go. Characterization steps are read-only against the Java system; a separate startup-blocker fix was made to enable runtime evidence collection.
 
@@ -18,19 +18,7 @@ Goal: produce the evidence needed for the Gate G0 go/no-go. Characterization ste
 | 2026-10-16 | 12 (entity half) | **Ledger `F-DATA-ENTITIES` entity half closed**: 39 rows, covering 38 `@Entity` classes (34 data, 3 broker, 1 llm) plus the one dead PK POJO (`OhlcvCandlePK` is a plain class, never referenced by main code); each row carries the access point (repository / store facade / owning service), the key and idempotency contract from §8, the referencing test classes and the Go entity file. 16 of the 38 entities carry a `fromDomain`/`toDomain` bridge to the core domain model (15 in data, both directions except `SignalEntity`'s 3 `fromDomain` overloads; `SynthesisEvaluationEntity` is one-way `toDomain`). Outstanding for this area: 38 repository/store rows and the 60 core domain-model rows | [feature-ledger.md](feature-ledger.md) §9 |
 | 2026-10-16 | 12 (repository half) | **Ledger `F-DATA-ENTITIES` repository half closed**: 39 new `F-DATA-REPO` rows - the 38 repository interfaces (34 data, 3 broker, 1 llm) plus the `PositionSummaryProjection` interface projection - each with its full custom-query surface (22 `@Query` on the candle repository including the `ON CONFLICT` idempotent insert, 23 on the signal repository including the native `ROW_NUMBER()` window read and the five `@Modifying` deletes, 14 SQL aggregates on sentiment accuracy), the 15 store facades with their core ports, direct consumers, Java tests and Go file. `core/domain` counts re-verified: 81 files (56 at the domain root + 25 port interfaces in subdirectories), so the domain-model area row is 81, not the stale 60 | [feature-ledger.md](feature-ledger.md) §10 |
 
-Still outstanding for G0 (in dependency order): golden vectors for money paths and the
-three SSE streams, the 409/422 shapes, runtime confirmation of the metrics inventory against the
-live `/actuator/prometheus` (step 8, checklist in §7 of the inventory), log-field inventory (9),
-Pi and native-image measurements (10, 11 - the only steps that need hardware), the runtime
-half of the scheduling-off test (12a), the remaining ledger rows for core domain models (81 files),
-indicators/strategies/gates, backtest engines, clients and risk controls and scheduling settings (12),
-the test traceability matrix (13), the Checkstyle/PMD rule mapping (14) and the G0 report (16).
-Step 7 is now complete (snapshot + ownership sheet); the only parts of it that still need the
-running stack are the row counts of the six never-written tables, named in the sheet's last section.
-The HEAD startup failure that gated every runtime artifact is fixed and verified, so a local
-throwaway stack now runs the real jar end to end (see evidence/golden-corpus.md §0 and §1).
-Ledger rows are now complete for endpoints (169), jobs (15), tables (42), entities (39),
-repositories (39), metrics (45), security (6) and wire-format (10) surfaces.
+The remaining work and historical G0 exit criteria below describe the plan before the captain's waiver; they are not active requirements. Current status and the waiver decision are recorded in [Phase 1 authorization](phase-1-authorization.md).
 
 ## Progress log (added by implementation runs; not part of the plan spec)
 
@@ -81,9 +69,9 @@ Captain authorization (given 2026-10-13). A seeded local or throwaway stack (nev
 ## Deliverables
 Golden corpus (outside product tree), OpenAPI file, schema snapshot, ownership sheet, metrics inventory, baseline and native-image numbers, feature ledger, traceability matrix, rule mapping, G0 report.
 
-## Gate G0 exit criteria
+## Historical Gate G0 exit criteria (waived)
 - Baseline and native-image numbers are in the report with method and caveats.
-- Ledger is fully expanded: one row per endpoint, job, entity, metric and strategy, with no area-level row left. G0 cannot pass with unexpanded rows.
+- Historical criterion: ledger fully expanded to one row per endpoint, job, entity, metric and strategy, with no area-level row left. G0 was waived before this criterion was met.
 - Every scheduled job is characterized and the scheduling-off test passes.
 - Golden corpus reproducible by a script.
-- Captain decides: proceed to Phase 1, or stay on Java with the native-image path. If Go does not clearly beat the native-image baseline on the Q1 metric, the default recommendation is to stay on Java.
+- Historical decision point: the captain waived G0 and authorized Phase 1; no native-image comparison was required.

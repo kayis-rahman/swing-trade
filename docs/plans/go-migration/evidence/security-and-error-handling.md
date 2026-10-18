@@ -231,8 +231,8 @@ Log format (`backend/api/src/main/resources/logback-spring.xml:20`): a text patt
 There is **no JSON encoder anywhere** (`grep -ri "logstash\|jsonencoder\|jsonlayout"` over `backend/*/src/main/resources`
 finds nothing), so the captain's "Logs: JSON" decision in [README.md](../README.md) is a *change* for the Go port, not
 parity. Files land in the `stage_logs` volume (`LOG_FILE=/var/log/swing-trade/stage.log`,
-`infra/docker-compose.infra-stage.yml:47,50`), streamed to stdout as well; consumers of the file are inventoried in
-Phase 0 step 9, which is still outstanding.
+`infra/docker-compose.infra-stage.yml:47,50`), streamed to stdout as well. Consumers of the file are inventoried in
+[the completed Phase 0 log-field inventory](log-fields.md).
 
 ## 7. F-API-SEC-06 — the global error envelope
 

@@ -662,12 +662,9 @@ activates. The broker and llm repositories are plain `JpaRepository`s with at mo
 | F-DATA-REPO-38 | SynthesisEvaluationRepository | `synthesis_evaluations` | llm | `findBySymbolAndAnalysisDate`; `findByOutcomeMeasuredAtIsNullAndAnalysisDateBeforeOrderByAnalysisDateAsc` (the re-measurement scan over unmeasured rows) | none | SynthesisEvaluationService | SynthesisEvaluationServiceTest | llm/synthesis_evaluation_repository.go | not-started |
 | F-DATA-REPO-39 | PositionSummaryProjection | `positions` (interface projection) | data | aliased read-model columns for `PositionRepository#findOpenSummaries`; the Go row is the matching struct plus a raw `SELECT` with the same alias list | n/a | PositionRepository via PositionStoreImpl | PositionRepositoryTest | data/repository/position_summary_projection.go | not-started |
 
-## 11. Remaining expansion (G0 still blocked)
+## 11. Remaining unexpanded areas
 
-These area rows are not yet expanded. Until they are, G0 cannot pass, because the exit criterion is "one row per
-endpoint, job, entity, metric and strategy". Endpoint (§2), job (§3), table (§8), entity (§9),
-repository/store-facade (§10), metric (§5), cross-cutting security/error (§6) and wire-format (§7) surfaces
-are done.
+G0 was waived by the captain; these incomplete areas are retained as future migration-planning work, not active gate blockers. See the [Phase 0 status and authorization](phase-0-characterization.md). Endpoint (§2), job (§3), table (§8), entity (§9), repository/store-facade (§10), metric (§5), cross-cutting security/error (§6) and wire-format (§7) surfaces are expanded.
 
 | Area | What must be expanded | Source of truth | Rows expected |
 |---|---|---|---|

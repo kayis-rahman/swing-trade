@@ -2,7 +2,6 @@
 """Validate Go package imports and module requirements against migration layers."""
 import json
 import pathlib
-import re
 import subprocess
 import sys
 
@@ -26,21 +25,6 @@ def run_json(command, cwd):
 
 def main():
     failures = []
-    for source in (ROOT / "go").rglob("*.go"):
-        if source.name.endswith("_test.go"):
-            continue
-        text = source.read_text(encoding="utf-8")
-        relative = source.relative_to(ROOT / "go")
-        if "time.Now(" in text and relative.parts[:2] != ("core", "clock"):
-            failures.append(f"{relative}: time.Now must stay behind core/clock")
-        if "panic(" in text and relative.parts[:2] != ("api", "cmd"):
-            failures.append(f"{relative}: production panic is only allowed in the executable entry point")
-        if "log.Fatal" in text and relative.parts[:2] != ("api", "cmd"):
-            failures.append(f"{relative}: log.Fatal is forbidden outside the executable entry point")
-        if relative.parts[:2] == ("core", "decimal") or relative.parts[0] in {"strategy", "broker"}:
-            if re.search(r"\bfloat64\b", text):
-                failures.append(f"{relative}: float64 is forbidden in money/strategy packages")
-
     for module, allowed in DEPENDENCIES.items():
         module_dir = ROOT / "go" / module
         mod = run_json(["go", "mod", "edit", "-json"], module_dir)

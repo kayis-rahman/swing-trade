@@ -35,4 +35,4 @@ The ruleset enables PMD 7 `category/java/errorprone.xml`, `category/java/securit
 
 ## Enforced Go toolchain
 
-`gofmt` and `goimports`; `golangci-lint` with `revive`, `staticcheck`, `govet`, `errcheck`, `gocritic`, `gosec`, `ineffassign`, `unused`, `bodyclose`, `sqlclosecheck`, `nilerr`, `depguard`, `forbidigo` and `funlen`; `go test -race`; `govulncheck`; and workspace architecture checks. Money packages forbid `float64`; `time.Now` is allowed only behind the clock port. Tools that are not installed are reported as unavailable, never silently counted green.
+`gofmt` and `goimports`; `golangci-lint` with `revive`, `staticcheck`, `govet`, `errcheck`, `gocritic`, `gosec`, `ineffassign`, `unused`, `bodyclose`, `sqlclosecheck`, `nilerr`, `depguard`, `forbidigo` and `funlen`; `go test -race`; `govulncheck`; and workspace module/package dependency checks. The architecture checker enforces the module layer graph; it does not enforce source-level rules for `float64`, `time.Now`, `panic`, or `log.Fatal`. Tools that are not installed are reported as unavailable, never silently counted green.

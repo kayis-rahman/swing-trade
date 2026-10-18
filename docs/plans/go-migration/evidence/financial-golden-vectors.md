@@ -4,17 +4,6 @@ Outputs were emitted directly by the Java 21 classes in `backend/strategy` on 20
 `FinancialScale` rounding/saturation rules and both current cost models; it is not the complete indicator,
 strategy, gate, or engine vector set required by G0.
 
-## Reproduction
-
-```sh
-cd backend && ./gradlew :strategy:classes --no-daemon
-cd ..
-javac -cp backend/strategy/build/classes/java/main -d /tmp/go-migration-vectors \
-  docs/plans/go-migration/evidence/scripts/FinancialGoldenProbe.java
-java -cp backend/strategy/build/classes/java/main:/tmp/go-migration-vectors \
-  com.swingtrade.strategy.FinancialGoldenProbe
-```
-
 ## Java output
 
 ```text
@@ -29,7 +18,7 @@ delivery_round_trip_cost=41.86
 intraday_round_trip_cost=47.57
 ```
 
-The probe inputs and implementations are explicit in [FinancialGoldenProbe.java](scripts/FinancialGoldenProbe.java),
+The values correspond to the Java implementations in
 [FinancialScale.java](../../../../backend/strategy/src/main/java/com/swingtrade/strategy/FinancialScale.java),
 [ZerodhaDeliveryCostModel.java](../../../../backend/strategy/src/main/java/com/swingtrade/strategy/ZerodhaDeliveryCostModel.java),
 and [IntradayCostModel.java](../../../../backend/strategy/src/main/java/com/swingtrade/strategy/IntradayCostModel.java).

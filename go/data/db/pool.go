@@ -62,6 +62,11 @@ func NewLocalOrReadOnlyPool(ctx context.Context, databaseURL string) (*pgxpool.P
 	if err != nil {
 		return nil, fmt.Errorf("parse local fallback database URL: %w", err)
 	}
+	if config.ConnConfig.Host != "127.0.0.1" || config.ConnConfig.Port != 55433 ||
+		config.ConnConfig.Database != "go_port_test" || config.ConnConfig.User != "go_port_test" ||
+		config.ConnConfig.Password != "" {
+		return nil, fmt.Errorf("local fallback database URL must target 127.0.0.1:55433/go_port_test as user go_port_test with no password")
+	}
 	config.ConnConfig.RuntimeParams["default_transaction_read_only"] = "on"
 	pool, err = pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

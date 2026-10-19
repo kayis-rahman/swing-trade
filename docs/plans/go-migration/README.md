@@ -25,7 +25,7 @@ Source analysis: a read-only scout of the repository at `c691c504` (module sizes
 | File | Purpose |
 |---|---|
 | [standards.md](standards.md) | Module layout, dependency rules, static scanning, coding standards, TDD loop |
-| [phase-0-characterization.md](phase-0-characterization.md) | Authorized now: baseline, goldens, ledger, traceability |
+| [phase-0-characterization.md](phase-0-characterization.md) | Historical characterization record; Phase 0/G0 were waived |
 | [phase-1-platform-skeleton.md](phase-1-platform-skeleton.md) | Go workspace, tooling, observability, no traffic |
 | [phase-1-authorization.md](phase-1-authorization.md) | Phase 0/G0 waiver and Phase 1 operational boundaries |
 | [phase-1-config.md](phase-1-config.md) | Go environment mapping, safe local commands, database-test limits |

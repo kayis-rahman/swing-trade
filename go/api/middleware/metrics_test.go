@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,6 +63,47 @@ func TestRequestMetricsUsesStableRoutePatternAndStatus(t *testing.T) {
 			}
 		default:
 			t.Errorf("unexpected metric family %q", family.GetName())
+		}
+	}
+}
+
+func TestRequestMetricsBoundsUnknownMethodLabels(t *testing.T) {
+	clock := testClock{now: time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)}
+	registry := prometheus.NewRegistry()
+	requests := prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "http_server_requests_seconds", Help: "test"}, []string{"method", "uri", "status", "outcome", "exception"})
+	apiRequests := prometheus.NewSummaryVec(prometheus.SummaryOpts{Name: "api_request_duration_seconds", Help: "test"}, []string{"method", "status"})
+	if err := registry.Register(requests); err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.Register(apiRequests); err != nil {
+		t.Fatal(err)
+	}
+	handler := RequestMetrics(clock, requests, apiRequests)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	request := httptest.NewRequest("CUSTOM"+strings.Repeat("X", 1024), "/api/health", nil)
+	handler.ServeHTTP(httptest.NewRecorder(), request)
+
+	families, err := registry.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(families) != 2 {
+		t.Fatalf("got %d metric families, want 2", len(families))
+	}
+	for _, family := range families {
+		if len(family.Metric) != 1 {
+			t.Fatalf("%s has %d series, want 1", family.GetName(), len(family.Metric))
+		}
+		method := ""
+		for _, label := range family.Metric[0].Label {
+			if label.GetName() == "method" {
+				method = label.GetValue()
+				break
+			}
+		}
+		if method != "OTHER" {
+			t.Errorf("%s method label = %q, want OTHER", family.GetName(), method)
 		}
 	}
 }

@@ -35,9 +35,19 @@ func RequestMetrics(clock coreclock.Clock, requests *prometheus.HistogramVec, ap
 				outcome = "CLIENT_ERROR"
 			}
 			duration := clock.Now().Sub(started).Seconds()
-			requests.WithLabelValues(r.Method, uri, strconv.Itoa(status), outcome, "").Observe(duration)
-			apiRequests.WithLabelValues(r.Method, strconv.Itoa(status)).Observe(duration)
+			method := normalizedMethod(r.Method)
+			requests.WithLabelValues(method, uri, strconv.Itoa(status), outcome, "").Observe(duration)
+			apiRequests.WithLabelValues(method, strconv.Itoa(status)).Observe(duration)
 		})
+	}
+}
+
+func normalizedMethod(method string) string {
+	switch method {
+	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
+		return method
+	default:
+		return "OTHER"
 	}
 }
 

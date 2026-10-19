@@ -10,15 +10,58 @@ COMPOSE_PROJECT="swing-trade-go-stage"
 COMPOSE_FILE="docker-compose.go-stage.yml"
 JAVA_CONTAINER="swing-trade-stage-api"
 
-if [[ "${STAGE_GO_PHASE1_GATE_PASSED:-}" != "YES" || -z "${STAGE_GO_PHASE1_GATE_REFERENCE:-}" ]]; then
-  echo "Refusing Go stage replacement: complete the Phase 1 no-mistakes/evidence gate first." >&2
-  echo "Set STAGE_GO_PHASE1_GATE_PASSED=YES and provide STAGE_GO_PHASE1_GATE_REFERENCE only after it passes." >&2
-  exit 2
-fi
+BUILD_COMMIT="$(cd "$PROJECT_ROOT" && git rev-parse HEAD)"
+if ! python3 - "$BUILD_COMMIT" <<'PY'
+import json
+import os
+import re
+import sys
 
-if [[ "${STAGE_GO_BACKUP_RESTORE_VERIFIED:-}" != "YES" || -z "${STAGE_GO_BACKUP_RESTORE_REFERENCE:-}" ]]; then
-  echo "Refusing Go stage replacement: stage database backup and restore prerequisites are not recorded." >&2
-  echo "Set STAGE_GO_BACKUP_RESTORE_VERIFIED=YES and provide STAGE_GO_BACKUP_RESTORE_REFERENCE only after verification." >&2
+commit = sys.argv[1]
+
+def load_record(variable, fields):
+    path = os.environ.get(variable, "")
+    if not path:
+        raise ValueError(f"{variable} must point to an evidence JSON record")
+    with open(path, encoding="utf-8") as record_file:
+        record = json.load(record_file)
+    if not isinstance(record, dict) or set(record) != set(fields):
+        raise ValueError(f"{variable} has an invalid record shape")
+    return record
+
+def nonempty(record, field):
+    return isinstance(record[field], str) and bool(record[field].strip())
+
+try:
+    gate = load_record("STAGE_GO_PHASE1_GATE_RECORD", (
+        "kind", "scope", "commit", "status", "run_reference"
+    ))
+    if (gate["kind"] != "no-mistakes-phase1"
+            or gate["scope"] != "go-stage-replacement"
+            or gate["commit"] != commit
+            or gate["status"] != "passed"
+            or not nonempty(gate, "run_reference")):
+        raise ValueError("Phase 1 evidence does not match this passing deployment commit and scope")
+
+    backup = load_record("STAGE_GO_BACKUP_RESTORE_RECORD", (
+        "kind", "scope", "status", "backup_reference", "backup_sha256",
+        "restore_reference", "restore_target", "restore_verified"
+    ))
+    if (backup["kind"] != "stage-backup-restore"
+            or backup["scope"] != "stage-database-backup-restore"
+            or backup["status"] != "verified"
+            or not nonempty(backup, "backup_reference")
+            or not isinstance(backup["backup_sha256"], str)
+            or re.fullmatch(r"[0-9a-f]{64}", backup["backup_sha256"]) is None
+            or not nonempty(backup, "restore_reference")
+            or backup["restore_target"] != "isolated"
+            or backup["restore_verified"] is not True):
+        raise ValueError("Stage backup/restore evidence is incomplete or not isolated and verified")
+except (OSError, UnicodeError, json.JSONDecodeError, ValueError, KeyError) as error:
+    print(f"Refusing Go stage replacement: invalid prerequisite evidence: {error}.", file=sys.stderr)
+    sys.exit(2)
+PY
+then
   exit 2
 fi
 
@@ -27,7 +70,6 @@ if [[ -n "$(cd "$PROJECT_ROOT" && git status --porcelain)" ]]; then
   exit 2
 fi
 
-BUILD_COMMIT="$(cd "$PROJECT_ROOT" && git rev-parse HEAD)"
 BUILD_ID="${BUILD_COMMIT:0:12}"
 ROLLBACK_CONTAINER="swing-trade-stage-api-java-rollback-${BUILD_ID}"
 BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/go-stage.XXXXXX")"

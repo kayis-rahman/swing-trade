@@ -68,9 +68,9 @@ and stopped Java API container for rollback. The Go skeleton intentionally has
 no trading or orchestration endpoints, so those Java-backed dashboard features
 will be unavailable while Go serves stage.
 
-This command refuses to connect to stage unless the operator supplies explicit
-Phase 1 gate and stage backup/restore evidence references. Follow
-[`docs/plans/go-migration/stage-go-replacement.md`](../plans/go-migration/stage-go-replacement.md)
+This command refuses to connect to stage unless the operator supplies
+machine-checkable Phase 1 gate and stage backup/restore JSON evidence records.
+Follow [`docs/plans/go-migration/stage-go-replacement.md`](../plans/go-migration/stage-go-replacement.md)
 first. The target has not been deployed; local artifact checks do not satisfy
 the backup/restore prerequisite or authorize stage replacement.
 

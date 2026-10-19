@@ -30,18 +30,30 @@ Create and checksum a stage backup, restore it to an isolated target, and
 record both results. Do not restore over the live stage database. Phase 1's
 existing backup/restore item is still deferred and is not satisfied by this
 change.
+
+
 3. Confirm the required stage `API_KEY`, the existing external Docker network,
 and the target host architecture. The deploy script reads only `uname -m`,
 passes `API_KEY` through Compose interpolation, and does not print the key.
 4. Record the running Java container ID and image. The script preserves that
 stopped container under a rollback name and leaves the dashboard and
 database containers untouched.
-5. Set `STAGE_GO_PHASE1_GATE_PASSED=YES`,
-`STAGE_GO_PHASE1_GATE_REFERENCE`,
-`STAGE_GO_BACKUP_RESTORE_VERIFIED=YES`, and
-`STAGE_GO_BACKUP_RESTORE_REFERENCE` only after the corresponding evidence
-exists. The script refuses to connect to stage unless these acknowledgements
-are present.
+5. Set `STAGE_GO_PHASE1_GATE_RECORD` and
+`STAGE_GO_BACKUP_RESTORE_RECORD` to the completed JSON evidence records
+described below.
+
+Before any SSH call, `bin/deploy-go-stage.sh` validates both records. The Phase 1
+record must contain exactly `kind: "no-mistakes-phase1"`,
+`scope: "go-stage-replacement"`, the full current `commit`, `status: "passed"`,
+and a nonempty `run_reference`. The backup record must contain exactly
+`kind: "stage-backup-restore"`,
+`scope: "stage-database-backup-restore"`, `status: "verified"`, nonempty
+`backup_reference` and `restore_reference`, a 64-character lowercase hexadecimal
+`backup_sha256`, `restore_target: "isolated"`, and `restore_verified: true`.
+The commit must match the clean deployment HEAD. Missing, malformed, incomplete,
+wrong-scope, or mismatched records refuse before contacting stage. These records
+must reflect completed work; this documentation and local checks do not create
+or satisfy them.
 
 ## Deployment and rollback
 

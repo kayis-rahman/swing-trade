@@ -29,7 +29,7 @@ The route walkthrough used the real Go binary. Each request returned HTTP 200. T
 
 With the public limit set to 100 requests per minute, 101 rapid requests from one loopback client produced 100 HTTP 200 responses followed by HTTP 429. After waiting 65 seconds, the next request returned HTTP 200 with `X-RateLimit-Limit: 100` and `X-RateLimit-Remaining: 99`. The standalone Go binary ran with no database configured.
 
-![Real-binary rate-limit response and post-expiry reset results](local-run/go-rate-limit-eviction.png)
+![Browser capture of live requests to the Go binary: requests 98-100 returned HTTP 200, request 101 returned HTTP 429 with Retry-After 59, and the request after 65 seconds returned HTTP 200 with the limit reset to 100 and 99 remaining.](local-run/go-rate-limit-eviction.png)
 
 [View the rate-limit expiry video](local-run/go-rate-limit-eviction.webm).
 

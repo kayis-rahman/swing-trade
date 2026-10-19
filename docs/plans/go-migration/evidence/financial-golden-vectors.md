@@ -1,7 +1,7 @@
 # Phase 0 financial golden vectors (partial)
 
-Outputs were emitted directly by the Java 21 classes in `backend/strategy` on 2026-10-17. The probe covers the
-`FinancialScale` rounding/saturation rules and both current cost models; it is not the complete indicator,
+Outputs were emitted directly by the Java 21 classes in `backend/strategy` on 2026-10-17. These values cover the
+`FinancialScale` rounding/saturation rules and both current cost models; they are not the complete indicator,
 strategy, gate, or engine vector set required by G0.
 
 ## Java output

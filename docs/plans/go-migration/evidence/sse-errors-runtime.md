@@ -2,9 +2,7 @@
 
 Phase 0 step 4 runtime captures from 2026-10-17, using the real API jar at the current HEAD against an isolated throwaway PostgreSQL cluster. Scheduling and LLM were disabled. The Yahoo base URL was overridden to a dead loopback port so no external market-data provider was contacted. No stage service or database was accessed.
 
-Raw responses, request/response headers, service logs, and the disposable database files are outside the worktree at:
-
-`/Users/kayisrahman/Documents/workspace/firstmate/data/swing-trade-go-migration-impl-v1/sse-capture/`
+Raw responses, request/response headers, service logs, and the disposable database files are outside the worktree in a task-local `sse-capture/` directory.
 
 ## Captured cases
 

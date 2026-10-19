@@ -14,8 +14,7 @@ docker --context pi-node exec swing-trade-stage-api sh -c 'grep -E "^(VmRSS|VmHW
 curl -fsS 'http://127.0.0.1:19090/api/v1/query?query=histogram_quantile%280.95%2C+sum+by+%28le%29+%28rate%28http_server_requests_seconds_bucket%7Bjob%3D%22swing-trade-stage%22%7D%5B5m%5D%29%29%29'
 ```
 
-The queries return JSON/text; raw outputs were retained outside the repository under
-`/Users/kayisrahman/Documents/workspace/firstmate/data/swing-trade-go-migration-impl-v1/`.
+The queries return JSON/text; raw outputs were retained outside the repository in a task-local evidence directory.
 
 ## Results
 

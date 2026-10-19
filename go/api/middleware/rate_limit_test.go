@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -42,30 +41,44 @@ func TestRateLimiterUsesFixedWindowAndExcludesAdminAndPreflight(t *testing.T) {
 	}
 }
 
-func TestRateLimiterBoundedMemory(t *testing.T) {
+func TestRateLimiterBoundsTrackedClientsAndPreservesWindows(t *testing.T) {
 	clock := &fixedClock{now: time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)}
-	limit := NewRateLimiter(100, clock)
-	handler := limit.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
-	for i := 0; i < 50; i++ {
+	limiter := NewRateLimiter(2, clock)
+	handler := limiter.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+	request := func(client int) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(http.MethodGet, "/api/health", nil)
-		// Use unique IPs that won't expire.
-		r.RemoteAddr = net.IPv4(192, 0, 2, byte(i+1)).String() + ":" + strconv.Itoa(i)
+		r.RemoteAddr = "client-" + strconv.Itoa(client) + ":1234"
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
+		return w
 	}
-	if len(limit.state) == 0 {
-		t.Fatal("expected some entries after 50 requests")
+
+	for i := 0; i < maxTrackedClients; i++ {
+		if got := request(i); got.Code != http.StatusOK {
+			t.Fatalf("initial request for client %d: %d", i, got.Code)
+		}
 	}
-	// Advance time so old entries expire.
-	clock.now = clock.now.Add(2 * time.Minute)
-	// Additional requests trigger cleanup.
-	for i := 50; i < 70; i++ {
-		r := httptest.NewRequest(http.MethodGet, "/api/health", nil)
-		r.RemoteAddr = net.IPv4(192, 0, 2, byte(i+1)).String() + ":" + strconv.Itoa(i)
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, r)
+	if got := len(limiter.state); got != maxTrackedClients {
+		t.Fatalf("tracked %d clients, want %d", got, maxTrackedClients)
 	}
-	if len(limit.state) >= 50 {
-		t.Fatalf("expected expired entries to be cleaned up, got %d entries", len(limit.state))
+	if got := request(maxTrackedClients); got.Code != http.StatusTooManyRequests || got.Header().Get("Retry-After") == "" {
+		t.Fatalf("untracked client at capacity: %d %v", got.Code, got.Header())
+	}
+	if got := len(limiter.state); got != maxTrackedClients {
+		t.Fatalf("capacity rejection grew state to %d", got)
+	}
+	if got := request(0); got.Code != http.StatusOK {
+		t.Fatalf("retained client second request: %d", got.Code)
+	}
+	if got := request(0); got.Code != http.StatusTooManyRequests {
+		t.Fatalf("retained client exceeded limit: %d", got.Code)
+	}
+
+	clock.now = clock.now.Add(time.Minute)
+	if got := request(maxTrackedClients); got.Code != http.StatusOK {
+		t.Fatalf("client request after window expiry: %d", got.Code)
+	}
+	if got := len(limiter.state); got != 1 {
+		t.Fatalf("expired entries were not reclaimed before insertion: %d remain", got)
 	}
 }

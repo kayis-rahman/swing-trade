@@ -13,6 +13,8 @@ import (
 	coreclock "github.com/kayis-rahman/swing-trade/go/core/clock"
 )
 
+const maxTrackedClients = 10_000
+
 type window struct {
 	started time.Time
 	count   int
@@ -54,13 +56,6 @@ func (l *RateLimiter) Middleware(next http.Handler) http.Handler {
 		client := remoteIP(r.RemoteAddr)
 		now := l.clock.Now()
 		l.mu.Lock()
-		current, exists := l.state[client]
-		if !exists || !now.Before(current.started.Add(time.Minute)) {
-			current = window{started: now, count: 1}
-		} else {
-			current.count++
-		}
-		l.state[client] = current
 		if !now.Before(l.lastCleanup.Add(time.Minute)) {
 			for key, win := range l.state {
 				if !now.Before(win.started.Add(time.Minute)) {
@@ -69,15 +64,29 @@ func (l *RateLimiter) Middleware(next http.Handler) http.Handler {
 			}
 			l.lastCleanup = now
 		}
+		current, exists := l.state[client]
+		capacityExceeded := !exists && len(l.state) >= maxTrackedClients
+		if capacityExceeded {
+			current = window{started: now}
+		} else if !exists || !now.Before(current.started.Add(time.Minute)) {
+			current = window{started: now, count: 1}
+			l.state[client] = current
+		} else {
+			current.count++
+			l.state[client] = current
+		}
 		l.mu.Unlock()
 
 		remaining := l.limit - current.count
+		if capacityExceeded {
+			remaining = 0
+		}
 		if remaining < 0 {
 			remaining = 0
 		}
 		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(l.limit))
 		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-		if current.count > l.limit {
+		if capacityExceeded || current.count > l.limit {
 			if l.hits != nil {
 				l.hits.Inc()
 			}

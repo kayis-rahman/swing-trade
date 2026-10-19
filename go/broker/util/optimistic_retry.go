@@ -31,7 +31,10 @@ func RetryOptimistic(ctx context.Context, action func(context.Context) error) er
 		select {
 		case <-ctx.Done():
 			if !timer.Stop() {
-				<-timer.C
+				select {
+				case <-timer.C:
+				default:
+				}
 			}
 			return fmt.Errorf("optimistic-lock retry interrupted: %w", ctx.Err())
 		case <-timer.C:

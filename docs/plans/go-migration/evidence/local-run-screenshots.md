@@ -37,7 +37,7 @@ With the public limit set to 100 requests per minute, 101 rapid requests from on
 
 - Java used a new, empty disposable database on the existing local PostgreSQL instance. Flyway initialized that database; it was dropped after capture.
 - Java startup was configured with loopback binding and its startup benchmark backfill, EOD ingestion, and schedulers disabled. The Go service also bound to loopback. No dev, stage, or Pi database or host was accessed in the successful screenshot run.
-- During an earlier, preliminary startup attempt, Java's default benchmark backfill did issue Yahoo Finance requests and write fetched candles only to a throwaway local database. That database was dropped. The final screenshot run explicitly disabled the backfill. See [local boot diagnostic](local-run/boot-diagnostic.md) in the external task evidence for details.
+- An earlier preliminary Java startup attempt ran the default benchmark backfill, issuing Yahoo Finance requests and writing fetched candles only to a throwaway local database. That attempt was not used as evidence, and the database was dropped. The successful screenshot run explicitly disabled the backfill.
 - All services and the throwaway database were stopped/dropped after capture.
 
 ## Review coverage limitation

@@ -1,4 +1,6 @@
 #!/bin/bash
+# Remote SSH commands intentionally interpolate local deployment paths.
+# shellcheck disable=SC2029
 # Dev Stack - Swing Trade Development Environment
 #
 # Architecture:
@@ -22,7 +24,6 @@ BACKEND_DIR="$PROJECT_ROOT/backend"
 DASHBOARD_DIR="$PROJECT_ROOT/dashboard"
 INFRA_DIR="$PROJECT_ROOT/infra"
 PIDFILE="$PROJECT_ROOT/.swing-trade-pids"
-PI_NODE_HOST="piworm.local"
 
 docker_compose() {
     if docker compose version >/dev/null 2>&1; then
@@ -103,6 +104,7 @@ case "${1:-help}" in
     # Load .env so Spring Boot picks up env vars (Spring doesn't auto-load .env)
     if [ -f "$INFRA_DIR/env/.env" ]; then
         set -a
+        # shellcheck disable=SC1091
         source "$INFRA_DIR/env/.env"
         set +a
         echo "✓ Loaded environment from $INFRA_DIR/env/.env"
@@ -271,6 +273,10 @@ case "${1:-help}" in
     fi
     ;;
 
+  stage-go)
+    exec "$PROJECT_ROOT/bin/deploy-go-stage.sh"
+    ;;
+
   stage)
     echo "=========================================="
     echo "  Swing Trade - Stage Deployment"
@@ -317,6 +323,7 @@ case "${1:-help}" in
     # --- Step 3: Switch to Java 21 for Gradle build ---
     echo "☕ Switching to Java 21 for Gradle build..."
     if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
+      # shellcheck disable=SC1091
       source "$HOME/.sdkman/bin/sdkman-init.sh"
     fi
     echo "  Java: $(java -version 2>&1 | head -1)"
@@ -326,11 +333,11 @@ case "${1:-help}" in
     echo "🔨 Building backend (jar + runtime deps) in worktree..."
     cd "$WORKTREE_DIR/backend"
     ./gradlew installFyersSdk :api:jar :api:copyRuntimeDeps -x test -q
-    rm -rf "$WORKTREE_DIR/lib"
+    rm -rf "${WORKTREE_DIR:?}/lib"
     mkdir -p "$WORKTREE_DIR/lib"
     cp api/build/libs/api-plain.jar "$WORKTREE_DIR/lib/"
     cp api/build/runtimeDeps/*.jar "$WORKTREE_DIR/lib/"
-    LIB_COUNT=$(ls -1 "$WORKTREE_DIR/lib" | wc -l | xargs)
+    LIB_COUNT=$(find "$WORKTREE_DIR/lib" -maxdepth 1 -type f -name '*.jar' | wc -l | xargs)
     echo "✓ Backend built: $LIB_COUNT jars in lib/"
     echo ""
 
@@ -595,11 +602,12 @@ case "${1:-help}" in
     ;;
 
   *)
-    echo "Usage: $0 {start|stage|stage-down|stage-logs|stage-restart|stop|infra|status|logs|live-logs|logs-json|stage-monitoring|frontend|frontend-logs|run}"
+    echo "Usage: $0 {start|stage|stage-go|stage-down|stage-logs|stage-restart|stop|infra|status|logs|live-logs|logs-json|stage-monitoring|frontend|frontend-logs|run}"
     echo ""
     echo "Commands:"
     echo "  start            - Start dev infra on pi-node + Spring Boot + Vue locally"
-    echo "  stage            - Build in .worktrees/stage (branch 'stage'), deploy artifacts to pi-node"
+    echo "  stage            - Build in .worktrees/stage (branch 'stage'), deploy Java artifacts to pi-node"
+    echo "  stage-go         - Replace only the stage API with Go after gate and backup evidence"
     echo "  stage-down       - Stop stage stack on pi-node"
     echo "  stage-logs       - View stage API logs (pass --tail=N for limit)"
     echo "  stage-restart    - Stop and restart stage stack (full rebuild)"

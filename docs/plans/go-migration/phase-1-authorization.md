@@ -6,4 +6,8 @@ Proceed with Phase 1, the Go platform skeleton, on branch `fm/swing-trade-go-mig
 
 The Go binary must expose infrastructure endpoints only, with no production traffic. The captain's local acceptance additionally requires one documented command to start the service, one command for unit/integration/static checks, and an end-to-end test that starts the real binary and exercises every route it exposes.
 
-Phase 1 plan steps requiring deployment or operations on Pi/stage (run the skeleton on Pi and stage database backup/restore) are deferred because this authorization explicitly prohibits further Pi/stage operations. No G0 report will be created.
+Phase 1 plan steps requiring deployment or operations on Pi/stage (run the skeleton on Pi and stage database backup/restore) remain deferred. No G0 report will be created.
+
+## Authorization update
+
+Captain instruction 051 (2026-10-19) authorizes adding a Go stage deployment set on this branch that can replace the Java API container. It does not authorize running that deployment, merging, touching production, or restarting the Pi host. A stage replacement must wait for the Phase 1 no-mistakes/evidence gate and the plan's stage backup/restore and safety prerequisites. The deployment set and its future prerequisites are tracked in [Go stage API replacement gate](stage-go-replacement.md).

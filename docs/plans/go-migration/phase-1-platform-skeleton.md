@@ -16,7 +16,7 @@ Captain waived Phase 0 and G0 on 2026-10-17 and authorized Phase 1 locally. Do n
 8. pgx pool, transaction helper, optimistic-lock retry helper, clock port.
 9. Decimal package with scale and rounding constants; red tests from Java `FinancialScale` and cost-model tests.
 10. Local test harness uses the authorized development database only: read-only reads; writes confined to a generated `go_port_test_<random>` schema that is dropped after each test. Migrations, `public` writes, testcontainers, golden comparator and shadow comparator are out of scope for this no-traffic skeleton.
-11. Container image/stage target is deferred; no image push or stage traffic is authorized.
+11. Add a Go stage deployment set that packages the no-traffic skeleton; actual stage replacement remains gated by the no-mistakes/evidence gate and stage backup/restore prerequisites. No image push or stage traffic is authorized by this plan.
 12. Pi deployment and Pi RSS/startup measurement are deferred; local real-binary startup is covered by HTTP E2E.
 13. Stage database backup/restore is deferred by the captain's no-stage-operations boundary.
 

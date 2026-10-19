@@ -59,6 +59,21 @@ The former self-hosted GitHub Actions definitions are retained for historical
 reference under `docs/infra/legacy/` and are not active workflows. Do not use
 their queued check status as a deployment signal.
 
+### Go stage API replacement (separately gated)
+
+`./dev-stack.sh stage-go` builds the Go API for the stage host and packages it
+with `infra/Dockerfile.go-stage` and `infra/docker-compose.go-stage.yml`. It
+replaces only `swing-trade-stage-api`, preserving the stage dashboard, database,
+and stopped Java API container for rollback. The Go skeleton intentionally has
+no trading or orchestration endpoints, so those Java-backed dashboard features
+will be unavailable while Go serves stage.
+
+This command refuses to connect to stage unless the operator supplies explicit
+Phase 1 gate and stage backup/restore evidence references. Follow
+[`docs/plans/go-migration/stage-go-replacement.md`](../plans/go-migration/stage-go-replacement.md)
+first. The target has not been deployed; local artifact checks do not satisfy
+the backup/restore prerequisite or authorize stage replacement.
+
 ### Container Configuration
 ```
 --name swing-trade-stage-api

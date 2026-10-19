@@ -20,9 +20,9 @@ type window struct {
 
 // RateLimiter applies a per-client fixed-window request limit.
 type RateLimiter struct {
-	limit        int
-	clock        coreclock.Clock
-	mu           sync.Mutex
+	limit       int
+	clock       coreclock.Clock
+	mu          sync.Mutex
 	state       map[string]window
 	hits        prometheus.Counter
 	lastCleanup time.Time

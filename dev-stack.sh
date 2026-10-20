@@ -607,7 +607,7 @@ case "${1:-help}" in
     echo "Commands:"
     echo "  start            - Start dev infra on pi-node + Spring Boot + Vue locally"
     echo "  stage            - Build in .worktrees/stage (branch 'stage'), deploy Java artifacts to pi-node"
-    echo "  stage-go         - Replace only the stage API with Go after gate and backup evidence"
+    echo "  stage-go         - Go stage replacement (currently blocked pending authoritative verification)"
     echo "  stage-down       - Stop stage stack on pi-node"
     echo "  stage-logs       - View stage API logs (pass --tail=N for limit)"
     echo "  stage-restart    - Stop and restart stage stack (full rebuild)"

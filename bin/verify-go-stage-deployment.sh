@@ -13,47 +13,6 @@ exit 97
 SH
 chmod +x "$TEMP_DIR/bin/ssh"
 
-python3 - "$TEMP_DIR" "$(cd "$PROJECT_ROOT" && git rev-parse HEAD)" <<'PY'
-import json
-import pathlib
-import sys
-
-root = pathlib.Path(sys.argv[1])
-commit = sys.argv[2]
-gate = {
-    "kind": "no-mistakes-phase1",
-    "scope": "go-stage-replacement",
-    "commit": commit,
-    "status": "passed",
-    "run_reference": "run-123",
-}
-backup = {
-    "kind": "stage-backup-restore",
-    "scope": "stage-database-backup-restore",
-    "status": "verified",
-    "backup_reference": "backup-123",
-    "backup_sha256": "a" * 64,
-    "restore_reference": "restore-123",
-    "restore_target": "isolated",
-    "restore_verified": True,
-}
-(root / "gate.json").write_text(json.dumps(gate), encoding="utf-8")
-(root / "backup.json").write_text(json.dumps(backup), encoding="utf-8")
-(root / "stale-gate.json").write_text(
-    json.dumps({**gate, "commit": "0" * 40}), encoding="utf-8"
-)
-(root / "wrong-scope-gate.json").write_text(
-    json.dumps({**gate, "scope": "other"}), encoding="utf-8"
-)
-(root / "bad-backup.json").write_text(
-    json.dumps({**backup, "restore_target": "stage"}), encoding="utf-8"
-)
-(root / "wrong-scope-backup.json").write_text(
-    json.dumps({**backup, "scope": "other"}), encoding="utf-8"
-)
-(root / "malformed.json").write_text("{", encoding="utf-8")
-PY
-
 assert_refused_without_ssh() {
   local expected_message="$1"
   shift
@@ -82,37 +41,21 @@ assert_refused_without_ssh() {
     exit 1
   fi
   if [[ -e "$TEMP_DIR/ssh-called" ]]; then
-    echo "Stage deployment contacted SSH before satisfying its safety preconditions." >&2
+    echo "Stage deployment contacted SSH despite missing authoritative verification." >&2
     exit 1
   fi
 }
 
 assert_refused_without_ssh \
-  'invalid prerequisite evidence' \
+  'no authoritative verifier is configured'
+assert_refused_without_ssh \
+  'no authoritative verifier is configured' \
   STAGE_GO_PHASE1_GATE_PASSED=YES \
   STAGE_GO_PHASE1_GATE_REFERENCE=fabricated \
   STAGE_GO_BACKUP_RESTORE_VERIFIED=YES \
-  STAGE_GO_BACKUP_RESTORE_REFERENCE=fabricated
-assert_refused_without_ssh \
-  'invalid prerequisite evidence' \
-  STAGE_GO_PHASE1_GATE_RECORD="$TEMP_DIR/stale-gate.json" \
-  STAGE_GO_BACKUP_RESTORE_RECORD="$TEMP_DIR/backup.json"
-assert_refused_without_ssh \
-  'invalid prerequisite evidence' \
-  STAGE_GO_PHASE1_GATE_RECORD="$TEMP_DIR/wrong-scope-gate.json" \
-  STAGE_GO_BACKUP_RESTORE_RECORD="$TEMP_DIR/backup.json"
-assert_refused_without_ssh \
-  'invalid prerequisite evidence' \
-  STAGE_GO_PHASE1_GATE_RECORD="$TEMP_DIR/gate.json" \
-  STAGE_GO_BACKUP_RESTORE_RECORD="$TEMP_DIR/wrong-scope-backup.json"
-assert_refused_without_ssh \
-  'invalid prerequisite evidence' \
-  STAGE_GO_PHASE1_GATE_RECORD="$TEMP_DIR/gate.json" \
-  STAGE_GO_BACKUP_RESTORE_RECORD="$TEMP_DIR/malformed.json"
-assert_refused_without_ssh \
-  'invalid prerequisite evidence' \
-  STAGE_GO_PHASE1_GATE_RECORD="$TEMP_DIR/gate.json" \
-  STAGE_GO_BACKUP_RESTORE_RECORD="$TEMP_DIR/bad-backup.json"
+  STAGE_GO_BACKUP_RESTORE_REFERENCE=fabricated \
+  STAGE_GO_PHASE1_GATE_RECORD=/dev/null \
+  STAGE_GO_BACKUP_RESTORE_RECORD=/dev/null
 
 bash -n "$PROJECT_ROOT/bin/deploy-go-stage.sh" "$PROJECT_ROOT/dev-stack.sh"
 if command -v shellcheck >/dev/null 2>&1; then

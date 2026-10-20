@@ -66,12 +66,13 @@ func (l *RateLimiter) Middleware(next http.Handler) http.Handler {
 		}
 		current, exists := l.state[client]
 		capacityExceeded := !exists && len(l.state) >= maxTrackedClients
-		if capacityExceeded {
+		switch {
+		case capacityExceeded:
 			current = window{started: now}
-		} else if !exists || !now.Before(current.started.Add(time.Minute)) {
+		case !exists || !now.Before(current.started.Add(time.Minute)):
 			current = window{started: now, count: 1}
 			l.state[client] = current
-		} else {
+		default:
 			current.count++
 			l.state[client] = current
 		}

@@ -61,10 +61,11 @@ their queued check status as a deployment signal.
 
 ### Go stage API replacement (separately gated)
 
-`./dev-stack.sh stage-go` builds the Go API for the stage host and packages it
-with `infra/Dockerfile.go-stage` and `infra/docker-compose.go-stage.yml`. It
-replaces only `swing-trade-stage-api`, preserving the stage dashboard, database,
-and stopped Java API container for rollback. The Go skeleton intentionally has
+The Go stage deployment set uses `infra/Dockerfile.go-stage` and
+`infra/docker-compose.go-stage.yml` to package the Go API and is designed to
+replace only `swing-trade-stage-api`, preserving the stage dashboard, database,
+and stopped Java API container for rollback. `./dev-stack.sh stage-go`
+currently exits before building or contacting the stage host. The Go skeleton intentionally has
 no trading or orchestration endpoints, so those Java-backed dashboard features
 will be unavailable while Go serves stage.
 

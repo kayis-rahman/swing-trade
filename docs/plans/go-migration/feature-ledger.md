@@ -17,7 +17,7 @@ adds ten wire-format rows confirmed from a live run — including the startup bl
 fixed and verified by running the rebuilt jar**, so every runtime artifact in this plan is unblocked. Section 8
 expands the persistence surface: 42 rows, one per table, from the ownership sheet in
 [evidence/table-ownership.md](evidence/table-ownership.md) — writers, readers, keys and the idempotency mechanism
-per table. Section 9 expands the entity surface: 39 rows, covering 38 `@Entity` classes plus the one dead PK POJO,
+per table. Section 9 expands the entity surface: 39 rows, one per `@Entity` class plus the one dead PK POJO,
 with the access point, key contract and Go file per row. Section 10 expands the persistence-access surface:
 39 rows - the 38 repository interfaces (34 data, 3 broker, 1 llm) plus the `PositionSummaryProjection`
 interface projection, each with its custom-query surface, store facade, direct consumers, Java tests and Go
@@ -36,7 +36,7 @@ Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-O
 ## Row template
 
 | Column | Required content |
-|---|---|
+| --- | --- |
 | ID | Unique, `F-<area>-<name>` |
 | Kind | endpoint, job, entity, metric or strategy |
 | Java module | Module name |
@@ -57,7 +57,7 @@ the red-test/green/parity commit references stay empty until the TDD loop of [st
 ## 1. Area index
 
 | Area | Java surface | Phase | Row IDs | Rows |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | F-API-HEALTH | `HealthController` on `/api/health` | 2 | F-API-HEALTH-01…06 | 6 |
 | F-API-INGEST | `IngestionController` — ingestion + holidays | 3 | F-API-INGEST-01…13 | 13 |
 | F-API-WATCH | `WatchlistController` — watchlist + data pull | 3 | F-API-WATCH-01…10 | 10 |
@@ -88,7 +88,7 @@ the red-test/green/parity commit references stay empty until the TDD loop of [st
 | F-API-SEC | Cross-cutting `api/config`: admin API-key boundary, public rate window, Resilience4j rate limits, CORS, trace/log correlation, global error envelope | 1, 2-7 | F-API-SEC-01…06 | 6 |
 | F-API-FMT | Wire format confirmed from the live system: JSON envelopes, `LocalDateTime`/`BigDecimal`/enum/null encoding, `text/csv` export, springdoc OpenAPI surface, HEAD startup blocker (fixed) | 1, 2-7 | F-API-FMT-01…10 | 10 |
 | F-OBS | 11 Java meter classes (7 `core/metrics`, 3 `api/metrics`, 1 `api/config`) + 10 platform groups | 1, 3-7 | F-OBS-01…35, F-OBS-P01…P10 | 45 |
-| F-DATA-DB | 42 tables (`schema-snapshot.sql`: 41 application + `flyway_schema_history`), 38 JPA entities plus 1 non-entity POJO, 38 repositories, 15 store facades | 1, 3-7 | F-DATA-DB-01…42 | 42 |
+| F-DATA-DB | 42 tables (`schema-snapshot.sql`: 41 application + `flyway_schema_history`), 39 entities, 38 repositories, 15 store facades | 1, 3-7 | F-DATA-DB-01…42 | 42 |
 | F-DATA-ENTITIES | 38 `@Entity` classes (34 data, 3 broker, 1 llm) + 1 dead PK POJO; 16 carry a `fromDomain`/`toDomain` bridge to the core domain model | 1, 3-7 | F-DATA-ENT-01…39 | 39 |
 | F-DATA-REPO | 38 repository interfaces (34 data, 3 broker, 1 llm) + 1 interface projection; 15 store facades in `data/store` implement 15 of the 17 core store ports | 1, 3-7 | F-DATA-REPO-01…39 | 39 |
 
@@ -102,7 +102,7 @@ Phase 1+ starts; the same convention applies to metric, cross-cutting and wire-f
 ### 2.1 Health, ingestion, watchlist, job runs
 
 | ID | Kind | Method | Path | Java module | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-HEALTH-01 | endpoint | GET | /api/health | api | com.swingtrade.api.controller.HealthController | com.swingtrade.api.test.integration.ApiIntegrationTest#testHealthEndpoint | api/controller/health.go | not-started |
 | F-API-HEALTH-02 | endpoint | GET | /api/health/details | api | com.swingtrade.api.controller.HealthController; com.swingtrade.data.service.DataIngestionService; com.swingtrade.strategy.PriceActionSignalEngine; com.swingtrade.llm.service.SentimentService | none (path not referenced in any test) | api/controller/health.go | not-started |
 | F-API-HEALTH-03 | endpoint | GET | /api/health/database | api | com.swingtrade.api.controller.HealthController; com.swingtrade.data.service.DataIngestionService | none (path not referenced in any test) | api/controller/health.go | not-started |
@@ -141,7 +141,7 @@ Phase 1+ starts; the same convention applies to metric, cross-cutting and wire-f
 ### 2.2 Settings, admin, Fyers auth
 
 | ID | Kind | Method | Path | Java module | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-SETTINGS-01 | endpoint | GET | /api/settings | api | com.swingtrade.api.controller.SettingsController; com.swingtrade.data.service.MarketDataClientProvider | none (path not referenced in any test) | api/controller/settings.go | not-started |
 | F-API-SETTINGS-02 | endpoint | POST | /api/settings/broker | api | com.swingtrade.api.controller.SettingsController; com.swingtrade.data.service.MarketDataClientProvider | none (path not referenced in any test) | api/controller/settings.go | not-started |
 | F-API-SETTINGS-03 | endpoint | GET | /api/settings/llm | api | com.swingtrade.api.controller.SettingsController; com.swingtrade.data.service.AppSettingsService; com.swingtrade.llm.config.LlmProperties | com.swingtrade.api.controller.SettingsControllerDefaultsTest#GetLlmSettings | api/controller/settings.go | not-started |
@@ -183,7 +183,7 @@ Phase 1+ starts; the same convention applies to metric, cross-cutting and wire-f
 test does not run, so the Go row needs the test re-derived, not just ported.
 
 | ID | Kind | Method | Path | Java module | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-SIGNALS-01 | endpoint | GET | /api/signals/gate-effectiveness | api | com.swingtrade.api.controller.SignalController; com.swingtrade.api.service.GateEffectivenessAuditService; com.swingtrade.data.repository.GateEffectivenessAuditRepository; com.swingtrade.data.repository.SignalRepository; com.swingtrade.data.repository.PositionRepository; com.swingtrade.domain.store.CandleStore | com.swingtrade.api.controller.GateEffectivenessSignalControllerTest#acceptsOptionalStrategyAndRegimeDimensions, #rejectsReversedDateRange | api/controller/signal.go | not-started |
 | F-API-SIGNALS-02 | endpoint | GET | /api/signals/latest | api | com.swingtrade.api.controller.SignalController; com.swingtrade.api.service.SignalService; com.swingtrade.domain.store.SignalStore | [@D] com.swingtrade.api.controller.SignalControllerTest#testGetLatestSignals_ReturnsSuccess; [@D] com.swingtrade.api.controller.ErrorHandlingTest.AcceptHeaderTests#testGetWithJsonAcceptHeader_ReturnsJson | api/controller/signal.go | not-started |
 | F-API-SIGNALS-03 | endpoint | GET | /api/signals/symbol/{symbol} | api | com.swingtrade.api.controller.SignalController; com.swingtrade.api.service.SignalService; com.swingtrade.domain.store.SignalStore | [@D] com.swingtrade.api.controller.SignalControllerTest#testGetSignalsBySymbol_ReturnsSuccess, #testGetSignalsBySymbol_WithSpecialCharacters; [@D] com.swingtrade.api.controller.ErrorHandlingTest.HttpStatusCodeTests#testGetNonExistentResource_ReturnsNotFound; [@D] com.swingtrade.api.controller.ErrorHandlingTest.ErrorResponseFormatTests#testErrorHandling_ReturnsStructuredErrorResponse, #testErrorHandling_WithNotFound_Returns404 | api/controller/signal.go | not-started |
@@ -224,7 +224,7 @@ test does not run, so the Go row needs the test re-derived, not just ported.
 ### 2.4 Backtest, candidate scans, positions
 
 | ID | Kind | Method | Path | Java module | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-BACKTEST-01 | endpoint | POST | /api/backtest/portfolio | api | com.swingtrade.api.controller.BacktestController; com.swingtrade.api.service.PortfolioBacktestService | com.swingtrade.api.controller.BacktestControllerPortfolioTest#delegatesPortfolioEndpointToApiService, #mapsInvalidRequestToBadRequest | api/controller/backtest.go | not-started |
 | F-API-BACKTEST-02 | endpoint | GET | /api/backtest/strategies | api | com.swingtrade.api.controller.BacktestController; com.swingtrade.strategy.StrategyRegistry | none (path not referenced in any test) | api/controller/backtest.go | not-started |
 | F-API-BACKTEST-03 | endpoint | POST | /api/backtest/run-tune | api | com.swingtrade.api.controller.BacktestController; com.swingtrade.strategy.StrategyRegistry; com.swingtrade.strategy.BacktestEngine | none in Java tests; Playwright dashboard/tests/e2e/api-isolated-audit.spec.ts | api/controller/backtest.go | not-started |
@@ -260,7 +260,7 @@ test does not run, so the Go row needs the test re-derived, not just ported.
 ### 2.5 Strategy configuration, reports, selection, promotion, synthesis
 
 | ID | Kind | Method | Path | Java module | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-STRATCFG-01 | endpoint | GET | /api/strategy-configs | api | com.swingtrade.api.controller.StrategyConfigController; com.swingtrade.api.service.StrategyConfigService; com.swingtrade.data.repository.StrategyConfigRepository; com.swingtrade.domain.store.StrategyConfigStore | com.swingtrade.api.controller.StrategyConfigControllerTest#listsConfigsByMode | api/controller/strategyconfig.go | not-started |
 | F-API-STRATCFG-02 | endpoint | POST | /api/strategy-configs | api | com.swingtrade.api.controller.StrategyConfigController; com.swingtrade.api.service.StrategyConfigService; com.swingtrade.domain.store.StrategyConfigStore; com.swingtrade.data.repository.StrategyConfigRepository; com.swingtrade.domain.service.VariantTradingService | com.swingtrade.api.controller.StrategyConfigControllerTest#createsConfigAndValidatesRequiredFields | api/controller/strategyconfig.go | not-started |
 | F-API-STRATCFG-03 | endpoint | GET | /api/strategy-configs/{variantId} | api | com.swingtrade.api.controller.StrategyConfigController; com.swingtrade.api.service.StrategyConfigService; com.swingtrade.domain.store.StrategyConfigStore | none (path not referenced in any test) | api/controller/strategyconfig.go | not-started |
@@ -280,7 +280,7 @@ test does not run, so the Go row needs the test re-derived, not just ported.
 ### 2.6 Paper portfolios, intraday, data export
 
 | ID | Kind | Method | Path | Java module | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-PAPERPF-01 | endpoint | GET | /api/paper-portfolios | api | com.swingtrade.api.controller.PaperPortfolioController; com.swingtrade.domain.service.PortfolioQueryService; com.swingtrade.broker.service.PortfolioQueryServiceImpl; com.swingtrade.broker.repository.PaperTradingPortfolioRepository | none (path not referenced in any test) | api/controller/paperportfolio.go | not-started |
 | F-API-PAPERPF-02 | endpoint | GET | /api/paper-portfolios/{portfolioId}/positions | api | com.swingtrade.api.controller.PaperPortfolioController; com.swingtrade.domain.service.PortfolioQueryService; com.swingtrade.broker.service.PortfolioQueryServiceImpl; com.swingtrade.data.repository.PositionRepository | none (path not referenced in any test) | api/controller/paperportfolio.go | not-started |
 | F-API-INTRADAY-01 | endpoint | POST | /api/intraday/paper/sessions | api | com.swingtrade.api.controller.IntradayPaperController; com.swingtrade.data.repository.OhlcvCandleRepository; com.swingtrade.strategy.StrategyTypeRegistry; com.swingtrade.broker.service.intraday.IntradayPaperExecutionService; com.swingtrade.data.repository.IntradayPaperSessionRepository | com.swingtrade.api.controller.IntradayPaperControllerTest#readsOnlyStoredFifteenMinuteBarsAndReturnsThePaperAudit, #rejectsNonIntradayStrategiesWithoutLoadingBarsOrExecuting, #sendsEmptyStoredSessionToExecutionSoItCanReturnIncompleteData (direct controller test, no HTTP path string) | api/controller/intradaypaper.go | not-started |
@@ -296,7 +296,7 @@ deliberate gap: the code is not ported as live, and the GpuHub auth-guard ticket
 enabling it.
 
 | ID | Kind | Method | Path | Java module | Java classes | Reason it stays off | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-OFF-01 | endpoint | POST | /api/gpuhub/deployments | api, gpuhub | com.swingtrade.api.controller.GpuHubController; com.swingtrade.gpuhub.service.GpuHubDeploymentService | caller-controlled `cmd` = unauthenticated RCE on a remote GPU container | api/controller/gpuhub.go (not ported as live) | not-started (live-off) |
 | F-API-OFF-02 | endpoint | GET | /api/gpuhub/deployments | api, gpuhub | com.swingtrade.api.controller.GpuHubController; com.swingtrade.gpuhub.service.GpuHubDeploymentService | same block comment; hardcoded page 1 size 20 | api/controller/gpuhub.go (not ported as live) | not-started (live-off) |
 | F-API-OFF-03 | endpoint | GET | /api/gpuhub/deployments/{uuid} | api, gpuhub | com.swingtrade.api.controller.GpuHubController; com.swingtrade.gpuhub.service.GpuHubDeploymentService | same block comment | api/controller/gpuhub.go (not ported as live) | not-started (live-off) |
@@ -318,7 +318,7 @@ Full characterization, including trigger expressions, side effects and idempoten
 what it drives.
 
 | ID | Kind | Class (FQCN) | Method | Java module | Trigger | Java classes | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-SCHED-01 | job | com.swingtrade.llm.service.SynthesisEvaluationJob | evaluatePendingSynthesis | llm | cron `0 15 2 * * *`, Asia/Kolkata | com.swingtrade.llm.service.SynthesisEvaluationJob; com.swingtrade.domain.store.CandleStore; com.swingtrade.llm.SynthesisEvaluationRepository | com.swingtrade.llm.service.SynthesisEvaluationJobTest | llm/scheduler/synthesis-evaluation-job.go | not-started |
 | F-SCHED-02 | job | com.swingtrade.broker.service.PaperTradingMonitorService | monitorPositions | broker | cron `${paper.trading.monitor-cron:0 45 16 * * MON-FRI}`, Asia/Kolkata | com.swingtrade.broker.service.PaperTradingMonitorService; com.swingtrade.broker.engine.PaperTradingEngine; com.swingtrade.data.repository.OhlcvCandleRepository; com.swingtrade.domain.store.PriceBandStore; com.swingtrade.strategy.TrailingBreakevenPolicy | com.swingtrade.broker.service.PaperTradingMonitorServiceTest | broker/scheduler/paper-trading-monitor-service.go | not-started |
 | F-SCHED-03 | job | com.swingtrade.broker.scheduler.PendingOrderExecutionScheduler | executePendingOrders | broker | cron `${paper.trading.pending-order-cron:0 35 16 * * MON-FRI}`, Asia/Kolkata | com.swingtrade.broker.scheduler.PendingOrderExecutionScheduler; com.swingtrade.broker.engine.PaperTradingEngine; com.swingtrade.data.repository.OhlcvCandleRepository; com.swingtrade.domain.store.PriceBandStore | com.swingtrade.broker.scheduler.PendingOrderExecutionSchedulerTest | broker/scheduler/pending-order-execution-scheduler.go | not-started |
@@ -338,7 +338,7 @@ what it drives.
 ## 4. Coverage summary and gaps
 
 | Measure | Value |
-|---|---|
+| --- | --- |
 | Live endpoints in Java | 156 |
 | Ledger endpoint rows | 169 (156 live + 13 live-off) |
 | Ledger job rows | 15 |
@@ -385,7 +385,7 @@ Dead-in-Java rows are kept so the Go port does not "discover" a missing writer m
 ### 5.1 TradeMetrics and JobOrchestratorMetrics (`core`)
 
 | ID | Kind | Series | Java module | Java classes | Labels | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-OBS-01 | metric | `trades_open_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `broker=paper` | com.swingtrade.core.metrics.TradeMetricsTest#recordsOpenCloseOutcomesDurationsPnlAndSymbols | core/metrics/trade_metrics.go | not-started |
 | F-OBS-02 | metric | `trades_closed_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `broker=paper` | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started |
 | F-OBS-03 | metric | `trades_outcome_total` | core, broker | com.swingtrade.core.metrics.TradeMetrics | `reason` ∈ {stop_loss, target_hit, time_stop, trend_break, manual} (closed set; other reasons are invisible) | same as F-OBS-01 | core/metrics/trade_metrics.go | not-started |
@@ -402,7 +402,7 @@ Dead-in-Java rows are kept so the Go port does not "discover" a missing writer m
 ### 5.2 DataIngestionMetrics, LlmMetrics, SentimentMetrics, SignalMetrics, KillSwitchMetrics (`core`)
 
 | ID | Kind | Series | Java module | Java classes | Labels | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-OBS-13 | metric | `data_candles_ingested_total` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | none | com.swingtrade.core.metrics.DataIngestionMetricsTest#recordsCandlesDurationsFailuresAndRateLimitHitsBySource | core/metrics/data_ingestion_metrics.go | not-started |
 | F-OBS-14 | metric | `data_ingestion_duration_seconds_count`, `_sum` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | none | same as F-OBS-13 | core/metrics/data_ingestion_metrics.go | not-started (no production writer in Java) |
 | F-OBS-15 | metric | `data_fetch_failures_total` | core, data | com.swingtrade.core.metrics.DataIngestionMetrics | `source` ∈ {unknown, active broker name} | same as F-OBS-13 | core/metrics/data_ingestion_metrics.go | not-started |
@@ -422,7 +422,7 @@ Dead-in-Java rows are kept so the Go port does not "discover" a missing writer m
 ### 5.3 api-module meters (`api/metrics`, `api/config`)
 
 | ID | Kind | Series | Java module | Java classes | Labels | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-OBS-28 | metric | `api_request_duration_seconds_count`, `_sum` | api | com.swingtrade.api.metrics.ApiRequestMetricsFilter | `method`, `status` (`/api/**` requests only) | com.swingtrade.api.metrics.ApiRequestMetricsFilterTest#recordsDurationWithMethodAndStatusTagsEvenWhenHandlerFails | api/metrics/api_request_metrics_filter.go | not-started |
 | F-OBS-29 | metric | `swingtrade_pi_cpu_temperature_celsius` | api | com.swingtrade.api.metrics.PiThermalMetrics | baseUnit `celsius`; sysfs read, NaN off-Pi | none (no test exists for this class) | api/metrics/pi_thermal_metrics.go | not-started |
 | F-OBS-30 | metric | `swingtrade_pi_cpu_frequency_hertz` | api | com.swingtrade.api.metrics.PiThermalMetrics | baseUnit `hertz`; sysfs read (kHz × 1000), NaN off-Pi | none | api/metrics/pi_thermal_metrics.go | not-started |
@@ -440,7 +440,7 @@ recorded reason. `management.metrics.enable.all=true`
 `percentiles-histogram.http.server.requests=true` are on, so no other meter publishes buckets or percentiles.
 
 | ID | Kind | Series group | Java module | Java classes | Labels | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-OBS-P01 | metric | `http_server_requests_seconds_count`, `_sum`, `_bucket`, `quantile` | api | Spring MVC auto timer (`WebMvcMetricsFilter`) | uri, method, status, outcome, exception | none in-tree | api/metrics/http_server_requests_timer.go | not-started |
 | F-OBS-P02 | metric | `jvm_memory_used_bytes`, `jvm_memory_max_bytes`, `jvm_gc_pause_seconds_*`, `jvm_threads_*`, `jvm_classes_loaded*` | api | JvmMemoryMetrics, JvmGcMetrics, JvmThreadMetrics, ClassLoaderMetrics | area/id/pool | none in-tree; asserted by dashboard/tests/e2e/views/stage-sanity.spec.ts | core/metrics/jvm_metrics.go | not-started |
 | F-OBS-P03 | metric | `application_started_time_seconds`, `application_ready_time_seconds` | api | Spring Boot startup gauges | none | e2e stage-sanity (asserts `application_`) | core/metrics/startup_gauges.go | not-started |
@@ -462,7 +462,7 @@ different 429 shapes, the CORS divergence and the 12 findings that constrain the
 governs; `Settings` lists the property keys that change it.
 
 | ID | Kind | Surface | Java module | Java classes | Settings | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-SEC-01 | security | admin API-key boundary on `/api/admin` and `/api/admin/**` (fail-closed 401 + `WWW-Authenticate: X-API-Key`, constant-time compare, OPTIONS exempt) | api | com.swingtrade.api.config.ApiSecurityWebConfig; com.swingtrade.api.config.ApiSecurityInterceptor | `app.security.api-key.enabled`, `app.security.api-key` | com.swingtrade.api.config.ApiSecurityInterceptorTest#protectsAdminRoutesWithConstantTimeApiKeyBoundary, #failsClosedWhenEnforcementIsEnabledWithoutConfiguredKey, #optionsRequestsBypassApiBoundaryForCorsPreflight | api/config/api_security_interceptor.go | not-started |
 | F-API-SEC-02 | security | public fixed-window rate limit for every other `/api/**` request: 1-minute window keyed by remote address, `X-RateLimit-Limit`/`-Remaining` on every response, 429 + `Retry-After` with an empty body, `api.rate.limit.hits` | api | com.swingtrade.api.config.ApiSecurityInterceptor | `app.security.public-rate-limit-per-minute` | com.swingtrade.api.config.ApiSecurityInterceptorTest#limitsPublicRequestsAndExposesHitMetric | api/config/api_security_interceptor.go | not-started |
 | F-API-SEC-03 | security | Resilience4j per-endpoint rate limits `candidateScan`, `llmAnalysis`, `sentimentAnalysis` (5/min, fail fast, 0s timeout) → 429 with an `ErrorResponse` body, distinct from F-API-SEC-02 | api | com.swingtrade.api.controller.AnalysisController; com.swingtrade.api.controller.AnalysisOrchestrationController; com.swingtrade.api.controller.CandidateScanController; com.swingtrade.api.controller.SentimentApiController; com.swingtrade.api.controller.IntradayPaperScanController; com.swingtrade.api.config.GlobalExceptionHandler | `resilience4j.ratelimiter.instances.*` | none (no test exercises the annotation or the `RequestNotPermitted` path) | api/config/resilience_rate_limiter.go | not-started |
@@ -472,18 +472,18 @@ governs; `Settings` lists the property keys that change it.
 
 ## 7. Wire-format rows (F-API-FMT)
 
-The ten rules that decide whether every one of the 156 live endpoints is byte-compatible, captured from a live run of
-the API at HEAD against a throwaway database ([golden-corpus.md](evidence/golden-corpus.md), 76 case files in
+The nine rules that decide whether every one of the 156 live endpoints is byte-compatible, captured from a live run of
+the API at HEAD against a throwaway database ([golden-corpus.md](evidence/golden-corpus.md), 71 case files in
 [goldens/cases/](evidence/goldens/cases)). They are rows rather than notes because each one is a Go implementation
 decision with a golden attached, and because two of them contradict assumptions this plan previously made.
 `Evidence` names the case file that pins the rule.
 
 | ID | Kind | Rule (as observed on the wire) | Java module | Java classes | Evidence | Go target | Status |
-|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | F-API-FMT-01 | startup-blocker (fixed) | **HEAD did not start**: `IntradayPaperController` constructor parameter 4 needed `com.fasterxml.jackson.databind.ObjectMapper`, which no Boot 4 auto-configuration registers; JVM exits 1 after a silent graceful shutdown. Introduced by 2ce79be0 (#136); the running stage image is older, so stage was unaffected and any new build was dead on arrival. **Fixed** by injecting the Jackson 3 `tools.jackson.databind.ObjectMapper` bean Boot 4 does register (`javap` on `JacksonAutoConfiguration` shows `JsonMapper jacksonJsonMapper(JsonMapper$Builder)` as its only mapper bean) and catching `tools.jackson.core.JacksonException`; verified by running the rebuilt jar against a throwaway cluster | api | com.swingtrade.api.controller.IntradayPaperController | golden-corpus.md §1 (stack trace, `git log -S` provenance, fix description) | api/controller/intraday_paper.go | verified-fix |
 | F-API-FMT-02 | serialization | `LocalDateTime` serializes **without a zone offset** and with microsecond precision (`2026-10-15T07:33:23.818683`); `LocalDate` is `yyyy-MM-dd`. Timezone in play is `Asia/Kolkata` (`-Duser.timezone`), and the offset is never emitted | api | com.swingtrade.api.dto.ApiResponse, ErrorResponse, config/GlobalExceptionHandler | goldens/cases/not-found-unknown-collection.json, goldens-security/cases/admin-200-with-key.json | api/dto/time.go + api/config/json.go | not-started |
 | F-API-FMT-03 | serialization | **`BigDecimal` is emitted as an unquoted JSON number and keeps its scale** (`"currentCapital":10000000.0`, `"initialCapital":100000`, `"netPnl":0`). `double`/`float` are JSON numbers (`"confidence":0.5`, a `double` would print `1.0E7`); `int`/`long` are unquoted (`"id":12`). The quoted decimals in `settings-*` responses come from `Map<String,String>` built over `app_settings`, so they are Strings — an earlier capture misread them as the BigDecimal rule | api | com.swingtrade.api.dto.PortfolioResponse, IntradayPaperSessionResult, all DTOs, SettingsController (String map) | goldens/cases/paper-portfolios.json, positions-performance.json, intraday-paper-session-no-bars.json, settings-trading.json | api/dto/decimal.go (emit scale-preserving numbers, never quoted) | not-started |
-| F-API-FMT-04 | envelope | Four response families coexist: `ErrorResponse{code, fieldErrors, message, path, status, timestamp}` (every 4xx), `ApiResponse{data, error, success, timestamp}` (settings, watchlist, admin/health), Spring `Page{content, first, last, pageNumber, pageSize, totalElements, totalPages}` (positions) and bare values (`[]` for signals/latest, `{"cleared":0,"symbol":…}` for the signal deletes) | api | com.swingtrade.api.dto.ApiResponse, ErrorResponse | goldens/cases/{settings, positions, signals-latest}.json plus the other 73 case files in goldens/index.md | api/dto/*.go | not-started |
+| F-API-FMT-04 | envelope | Four response families coexist: `ErrorResponse{code, fieldErrors, message, path, status, timestamp}` (every 4xx), `ApiResponse{data, error, success, timestamp}` (settings, watchlist, admin/health), Spring `Page{content, first, last, pageNumber, pageSize, totalElements, totalPages}` (positions) and bare values (`[]` for signals/latest, `{"cleared":0,"symbol":…}` for the signal deletes) | api | com.swingtrade.api.dto.ApiResponse, ErrorResponse | goldens/cases/{settings, positions, signals-latest}.json plus the other 68 case files in goldens/index.md | api/dto/*.go | not-started |
 | F-API-FMT-05 | serialization | Nullable fields are always present with an explicit `null`, never omitted (`"error":null`, `"signalType":null`, `"averageTrade":null` vs `"averageLoss":0` — zero-valued and absent aggregates are distinguishable) | api | com.swingtrade.api.dto.ApiResponse and the DTOs | goldens/cases/positions-performance.json, signals-combined.json | api/dto/*.go (no `omitempty`) | not-started |
 | F-API-FMT-06 | error map | Statuses actually emitted: 400 for a missing query/request parameter (`Missing required parameter: symbol`), for a range guard (`reconciliation range must be at most 10 calendar days`), for an unknown id (`Strategy variant not found: …`) **and** for the reserved signal path segment (bare `{"error": …}` with no envelope); 404 for an unmapped path; 401+`WWW-Authenticate: X-API-Key` with an empty body; 429+`Retry-After` with an empty body; 500 leaks an internal message through the legacy `ApiResponse` envelope | api | com.swingtrade.api.config.GlobalExceptionHandler; com.swingtrade.api.controller.SignalController | goldens/cases/{validation-watchlist-empty-body, ingestion-reconcile-out-of-range, strategy-config-variant, reserved-segment-signals-delete-latest, not-found-unknown-collection, admin-data-status}.json, goldens-security/cases/admin-401-no-key.json | api/config/global_exception_handler.go | not-started |
 | F-API-FMT-07 | rate limit | The public 429 body is empty and carries `Retry-After: 17` (remaining window seconds), `X-RateLimit-Limit: 100`, `X-RateLimit-Remaining: 0`, `Connection: close`. The window is one counter per JVM across all paths and methods: the probe was rejected on attempt 33 because a preceding 71-case capture had already used 67 requests | api | com.swingtrade.api.config.ApiSecurityInterceptor | goldens/cases/rate-limit-429.json | api/config/api_security_interceptor.go | not-started |
@@ -493,10 +493,10 @@ decision with a golden attached, and because two of them contradict assumptions 
 
 ## 8. Table ownership rows (F-DATA-DB)
 
-The persistence surface, one row per table, from the ownership sheet in [evidence/table-ownership.md](evidence/table-ownership.md): 42 tables (41 application + `flyway_schema_history`), 38 JPA entity classes, 38 repository interfaces and 15 store facades, derived by mapping every production `JpaRepository` call site in `backend/*/src/main` against the committed schema snapshot. `Writers`/`Readers` name the production classes only; the full sheet also carries the HTTP write surface, the scheduled writers, every delete path, all 8 foreign keys, the insert-ordering rules, the file-system state that lives outside Postgres, and the 13 findings that constrain the port. Java-test coverage for these rows is tracked by the traceability matrix (Phase 0 step 13, not started), so the template's test column is deferred here and no row claims coverage.
+The persistence surface, one row per table, from the ownership sheet in [evidence/table-ownership.md](evidence/table-ownership.md): 42 tables (41 application + `flyway_schema_history`), 39 JPA entity classes, 38 repository interfaces and 15 store facades, derived by mapping every production `JpaRepository` call site in `backend/*/src/main` against the committed schema snapshot. `Writers`/`Readers` name the production classes only; the full sheet also carries the HTTP write surface, the scheduled writers, every delete path, all 8 foreign keys, the insert-ordering rules, the file-system state that lives outside Postgres, and the 13 findings that constrain the port. Java-test coverage for these rows is tracked by the traceability matrix (Phase 0 step 13, not started), so the template's test column is deferred here and no row claims coverage.
 
 | ID | Table | Java module | Java classes (entity · repository · access point) | Production writers | Production readers | Keys / idempotency | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-DATA-DB-01 | `app_settings` | data | AppSettingEntity · AppSettingRepository · AppSettingsService | AppSettingsService `set`/`save`/`updateValue` — HTTP `PUT /api/settings/{llm,gpuhub,discord,trading,scanning}`, `POST /api/settings/save`, `POST /api/settings/broker`, `PUT /api/candidate-scans/settings` | AppSettingsService `findByKey`/`findAll` — every module's only settings access point | PK `id`; UNIQUE `key`; `UPDATE` by key then `INSERT`; `set` is a no-op when an env var overrides the key | data/store/app_settings.go | not-started |
 | F-DATA-DB-02 | `backtest_result` | data | BacktestResultEntity · BacktestResultRepository · BacktestResultStoreImpl | BacktestResultStoreImpl `saveOrUpdate` ← pipeline `BacktestStage` (**no HTTP writer**: `BacktestController` injects no store) | JobOrchestratorService:783 | PK `id`; UNIQUE `(symbol, run_date)`; read-then-write | data/store/backtest_result.go | not-started |
 | F-DATA-DB-03 | `candidate_history_eligibility` | data | CandidateHistoryEligibilityEntity · repository (no facade) | CandidateScanService `save` | CandidateScanService `findById` | PK **`symbol`** (no surrogate id) | data/store/candidate_history_eligibility.go | not-started |
@@ -556,7 +556,7 @@ entities, `llm` for synthesis) per the module layout in [standards.md](standards
 stays empty.
 
 | ID | Entity | Table | Java module | Java classes (access point) | Keys / idempotency | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-DATA-ENT-01 | AppSettingEntity | `app_settings` | data | AppSettingRepository · AppSettingsService | PK id; UNIQUE `key`; `set` no-ops when an env var overrides the key | EntityPersistenceContractTest, AppSettingsServiceTest | data/entity/app_setting.go | not-started |
 | F-DATA-ENT-02 | BacktestResultEntity | `backtest_result` | data | BacktestResultRepository · BacktestResultStoreImpl | PK id; UNIQUE (symbol, run_date); read-then-write | none (class not referenced in the test tree) | data/entity/backtest_result.go | not-started |
 | F-DATA-ENT-03 | CandidateHistoryEligibilityEntity | `candidate_history_eligibility` | data | repository (no facade) | PK **symbol** (business key, no surrogate) | none (class not referenced in the test tree) | data/entity/candidate_history_eligibility.go | not-started |
@@ -619,7 +619,7 @@ tables (§9) and `NewsItemRepository` is dead - their Go rows port the interface
 activates. The broker and llm repositories are plain `JpaRepository`s with at most two derived queries.
 
 | ID | Repository | Table | Java module | Custom query surface | Facade / core port | Direct consumers | Java tests | Go module and file | Status |
-|---|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-DATA-REPO-01 | AppSettingRepository | `app_settings` | data | `findByKey`; one `@Modifying` JPQL bulk `UPDATE ... WHERE key` (bypasses the persistence context) | none - `AppSettingsService` implements the `core` `AppSettingsStore` port itself | AppSettingsService | AppSettingsServiceTest | data/repository/app_setting.go | not-started |
 | F-DATA-REPO-02 | BacktestResultRepository | `backtest_result` | data | `findBySymbolAndRunDate` | BacktestResultStoreImpl → `BacktestResultStore` (`saveOrUpdate` = read-then-write preserving the id) | - | none | data/repository/backtest_result.go | not-started |
 | F-DATA-REPO-03 | CandidateHistoryEligibilityRepository | `candidate_history_eligibility` | data | none (plain `JpaRepository`, PK is the `symbol` string) | none | CandidateScanService | CandidateScanServiceTest, CandidateScanDataQualityTest | data/repository/candidate_history_eligibility.go | not-started |
@@ -668,8 +668,8 @@ repository/store-facade (§10), metric (§5), cross-cutting security/error (§6)
 are done.
 
 | Area | What must be expanded | Source of truth | Rows expected |
-|---|---|---|---|
-| F-DATA-ENTITIES | the **entity** half is done (§9, 39 rows) and the **repository** half is done (§10, 39 rows); what remains is one row per **core domain model**: 81 files under `core/domain` (56 root: 39 records, 8 classes, 6 enums, 3 port interfaces; plus 25 port interfaces in `policy`/`service`/`store`/`source`) | `backend/core/src/main/java/com/swingtrade/domain/` | 81 domain-model rows |
+| --- | --- | --- | --- |
+| F-DATA-ENTITIES | the **entity** half is done (§9, 39 rows) and the **repository** half is done (§10, 39 rows); what remains is one row per **core domain model**: 81 files under `core/domain` (56 root: 39 records, 8 classes, 6 enums, 3 port interfaces; plus 28 port interfaces in `policy`/`service`/`store`/`source`) | `backend/core/src/main/java/com/swingtrade/domain/` | 81 domain-model rows |
 | F-STRAT-IND | one row per indicator and one per strategy/gate | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 (numeric golden vectors) |
 | F-STRAT-BT | one row per backtest engine, walk-forward, DSR and cost model | `backend/strategy/src/main/java/com/swingtrade/strategy/` | Phase 0 step 6 |
 | F-LLM-*, F-BRK-*, F-DATA-CLIENTS | one row per client, news source, prompt, risk control | `backend/llm/`, `backend/broker/`, `backend/data/client/` | ~40 rows |

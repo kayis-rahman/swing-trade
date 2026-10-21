@@ -28,12 +28,10 @@ below, so the corpus can be re-validated in CI after the Go port exists.
 
 Preconditions
 -------------
-The Java API must be running against an isolated, Flyway-migrated throwaway
-database with scheduling disabled (see phase-0-characterization.md step 1).
-Flyway seeds baseline rows, so the database is not empty and response bodies
-may vary with seeded or network-dependent data (notably news) and timestamps.
-Treat these captures as characterization evidence, not byte-for-byte
-reproducible fixtures.
+The Java API must be running against an isolated throwaway database with
+scheduling disabled (see phase-0-characterization.md step 1). The capture is
+deterministic only on an empty database: every list endpoint returns the empty
+collection shape rather than data-dependent rows.
 """
 
 from __future__ import annotations
@@ -46,7 +44,7 @@ import urllib.error
 import urllib.request
 
 # (slug, method, path, expected_status, body_or_None, note)
-# Expected statuses were observed on a fresh Flyway-migrated throwaway database;
+# Expected statuses are the ones observed on an empty throwaway database;
 # a mismatch is a regression signal, not a failure of this script.
 CASES = [
     # --- health / platform -------------------------------------------------
@@ -77,7 +75,7 @@ CASES = [
     ("signals-gate-effectiveness", "GET", "/api/signals/gate-effectiveness?from=2026-01-01&to=2026-01-31", 200, None, "gate effectiveness report (from/to required)"),
     ("signals-symbol", "GET", "/api/signals/symbol/RELIANCE", 200, None, "per-symbol signals, empty symbol"),
     ("signals-combined", "GET", "/api/signals/combined/RELIANCE", 200, None,
-     "captured 200 degradation response with keyword fallback when the LLM is unreachable; live news content is network-dependent"),
+     "combined signal view: does not answer within 30s on an empty DB with no LLM, so no golden is possible yet (see evidence doc, finding 2)"),
     ("signals-analysis", "GET", "/api/signals/analysis/RELIANCE", 200, None, "stored analysis for a symbol"),
     ("positions", "GET", "/api/positions", 200, None, "open positions list"),
     ("positions-closed", "GET", "/api/positions/closed", 200, None, "closed positions list"),
@@ -135,9 +133,9 @@ CASES = [
      "DELETE on the reserved segment 'latest': bare 400 {\"error\": ...} body, not the ApiResponse envelope"),
 
     # --- intraday paper sessions (POST /api/intraday/paper/sessions) --------
-    # This controller previously could not be instantiated by Boot 4's
-    # Jackson 3 auto-configuration (evidence doc §1); its two routes became
-    # capturable after the Jackson 3 fix.
+    # This controller is the one that cannot be instantiated by Boot 4's
+    # Jackson 3 auto-configuration (evidence doc §1), so its two routes only
+    # became capturable after the Jackson 3 fix.
     ("intraday-paper-session-not-found", "GET", "/api/intraday/paper/sessions/gnhf-unknown-run", 404, None,
      "unknown runId: Spring's default 404 error body"),
     ("intraday-paper-session-empty-body", "POST", "/api/intraday/paper/sessions", 400, {},

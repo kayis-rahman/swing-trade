@@ -8,7 +8,7 @@ snapshot. No product code was changed, and no database was needed: the ownership
 classes inject which repository and which methods they call.
 
 | Fact | Value | Note |
-|---|---|---|
+| --- | --- | --- |
 | tables | **42** (41 application + `flyway_schema_history`) | matches `CREATE TABLE` count in [schema-snapshot.sql](schema-snapshot.sql) |
 | JPA entity classes | **39** (35 `data/entity`, 3 `broker/entity`, 1 `llm`) | corrects the ledger's area row, which counted only `data/entity` |
 | repository interfaces | **38** (34 `data`, 3 `broker`, 1 `llm`) | corrects the ledger's "39" |
@@ -40,7 +40,7 @@ classes inject which repository and which methods they call.
 ## 2. Ownership sheet
 
 | Table | Entity · repository (module) | Production writers | Production readers |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `app_settings` | AppSettingEntity · AppSettingRepository (data) | AppSettingsService `set`/`save`/`updateValue` | AppSettingsService `findByKey`/`findAll` — the only access point for every module |
 | `backtest_result` | BacktestResultEntity · BacktestResultRepository (data) | BacktestResultStoreImpl `saveOrUpdate` ← BacktestStage (pipeline) | BacktestResultStoreImpl `findBySymbolAndRunDate` ← JobOrchestratorService:783 |
 | `candidate_history_eligibility` | CandidateHistoryEligibilityEntity · repository (data) | CandidateScanService `save` | CandidateScanService `findById` |
@@ -90,7 +90,7 @@ Only the tables that have a write surface are listed; every other table is writt
 pipeline (`JobOrchestratorService` and its stages) or not at all.
 
 | Table | HTTP endpoints that write it | Scheduled writers | Delete paths |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `app_settings` | `PUT /api/settings/{llm,gpuhub,discord,trading,scanning}`, `POST /api/settings/save`, `POST /api/settings/broker`, `PUT /api/candidate-scans/settings` (10 scan keys) | none | none — keys are never removed; `set` is a no-op when an environment variable overrides the key (AppSettingsService:64-68) |
 | `backtest_result` | none — `BacktestController` injects no store, so `POST /api/backtest/run*` never persists | pipeline `BacktestStage` | none; the unique key makes re-runs overwrite |
 | `candidate_scan_runs`, `candidate_scan_results`, `candidate_history_eligibility` | `POST /api/candidate-scans/{runId}/{analysis,cancel,pause,resume}`, `PUT /api/candidate-scans/settings` | F-SCHED-11 (17:00), F-SCHED-08 (60 s dispatch) | none — no delete endpoint, rows accumulate |
@@ -116,7 +116,7 @@ Keys and indexes are quoted from the snapshot, not from the entity annotations, 
 sometimes adds a constraint the entity does not declare.
 
 | Table | Primary key | Unique constraints | Idempotency mechanism (Java) |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `app_settings` | `id` | `app_settings_key_key (key)` | `set` = `UPDATE` by key, `INSERT` when absent (AppSettingsService:69-74) |
 | `backtest_result` | `id` | `uq_backtest_result_symbol_date (symbol, run_date)` | read-then-write (`saveOrUpdate` reuses the existing id) |
 | `candidate_history_eligibility` | **`symbol`** (no surrogate id) | — | one row per symbol |
@@ -174,7 +174,7 @@ sometimes adds a constraint the entity does not declare.
 ## 5. Foreign keys and insert ordering
 
 | Constraint | Columns | Target | On delete |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `fk_signals_stock` | `signals.symbol` | `stocks.symbol` | CASCADE |
 | `fk_positions_stock` | `positions.symbol` | `stocks.symbol` | CASCADE |
 | `fk_trades_stock` | `trades.symbol` | `stocks.symbol` | CASCADE |
@@ -201,7 +201,7 @@ Ordering rules the Go port inherits:
 Two write surfaces are not in the schema snapshot at all, and a port that mirrors only Postgres loses them:
 
 | Surface | Writer | Reader | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `backtest.reports.dir` (default `reports`), files `backtest_\d{8}_\d{6}.json` | `BacktestController` run endpoints | `GET /api/backtest/reports`, `GET /api/backtest/reports/{filename}` | filename is pattern-validated and resolved with a `startsWith(dir)` guard, so the traversal is blocked twice; a missing directory returns `[]` (BacktestController:198, 225) |
 | per-run trade-list CSV | `BacktestEngine:975` | nothing over HTTP | another file-system side effect of the same run endpoints |
 | `ledger.csv` and `report.md` in a readiness directory | `IntradayDataReadinessCommand` (CLI runner, not HTTP) | operator | data-module command; not part of the API surface |
@@ -209,7 +209,7 @@ Two write surfaces are not in the schema snapshot at all, and a port that mirror
 ## 6. Tables with no production writer
 
 | Table | Why it matters |
-|---|---|
+| --- | --- |
 | `corporate_actions` | `CorporateActionStoreImpl.save` has no caller, so BacktestEngine's split/dividend adjustment reads a table nothing writes (empty unless it was populated by hand). **Do not** start writing it in Go: adjusted backtests would no longer match Java's unadjusted ones. |
 | `universe_snapshots` | `UniverseSnapshotStoreImpl.save` has no caller; BacktestEngine reads point-in-time membership, so every vintage resolves to "no snapshot" and falls through to the current universe. Same warning as above. |
 | `trade_labels` | `TradeLabelService.labelTrade`/`bulkLabelTrades` have no production caller, so the attribution exit-reason feature is dormant; the repository and its reads stay unreachable. |

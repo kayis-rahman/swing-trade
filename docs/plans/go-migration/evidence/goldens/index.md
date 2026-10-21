@@ -3,7 +3,7 @@
 Capture tag: `local-throwaway`. Base: `http://127.0.0.1:8080`.
 
 | case | method | path | status | expected | note |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | health | GET | `/api/health` | 200 | 200 | HealthController aggregate health |
 | health-database | GET | `/api/health/database` | 200 | 200 | DB health probe |
 | health-details | GET | `/api/health/details` | 200 | 200 | health details |

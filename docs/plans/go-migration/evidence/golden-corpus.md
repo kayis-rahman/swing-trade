@@ -6,7 +6,7 @@ the API at HEAD (`15766cca`) against an isolated throwaway database on this mach
 2026-10-15. No product code was modified.
 
 | Artifact | What it is |
-|---|---|
+| --- | --- |
 | [scripts/capture-goldens.py](scripts/capture-goldens.py) | the reproducible capture script |
 | [goldens/openapi3.json](goldens/openapi3.json) | the live springdoc 3.1 export (142 paths, 109 schemas) |
 | [goldens/index.md](goldens/index.md) | generated index of the 71 default-profile cases + the rate-limit probe, plus the 4 `intraday-paper-*` cases captured after the fix |
@@ -109,7 +109,7 @@ cluster (a *new* cluster, not the one used for the first capture — `/tmp/throw
 routes behave (`goldens/cases/intraday-paper-*.json`, tag `local-throwaway-fixed`):
 
 | Request | Status | Body |
-|---|---|---|
+| --- | --- | --- |
 | `GET /api/intraday/paper/sessions/gnhf-unknown-run` | 404 | Spring's default `ErrorResponse` |
 | `POST /api/intraday/paper/sessions` with `{}` | 400 | `VALIDATION_ERROR` listing `sessionDate`, `symbol`, `strategyType` — with `fieldErrors:[]` |
 | `POST .../sessions` with `{"symbol":"TCS","sessionDate":"2026-10-09","strategyType":"INTRADAY_ORB"}` | 200 | `status: "INCOMPLETE_DATA"`, `expectedBars: 25`, `receivedBars: 0` (no stored bars, no row persisted) |
@@ -139,7 +139,7 @@ return a body-less 400 rather than the `ErrorResponse` envelope.
 ## 3. Step 5: time, decimal, enum and null formatting rules actually emitted
 
 | Rule | Evidence (case) |
-|---|---|
+| --- | --- |
 | `LocalDateTime` has **no zone offset** and **microsecond precision** (6 fractional digits) | `"timestamp":"2026-10-15T07:33:23.818683"` on every error envelope, `settings`, `positions-performance` |
 | `LocalDate` is a bare `yyyy-MM-dd` | `"analyzedAt":"2026-10-15"`, `"date":"2026-10-15"` |
 | `BigDecimal` is emitted as a **JSON number**, never quoted, and keeps its scale | `paper-portfolios`: `"currentCapital":10000000.0`, `"initialCapital":10000000.0`, `"realizedPnl":0.0` (entity fields typed `BigDecimal`; a `double` would print `1.0E7`); `intraday-paper-session-no-bars`: `"initialCapital":100000`, `"finalCapital":100000`, `"netPnl":0`. **Correction to the first capture**, which claimed BigDecimal was quoted because `settings-trading` shows `"trading.initial_capital":"500000"` — that endpoint returns `Map<String,String>` built from `app_settings`, so those values are Java Strings, not BigDecimal |
@@ -169,7 +169,7 @@ Four families coexist; the dashboard branches per call site on `direct` vs `enve
 ## 5. Status codes observed on an empty throwaway database
 
 | Status | Trigger | Case |
-|---|---|---|
+| --- | --- | --- |
 | 200 | normal reads, empty collections, `DELETE` on a live symbol | most cases |
 | 400 | missing required query parameter | `Missing required parameter: symbol` (`admin-data-status`), `from` (`gate-effectiveness`), `fromDate` (`data/export`) |
 | 400 | missing required request parameter/body field | `POST /api/watchlist` with `{}` and with `{"foo":"bar"}` both → `Missing required parameter: symbol` (no `fieldErrors` are ever populated by this path) |
@@ -230,7 +230,7 @@ bucket (and the `Retry-After` value is the remaining window seconds, not a fixed
 produce, 2 990 lines.
 
 | Fact | Value | Why it matters for the port |
-|---|---|---|
+| --- | --- | --- |
 | `CREATE TABLE` statements | 42 (41 application tables + `flyway_schema_history`) | the plan's area table claims 35 entities and 37 repositories; the real table count needs no interpretation, so the entity/repository rows in the ledger can now be checked against a fixed number |
 | indexes | 78 `CREATE INDEX`/`CREATE UNIQUE INDEX` | index names are the parity surface for query plans, and several of them are the idempotency guard named in the scheduler characterization |
 | TimescaleDB / hypertables | none — no `CREATE EXTENSION`, no hypertable anywhere in the 53 migrations, and no `timescaledb` string in the migration tree | plain Postgres is sufficient; the "TimescaleDB-patched PostgreSQL" comment in `application.properties` is stale and the Go port needs no extension |

@@ -1,0 +1,11 @@
+go 1.27.0
+
+use (
+	./go/api
+	./go/broker
+	./go/core
+	./go/data
+	./go/gpuhub
+	./go/llm
+	./go/strategy
+)

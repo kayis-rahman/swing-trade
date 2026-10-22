@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
+import { mockDashboardApi } from '../fixtures/api'
 
 test('signals view loads', async ({ page }) => {
+  await mockDashboardApi(page)
   await page.goto('http://localhost:3003/signals')
   await page.waitForLoadState('networkidle')
 

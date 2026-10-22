@@ -72,6 +72,7 @@ function mountView(): VueWrapper {
   return mount(OrchestratorView, {
     global: {
       stubs: {
+        RouterLink: { template: '<a><slot /></a>' },
         ErrorBoundary: {
           props: ['error'],
           template: '<div><slot /><slot v-if="error" name="error" /></div>',

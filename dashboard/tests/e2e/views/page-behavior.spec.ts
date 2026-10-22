@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
+import { mockDashboardApi } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
+
+test.beforeEach(async ({ page }) => mockDashboardApi(page))
 
 const pages = [
   {

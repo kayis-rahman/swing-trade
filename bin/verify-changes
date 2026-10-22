@@ -30,7 +30,7 @@ context_offenders="$(
     | grep -v '^bin/verify-changes:' || true
 )"
 if [[ -n "${context_offenders}" ]]; then
-  printf 'ERROR: scripts must not run "docker context use" (use `docker --context pi-node` or a scoped DOCKER_CONTEXT):\n%s\n' "${context_offenders}" >&2
+  printf "ERROR: scripts must not run \"docker context use\" (use \`docker --context pi-node\` or a scoped DOCKER_CONTEXT):\n%s\n" "${context_offenders}" >&2
   exit 1
 fi
 
@@ -48,8 +48,12 @@ fi
 
 run_backend=false
 run_dashboard=false
+run_go=false
+run_go_stage=false
 if grep -q '^backend/' <<<"${changed_paths}"; then run_backend=true; fi
 if grep -q '^dashboard/' <<<"${changed_paths}"; then run_dashboard=true; fi
+if grep -qE '^(go/|go\.work($|\.sum$)|\.golangci\.yml$|bin/(go-run|go-verify|check-go-architecture)$)' <<<"${changed_paths}"; then run_go=true; fi
+if grep -qE '^(dev-stack\.sh|infra/(Dockerfile\.go-stage|docker-compose\.go-stage\.yml)|bin/(deploy-go-stage|verify-go-stage-deployment)\.sh)$' <<<"${changed_paths}"; then run_go_stage=true; fi
 
 failures=0
 
@@ -59,6 +63,28 @@ if [[ "${run_backend}" == "true" ]]; then
   else
     printf '\nRunning backend tests for changed backend files...\n'
     if ! (cd backend && ./gradlew test --no-daemon); then
+      failures=$((failures + 1))
+    fi
+  fi
+fi
+
+if [[ "${run_go}" == "true" ]]; then
+  if [[ "${dry_run}" == "true" ]]; then
+    printf '[dry-run] ./bin/go-verify\n'
+  else
+    printf '\nRunning Go unit, E2E, authorized development DB, race, vet, lint, vulnerability, and architecture checks...\n'
+    if ! ./bin/go-verify; then
+      failures=$((failures + 1))
+    fi
+  fi
+fi
+
+if [[ "${run_go_stage}" == "true" ]]; then
+  if [[ "${dry_run}" == "true" ]]; then
+    printf '[dry-run] ./bin/verify-go-stage-deployment.sh\n'
+  else
+    printf '\nRunning Go stage deployment safety and configuration checks...\n'
+    if ! ./bin/verify-go-stage-deployment.sh; then
       failures=$((failures + 1))
     fi
   fi
@@ -75,8 +101,8 @@ if [[ "${run_dashboard}" == "true" ]]; then
   fi
 fi
 
-if [[ "${run_backend}" == "false" && "${run_dashboard}" == "false" ]]; then
-  printf 'No backend or dashboard files changed; no application checks selected.\n'
+if [[ "${run_backend}" == "false" && "${run_dashboard}" == "false" && "${run_go}" == "false" && "${run_go_stage}" == "false" ]]; then
+  printf 'No backend, dashboard, or Go files changed; no application checks selected.\n'
 fi
 
 if [[ "${dry_run}" == "true" ]]; then

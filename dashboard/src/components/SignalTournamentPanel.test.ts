@@ -21,12 +21,18 @@ const row: SignalSelection = {
 
 describe('SignalTournamentPanel', () => {
   it('shows an empty message when there are no winners', () => {
-    const wrapper = mount(SignalTournamentPanel, { props: { selections: [] } })
+    const wrapper = mount(SignalTournamentPanel, {
+      props: { selections: [] },
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
     expect(wrapper.text()).toContain('No variant produced a BUY')
   })
 
   it('renders the winner, every candidate chip and the selection status', () => {
-    const wrapper = mount(SignalTournamentPanel, { props: { selections: [row] } })
+    const wrapper = mount(SignalTournamentPanel, {
+      props: { selections: [row] },
+      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    })
     const text = wrapper.text()
     expect(text).toContain('ADANIPORTS')
     expect(text).toContain('pullback-v1 BUY 75%')

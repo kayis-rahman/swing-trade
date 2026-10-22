@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test'
+import { mockDashboardApi } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
 
 test.describe('Signals View Selection', () => {
+  test.beforeEach(async ({ page }) => mockDashboardApi(page))
+
   test('signals page renders without JS errors', async ({ page }) => {
     await page.goto(`${DASHBOARD}/signals`)
     await page.waitForLoadState('networkidle')

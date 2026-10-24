@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-const javaBaseUrl = process.env.PARITY_JAVA_BASE_URL
-const goBaseUrl = process.env.PARITY_GO_BASE_URL
+const javaBaseUrl = process.env.JAVA_SERVICE_URL ?? process.env.PARITY_JAVA_BASE_URL
+const goBaseUrl = process.env.GO_SERVICE_URL ?? process.env.PARITY_GO_BASE_URL
 const requests = [
   '/api/health',
   '/api/holidays',
@@ -11,10 +11,7 @@ const requests = [
 ]
 
 test('Go read endpoints match Java responses on the shared local dataset', async ({ request }) => {
-  test.skip(
-    !javaBaseUrl || !goBaseUrl,
-    'Set PARITY_JAVA_BASE_URL and PARITY_GO_BASE_URL to run API parity'
-  )
+  test.skip(!javaBaseUrl || !goBaseUrl, 'Set JAVA_SERVICE_URL and GO_SERVICE_URL to run API parity')
 
   for (const path of requests) {
     const [javaResponse, goResponse] = await Promise.all([

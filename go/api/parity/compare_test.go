@@ -9,10 +9,16 @@ import (
 )
 
 func TestConfiguredReadParity(t *testing.T) {
-	javaBaseURL := os.Getenv("PARITY_JAVA_BASE_URL")
-	goBaseURL := os.Getenv("PARITY_GO_BASE_URL")
+	javaBaseURL := os.Getenv("JAVA_SERVICE_URL")
+	if javaBaseURL == "" {
+		javaBaseURL = os.Getenv("PARITY_JAVA_BASE_URL")
+	}
+	goBaseURL := os.Getenv("GO_SERVICE_URL")
+	if goBaseURL == "" {
+		goBaseURL = os.Getenv("PARITY_GO_BASE_URL")
+	}
 	if javaBaseURL == "" || goBaseURL == "" {
-		t.Skip("set PARITY_JAVA_BASE_URL and PARITY_GO_BASE_URL to compare running services")
+		t.Skip("set JAVA_SERVICE_URL and GO_SERVICE_URL to compare running services")
 	}
 	differences, err := Compare(http.DefaultClient, javaBaseURL, goBaseURL, []Request{
 		{Path: "/api/health"},

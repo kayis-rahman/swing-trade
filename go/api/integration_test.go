@@ -20,7 +20,7 @@ func TestRealBinaryServesEveryInfrastructureRoute(t *testing.T) {
 	cmd, output, baseURL := startAPIBinary(t, binary)
 	waitForHealth(t, client, baseURL, cmd, output)
 	assertHealthRoutes(t, client, baseURL)
-	assertWatchlistRoutesRequireDatabase(t, client, baseURL)
+	assertDatabaseReadRoutesRequireDatabase(t, client, baseURL)
 	assertAdminRoute(t, client, baseURL)
 	assertAdminPreflight(t, client, baseURL)
 	assertPrometheusRoute(t, client, baseURL)
@@ -90,9 +90,9 @@ func waitForHealth(t *testing.T, client *http.Client, baseURL string, cmd *exec.
 	}
 }
 
-func assertWatchlistRoutesRequireDatabase(t *testing.T, client *http.Client, baseURL string) {
+func assertDatabaseReadRoutesRequireDatabase(t *testing.T, client *http.Client, baseURL string) {
 	t.Helper()
-	for _, path := range []string{"/api/watchlist", "/api/watchlist/all"} {
+	for _, path := range []string{"/api/watchlist", "/api/watchlist/all", "/api/holidays", "/api/holidays/today"} {
 		response := makeRequest(t, client, http.MethodGet, baseURL+path, "")
 		body, err := io.ReadAll(response.Body)
 		_ = response.Body.Close()

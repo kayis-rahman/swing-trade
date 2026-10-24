@@ -8,6 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type NseHoliday struct {
+	ID          int64            `json:"id"`
+	HolidayDate pgtype.Date      `json:"holiday_date"`
+	Occasion    string           `json:"occasion"`
+	HolidayType string           `json:"holiday_type"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	Version     pgtype.Int4      `json:"version"`
+}
+
 type Watchlist struct {
 	ID           int64            `json:"id"`
 	Symbol       string           `json:"symbol"`

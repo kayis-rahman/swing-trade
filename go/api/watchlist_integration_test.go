@@ -16,7 +16,7 @@ import (
 	"github.com/kayis-rahman/swing-trade/go/data/db"
 )
 
-func TestWatchlistReadEndpointsAgainstAuthorizedDevelopmentDatabase(t *testing.T) {
+func TestReadEndpointsAgainstAuthorizedDevelopmentDatabase(t *testing.T) {
 	databaseURL := os.Getenv("SWINGTRADE_TEST_DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("authorized read-only development database URL is unavailable")
@@ -30,7 +30,7 @@ func TestWatchlistReadEndpointsAgainstAuthorizedDevelopmentDatabase(t *testing.T
 	defer pool.Close()
 
 	cfg := config.Config{HTTPAddr: "127.0.0.1:0", PublicRateLimitPerMinute: 100}
-	handler, err := NewHandlerWithWatchlist(cfg, nil, coreclock.System{}, data.NewWatchlistReader(pool))
+	handler, err := NewHandlerWithStores(cfg, nil, coreclock.System{}, data.NewWatchlistReader(pool), data.NewHolidayReader(pool))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +38,8 @@ func TestWatchlistReadEndpointsAgainstAuthorizedDevelopmentDatabase(t *testing.T
 		path   string
 		active bool
 	}{
+		{path: "/api/holidays"},
+		{path: "/api/holidays/today"},
 		{path: "/api/watchlist", active: true},
 		{path: "/api/watchlist/all"},
 	} {
@@ -45,6 +47,19 @@ func TestWatchlistReadEndpointsAgainstAuthorizedDevelopmentDatabase(t *testing.T
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, tc.path, nil).WithContext(ctx))
 		if response.Code != http.StatusOK {
 			t.Fatalf("GET %s = %d", tc.path, response.Code)
+		}
+		if tc.path == "/api/holidays" || tc.path == "/api/holidays/today" {
+			var body struct {
+				Data    json.RawMessage `json:"data"`
+				Success bool            `json:"success"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+				t.Fatal("holiday response was not valid JSON")
+			}
+			if !body.Success || len(body.Data) == 0 || string(body.Data) == "null" {
+				t.Fatalf("GET %s returned invalid holiday data", tc.path)
+			}
+			continue
 		}
 		var body struct {
 			Data []struct {

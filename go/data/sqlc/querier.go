@@ -6,11 +6,16 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	GetHolidayByDate(ctx context.Context, holidayDate pgtype.Date) (GetHolidayByDateRow, error)
 	ListActiveWatchlist(ctx context.Context) ([]Watchlist, error)
 	ListAllWatchlist(ctx context.Context) ([]Watchlist, error)
+	ListHolidaysByDateRange(ctx context.Context, arg ListHolidaysByDateRangeParams) ([]ListHolidaysByDateRangeRow, error)
+	ListUpcomingHolidays(ctx context.Context, holidayDate pgtype.Date) ([]ListUpcomingHolidaysRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

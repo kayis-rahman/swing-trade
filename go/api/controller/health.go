@@ -28,9 +28,9 @@ type healthComponent struct {
 	Details        map[string]any `json:"details"`
 }
 
-// HealthStatus retains the Java-era wire keys through Phase 8 for client compatibility.
-// javaVersion maps to runtime.Version; heap fields map to Go HeapIdle, HeapSys, and HeapAlloc.
-// Phase 8 may rename these keys to Go-specific names after the compatibility window.
+// healthSystemInfo retains Java-era wire keys for client compatibility through Phase 8.
+// javaVersion maps to runtime.Version; heap fields map to HeapIdle-HeapReleased, HeapSys, and HeapAlloc.
+// Phase 8 may rename the fields to Go-specific names after the compatibility window.
 type healthSystemInfo struct {
 	JavaVersion         string `json:"javaVersion"`
 	OSName              string `json:"osName"`

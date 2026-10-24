@@ -44,6 +44,7 @@ func run(ctx context.Context) error {
 	logger := corelog.New(os.Stdout, slog.LevelInfo, "api")
 
 	var watchlistReader data.WatchlistReadStore
+	var holidayReader data.HolidayReadStore
 	if cfg.DatabaseURL != "" {
 		pool, err := db.NewLocalOrReadOnlyPool(ctx, cfg.DatabaseURL)
 		if err != nil {
@@ -51,9 +52,10 @@ func run(ctx context.Context) error {
 		}
 		defer pool.Close()
 		watchlistReader = data.NewWatchlistReader(pool)
+		holidayReader = data.NewHolidayReader(pool)
 	}
 
-	handler, err := api.NewHandlerWithWatchlist(cfg, logger, coreclock.System{}, watchlistReader)
+	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader)
 	if err != nil {
 		return fmt.Errorf("initialize HTTP platform: %w", err)
 	}

@@ -38,6 +38,11 @@ func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock corecloc
 
 // NewHandlerWithWatchlist builds the HTTP handler with an optional read-only watchlist store.
 func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore) (http.Handler, error) {
+	return NewHandlerWithStores(cfg, logger, clock, watchlist, nil)
+}
+
+// NewHandlerWithStores builds the HTTP handler with optional read-only data stores.
+func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore) (http.Handler, error) {
 	if clock == nil {
 		clock = coreclock.System{}
 	}
@@ -71,6 +76,7 @@ func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock corec
 
 	mux := http.NewServeMux()
 	controller.RegisterHealthRoutes(mux, watchlist != nil, clock, clock.Now())
+	controller.RegisterHolidayRoutes(mux, holidays, logger, clock)
 	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
 	mux.HandleFunc("GET /api/admin/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})

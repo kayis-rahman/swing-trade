@@ -9,3 +9,12 @@ CREATE TABLE watchlist (
     last_synced_at TIMESTAMP,
     candle_count INTEGER DEFAULT 0
 );
+
+CREATE TABLE nse_holidays (
+    id BIGSERIAL PRIMARY KEY,
+    holiday_date DATE NOT NULL UNIQUE,
+    occasion VARCHAR(128) NOT NULL,
+    holiday_type VARCHAR(32) NOT NULL DEFAULT 'FULL' CHECK (holiday_type IN ('FULL', 'PARTIAL')),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER
+);

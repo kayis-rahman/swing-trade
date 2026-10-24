@@ -14,6 +14,11 @@ func TestInfrastructureRoutes(t *testing.T) {
 	handler := handlerFor(t, testConfig())
 	for _, path := range []string{
 		"/api/health",
+		"/api/health/details?verbose=true",
+		"/api/health/database",
+		"/api/health/market-data",
+		"/api/health/llm",
+		"/api/health/full",
 		"/api/admin/health",
 		"/actuator/health",
 		"/actuator/health/liveness",

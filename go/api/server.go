@@ -70,10 +70,8 @@ func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock corec
 	}
 
 	mux := http.NewServeMux()
+	controller.RegisterHealthRoutes(mux, watchlist != nil, clock, clock.Now())
 	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
-	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
-	})
 	mux.HandleFunc("GET /api/admin/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
 	})

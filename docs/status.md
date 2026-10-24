@@ -1,6 +1,8 @@
 # Pre-Pilot Status
 
-Last checked: 2026-10-24 (Go Phase 2 watchlist read slice)
+Last checked: 2026-10-24 (Go Phase 2 health and watchlist read slices)
+
+- [x] Added six Java-compatible Go health read routes while preserving the legacy `systemInfo` wire names and mapping version/heap fields to Go runtime values; added endpoint, runtime mapping, verbose diagnostics, and configured/unconfigured database tests. Updated the health feature-ledger rows as parity-pending. `go test ./...` from `go/api` passed after the change. `./bin/go-verify` passed all Go modules, including authorized development-database integration tests, race, coverage, vet, lint, vulnerability scan, and architecture checks; govulncheck still reports GO-2026-6809 in Go 1.27.2 (fixed in 1.27.3). Docker context `pi-node` had the PostgreSQL 16 dev service already running; no services were restarted, and no stage systems were touched.
 
 - [x] Implemented the read-only Go watchlist endpoints (`GET /api/watchlist` and `/api/watchlist/all`) with sqlc queries, Java-compatible `ApiResponse` and entity field formatting, handler tests using the captured Java golden shape, generated-query tests, and read-only development-database integration coverage. Updated feature-ledger rows; parity remains pending until full endpoint comparison and the later shadow run. `./bin/go-verify` passed Go race, coverage, vet, lint, and architecture checks; `govulncheck` reports the existing Go 1.27.2 standard-library advisory GO-2026-6809 (fixed in 1.27.3). `./bin/verify-changes` stopped because `yarn` is not installed, so dashboard checks were run directly from installed `dashboard/node_modules`: Prettier, typecheck, 61 Vitest files / 375 tests, ESLint, and Vite build all passed. No stack was started and no stage or production systems were touched.
 

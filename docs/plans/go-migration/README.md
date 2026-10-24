@@ -1,6 +1,6 @@
 # Java to Go migration plan
 
-Status: Phase 1 no-traffic skeleton merged. Phase 0 and G0 were waived by captain decision on 2026-10-17. Phase 2 is authorized and underway; the watchlist GET slice is implemented with parity pending. Remaining Phase 2 endpoints, shadow-comparator setup, and the one-trading-week shadow gate are incomplete. Later phases remain in plan order.
+Status: Phase 1 no-traffic skeleton merged. Phase 0 and G0 were waived by captain decision on 2026-10-17. Phase 2 is authorized and underway; read-only watchlist and health endpoint slices are implemented with parity pending. Remaining Phase 2 endpoints, shadow-comparator setup, and the one-trading-week shadow gate are incomplete. Later phases remain in plan order.
 Source analysis: a read-only scout of the repository at `c691c504` (module sizes, endpoints, schedulers, deployment, observability, safety flags); file references point at this repository. Repo baseline: `c691c504`.
 
 ## Decisions (captain, 2026-10-13)

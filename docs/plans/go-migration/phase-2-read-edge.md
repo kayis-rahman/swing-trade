@@ -14,7 +14,8 @@ Health, holidays and calendar reads, watchlist and stock reads, signals reads, p
 Then:
 6. nginx mirrors production GETs to Go; Go responses are discarded; comparator logs diffs.
 7. Triage every diff into bug, accepted difference (recorded with captain approval), or comparator noise.
-8. Run for one full trading week.
+8. Replay a deterministic fixture corpus through both the legacy path and Go path; require zero unexplained diffs, and name and justify every tolerated difference in the parity report.
+9. Run the live shadow comparator for one full trading week before release. This soak is a release-readiness gate, not a merge gate; do not represent deterministic replay as satisfying the live-week requirement.
 
 ## Gate G2 exit criteria
-Zero unexplained diffs for one trading week; all accepted differences approved; Playwright suite green against Go reads in a test environment.
+Zero unexplained diffs across the deterministic replay corpus; all tolerated differences named and justified; Playwright suite green against Go reads in a test environment. The one-trading-week live shadow soak remains outstanding until release readiness.

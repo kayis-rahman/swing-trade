@@ -85,8 +85,8 @@ for module in "${modules[@]}"; do
     cd "$REPO_ROOT/go/$module"
     "$GO_BIN" mod tidy -diff
     test_status=0
-    if [[ "$module" == "data" ]]; then
-      if [[ "$use_local_test_database" == "true" ]]; then
+    if [[ "$module" == "data" || ( "$module" == "api" && "$use_local_test_database" == "false" ) ]]; then
+      if [[ "$module" == "data" && "$use_local_test_database" == "true" ]]; then
         if test_output="$(SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1 SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
       elif test_output="$(SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
     else
@@ -125,7 +125,7 @@ if failed:
   ); then
     failures=$((failures + 1))
   fi
-  if [[ "$module" == "data" ]]; then unset dev_db_url; fi
+  if [[ "$module" == "api" ]]; then unset dev_db_url; fi
 done
 
 "$REPO_ROOT/bin/check-go-architecture"

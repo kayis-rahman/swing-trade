@@ -9,10 +9,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/kayis-rahman/swing-trade/go/api/controller"
 	"github.com/kayis-rahman/swing-trade/go/api/middleware"
 	coreclock "github.com/kayis-rahman/swing-trade/go/core/clock"
 	"github.com/kayis-rahman/swing-trade/go/core/config"
 	corelog "github.com/kayis-rahman/swing-trade/go/core/log"
+	"github.com/kayis-rahman/swing-trade/go/data"
 )
 
 type healthResponse struct {
@@ -24,13 +26,18 @@ type healthComponent struct {
 	Status string `json:"status"`
 }
 
-// NewHandler builds the infrastructure-only HTTP handler with a discard logger.
+// NewHandler builds an HTTP handler without a configured data store or logger.
 func NewHandler(cfg config.Config) (http.Handler, error) {
 	return NewHandlerWithLogger(cfg, corelog.New(io.Discard, slog.LevelInfo, "api"), coreclock.System{})
 }
 
-// NewHandlerWithLogger builds the infrastructure-only handler with injected logging and time.
+// NewHandlerWithLogger builds an HTTP handler with injected logging and time but no data store.
 func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock coreclock.Clock) (http.Handler, error) {
+	return NewHandlerWithWatchlist(cfg, logger, clock, nil)
+}
+
+// NewHandlerWithWatchlist builds the HTTP handler with an optional read-only watchlist store.
+func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore) (http.Handler, error) {
 	if clock == nil {
 		clock = coreclock.System{}
 	}
@@ -63,6 +70,7 @@ func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock corecloc
 	}
 
 	mux := http.NewServeMux()
+	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
 	})

@@ -22,6 +22,9 @@ type IngestionOutcome struct {
 }
 
 // CandleIngester validates provider candles against the NSE calendar before storage.
+const defaultIngestionChunkDays = 365
+
+// CandleIngester coordinates historical provider reads, session validation, and storage.
 type CandleIngester struct {
 	provider HistoricalCandleProvider
 	writer   *CandleWriter
@@ -41,35 +44,25 @@ func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, 
 	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) || strings.TrimSpace(providerInterval) == "" || strings.TrimSpace(storageTimeframe) == "" {
 		return IngestionOutcome{SourceOutcome: "INVALID_REQUEST", ErrorMessage: "symbol, intervals, and ordered date range are required"}
 	}
-	candles, err := ingester.provider.FetchCandles(ctx, symbol, from, to, providerInterval)
-	if err != nil {
-		return IngestionOutcome{SourceOutcome: "TRANSIENT_SOURCE_FAILURE", ErrorMessage: err.Error()}
-	}
-	outcome := IngestionOutcome{SourceOutcome: "NO_USABLE_DATA", FetchedRows: len(candles)}
-	for _, candle := range candles {
-		if candle.Date.Before(from) || candle.Date.After(to) || !isValidYahooCandle(&candle) {
-			outcome.InvalidRows++
-			continue
+	outcome := IngestionOutcome{SourceOutcome: "NO_USABLE_DATA"}
+	for chunkStart := from; !chunkStart.After(to); {
+		chunkEnd := chunkStart.AddDate(0, 0, defaultIngestionChunkDays-1)
+		if chunkEnd.After(to) {
+			chunkEnd = to
 		}
-		trading, err := IsNSETradingSession(ctx, candle.Date, ingester.holidays)
-		if err != nil {
-			outcome.SourceOutcome = "TRANSIENT_SOURCE_FAILURE"
-			outcome.ErrorMessage = fmt.Errorf("check NSE session: %w", err).Error()
-			return outcome
-		}
-		if !trading {
-			outcome.InvalidRows++
-			continue
-		}
-		inserted, err := ingester.writer.InsertIfAbsent(ctx, candle, storageTimeframe)
+		candles, err := ingester.provider.FetchCandles(ctx, symbol, chunkStart, chunkEnd, providerInterval)
 		if err != nil {
 			outcome.SourceOutcome = "TRANSIENT_SOURCE_FAILURE"
 			outcome.ErrorMessage = err.Error()
 			return outcome
 		}
-		if inserted {
-			outcome.SavedRows++
+		outcome.FetchedRows += len(candles)
+		if err := ingester.storeChunk(ctx, &outcome, candles, chunkStart, chunkEnd, storageTimeframe); err != nil {
+			outcome.SourceOutcome = "TRANSIENT_SOURCE_FAILURE"
+			outcome.ErrorMessage = err.Error()
+			return outcome
 		}
+		chunkStart = chunkEnd.AddDate(0, 0, 1)
 	}
 	switch {
 	case outcome.FetchedRows == 0:
@@ -80,6 +73,31 @@ func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, 
 		outcome.SourceOutcome = "DATA_RECEIVED"
 	}
 	return outcome
+}
+
+func (ingester *CandleIngester) storeChunk(ctx context.Context, outcome *IngestionOutcome, candles []YahooCandle, from, to time.Time, timeframe string) error {
+	for _, candle := range candles {
+		if candle.Date.Before(from) || candle.Date.After(to) || !isValidYahooCandle(&candle) {
+			outcome.InvalidRows++
+			continue
+		}
+		trading, err := IsNSETradingSession(ctx, candle.Date, ingester.holidays)
+		if err != nil {
+			return fmt.Errorf("check NSE session: %w", err)
+		}
+		if !trading {
+			outcome.InvalidRows++
+			continue
+		}
+		inserted, err := ingester.writer.InsertIfAbsent(ctx, candle, timeframe)
+		if err != nil {
+			return err
+		}
+		if inserted {
+			outcome.SavedRows++
+		}
+	}
+	return nil
 }
 
 func isValidYahooCandle(candle *YahooCandle) bool {

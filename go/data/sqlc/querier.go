@@ -11,8 +11,11 @@ import (
 )
 
 type Querier interface {
+	CountDailyCandles(ctx context.Context, symbol string) (int64, error)
 	GetAppSetting(ctx context.Context, key string) (pgtype.Text, error)
+	GetEarliestDailyCandleDate(ctx context.Context, symbol string) (pgtype.Date, error)
 	GetHolidayByDate(ctx context.Context, holidayDate pgtype.Date) (GetHolidayByDateRow, error)
+	GetLatestDailyCandleDate(ctx context.Context, symbol string) (pgtype.Date, error)
 	ListActiveWatchlist(ctx context.Context) ([]Watchlist, error)
 	ListAllWatchlist(ctx context.Context) ([]Watchlist, error)
 	ListHolidaysByDateRange(ctx context.Context, arg ListHolidaysByDateRangeParams) ([]ListHolidaysByDateRangeRow, error)

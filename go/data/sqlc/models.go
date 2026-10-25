@@ -24,6 +24,22 @@ type NseHoliday struct {
 	Version     pgtype.Int4      `json:"version"`
 }
 
+type OhlcvCandle struct {
+	ID            int64            `json:"id"`
+	Symbol        string           `json:"symbol"`
+	Date          pgtype.Date      `json:"date"`
+	OpenPrice     pgtype.Numeric   `json:"open_price"`
+	HighPrice     pgtype.Numeric   `json:"high_price"`
+	LowPrice      pgtype.Numeric   `json:"low_price"`
+	ClosePrice    pgtype.Numeric   `json:"close_price"`
+	Volume        pgtype.Int8      `json:"volume"`
+	AdjClosePrice pgtype.Numeric   `json:"adj_close_price"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	Version       pgtype.Int4      `json:"version"`
+	Timeframe     string           `json:"timeframe"`
+	BarTime       pgtype.Time      `json:"bar_time"`
+}
+
 type Watchlist struct {
 	ID           int64            `json:"id"`
 	Symbol       string           `json:"symbol"`

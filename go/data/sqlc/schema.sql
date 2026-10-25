@@ -1,4 +1,21 @@
 -- sqlc schema subset from backend/data/src/main/resources/db/migration/V1__swing_trade_schema.sql.
+CREATE TABLE ohlcv_candles (
+    id BIGSERIAL PRIMARY KEY,
+    symbol VARCHAR(20) NOT NULL,
+    date DATE NOT NULL,
+    open_price NUMERIC(15,4),
+    high_price NUMERIC(15,4),
+    low_price NUMERIC(15,4),
+    close_price NUMERIC(15,4),
+    volume BIGINT,
+    adj_close_price NUMERIC(15,4),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER,
+    timeframe VARCHAR(10) NOT NULL DEFAULT 'D',
+    bar_time TIME NOT NULL DEFAULT '00:00:00',
+    CONSTRAINT uq_ohlcv_candles_symbol_timeframe_date_bar_time UNIQUE (symbol, timeframe, date, bar_time)
+);
+
 CREATE TABLE watchlist (
     id BIGSERIAL PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL UNIQUE,

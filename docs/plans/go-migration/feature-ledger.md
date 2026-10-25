@@ -703,3 +703,4 @@ implementation above covers both Java classes, pinned by
 `TestAdvancedTechnicalIndicatorsClassBehaviors`. The `BigDecimal` and `Double`
 variants of the core indicators likewise share one Go implementation each,
 contract-tested alongside the primary suites.
+| F-STRAT-IND-11 | gate | `DataQualityGate#evaluate` | strategy | Blocks excluded symbols before a portfolio run: empty window, non-positive prices, >8% missing Mon-Fri bars (holiday-blind by design), and the >40% unadjusted-split heuristic computed as BigDecimal divide scale6 HALF_UP | `DataQualityGateTest` (4 tests) | strategy/data_quality_gate.go | parity-pending |

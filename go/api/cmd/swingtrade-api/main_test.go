@@ -307,6 +307,10 @@ func (stubCandles) CandleExistsOnDate(context.Context, string, time.Time) (bool,
 	return false, nil
 }
 
+func (stubCandles) LatestIntervalCandleDate(context.Context, string, string) (*time.Time, error) {
+	return nil, nil
+}
+
 type execStub struct{}
 
 func (execStub) Exec(context.Context, string, ...any) (pgconn.CommandTag, error) {
@@ -383,3 +387,37 @@ type stubSymbolMasterJob struct{}
 func (stubSymbolMasterJob) Refresh(context.Context) (int, error) { return 0, nil }
 
 func (stubSymbolMasterJob) CountSymbols(context.Context) (int64, error) { return 0, nil }
+
+func TestStartIntradayIngestionJobDoesNothingWhenDisabled(t *testing.T) {
+	err := startIntradayIngestionJob(context.Background(), slog.New(slog.NewTextHandler(io.Discard, nil)),
+		config.Config{}, stubWatchlist{}, stubHolidayStore{}, stubCandles{}, writerStub(t), stubLock)
+	if err != nil {
+		t.Fatalf("startIntradayIngestionJob() error = %v", err)
+	}
+}
+
+func TestStartIntradayIngestionJobStartsEnabledLoop(t *testing.T) {
+	var buffer bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buffer, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	err := startIntradayIngestionJob(ctx, logger,
+		config.Config{IntradayIngestionEnabled: true, IntradayIngestionLookbackDays: 10},
+		stubWatchlist{}, stubHolidayStore{}, stubCandles{}, writerStub(t), stubLock)
+	if err != nil {
+		t.Fatalf("startIntradayIngestionJob() error = %v", err)
+	}
+	if !strings.Contains(buffer.String(), "intraday ingestion job started") {
+		t.Fatalf("missing job start log: %s", buffer.String())
+	}
+}
+
+func TestStartIntradayIngestionJobRejectsMissingDependencies(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := startIntradayIngestionJob(context.Background(), logger,
+		config.Config{IntradayIngestionEnabled: true},
+		stubWatchlist{}, nil, stubCandles{}, writerStub(t), stubLock)
+	if err == nil {
+		t.Fatal("nil holiday store accepted")
+	}
+}

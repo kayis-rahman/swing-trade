@@ -20,6 +20,8 @@ type Config struct {
 	BenchmarkBackfillOnStartup      bool
 	BenchmarkBackfillYears          int
 	FyersSymbolMasterRefreshEnabled bool
+	IntradayIngestionEnabled        bool
+	IntradayIngestionLookbackDays   int
 }
 
 // Load reads the established Java deployment environment names through lookup.
@@ -63,6 +65,10 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	intradayEnabled, intradayLookbackDays, err := loadIntradayJobSettings(lookup)
+	if err != nil {
+		return Config{}, err
+	}
 
 	host := "127.0.0.1"
 	if value, ok := lookup("HTTP_HOST"); ok && strings.TrimSpace(value) != "" {
@@ -81,6 +87,8 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		BenchmarkBackfillOnStartup:      benchmarkBackfillOnStartup,
 		BenchmarkBackfillYears:          benchmarkBackfillYears,
 		FyersSymbolMasterRefreshEnabled: symbolMasterRefreshEnabled,
+		IntradayIngestionEnabled:        intradayEnabled,
+		IntradayIngestionLookbackDays:   intradayLookbackDays,
 	}, nil
 }
 
@@ -114,6 +122,27 @@ func loadIngestionJobSettings(lookup func(string) (string, bool)) (eodEnabled, b
 		}
 	}
 	return eodEnabled, backfillOnStartup, symbolMasterRefreshEnabled, backfillYears, nil
+}
+
+// loadIntradayJobSettings reads the Go-only intraday ingestion gates. Enabled
+// defaults false until the G8 switch even though Java's
+// intraday.ingestion.enabled defaults to true; a negative lookback is clamped
+// to zero at run time exactly like Java's Math.max(0, lookbackDays).
+func loadIntradayJobSettings(lookup func(string) (string, bool)) (enabled bool, lookbackDays int, err error) {
+	lookbackDays = 10
+	if value, ok := lookup("INTRADAY_INGESTION_ENABLED"); ok && strings.TrimSpace(value) != "" {
+		enabled, err = strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return false, 0, fmt.Errorf("INTRADAY_INGESTION_ENABLED must be a boolean: %w", err)
+		}
+	}
+	if value, ok := lookup("INTRADAY_INGESTION_LOOKBACK_DAYS"); ok && strings.TrimSpace(value) != "" {
+		lookbackDays, err = strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			return false, 0, fmt.Errorf("INTRADAY_INGESTION_LOOKBACK_DAYS must be an integer")
+		}
+	}
+	return enabled, lookbackDays, nil
 }
 
 func splitOrigins(value string) []string {

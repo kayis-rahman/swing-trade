@@ -13,8 +13,9 @@ func TestLoadUsesSafeLocalDefaults(t *testing.T) {
 	if got.APIKeyEnabled || got.APIKey != "" || got.DatabaseURL != "" || got.GPUHubAPIKeyConfigured {
 		t.Fatalf("unexpected enabled integration in defaults: %+v", got)
 	}
-	if got.EODEnabled || got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 10 || got.FyersSymbolMasterRefreshEnabled {
-		t.Fatalf("Go ingestion jobs must default off with a 10-year benchmark window: %+v", got)
+	if got.EODEnabled || got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 10 || got.FyersSymbolMasterRefreshEnabled ||
+		got.IntradayIngestionEnabled || got.IntradayIngestionLookbackDays != 10 {
+		t.Fatalf("Go ingestion jobs must default off with a 10-year benchmark and 10-day lookback: %+v", got)
 	}
 }
 
@@ -46,12 +47,15 @@ func TestLoadMapsIngestionJobSettings(t *testing.T) {
 		"BENCHMARK_BACKFILL_ON_STARTUP":       "true",
 		"BENCHMARK_BACKFILL_YEARS":            "7",
 		"FYERS_SYMBOL_MASTER_REFRESH_ENABLED": "true",
+		"INTRADAY_INGESTION_ENABLED":          "true",
+		"INTRADAY_INGESTION_LOOKBACK_DAYS":    "3",
 	}
 	got, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if !got.EODEnabled || !got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 7 || !got.FyersSymbolMasterRefreshEnabled {
+	if !got.EODEnabled || !got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 7 || !got.FyersSymbolMasterRefreshEnabled ||
+		!got.IntradayIngestionEnabled || got.IntradayIngestionLookbackDays != 3 {
 		t.Fatalf("ingestion job settings mismatch: %+v", got)
 	}
 }
@@ -66,6 +70,8 @@ func TestLoadRejectsInvalidBoundaryConfiguration(t *testing.T) {
 		"bad backfill boolean":    {"BENCHMARK_BACKFILL_ON_STARTUP": "maybe"},
 		"bad backfill years":      {"BENCHMARK_BACKFILL_YEARS": "0"},
 		"bad symbol master flag":  {"FYERS_SYMBOL_MASTER_REFRESH_ENABLED": "sometimes"},
+		"bad intraday flag":       {"INTRADAY_INGESTION_ENABLED": "later"},
+		"bad intraday lookback":   {"INTRADAY_INGESTION_LOOKBACK_DAYS": "three"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })

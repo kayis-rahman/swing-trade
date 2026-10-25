@@ -95,16 +95,27 @@ func wireIngestionJobs(
 	holidays data.HolidayReadStore,
 	watchlist data.WatchlistReadStore,
 ) error {
-	if cfg.EODEnabled || cfg.BenchmarkBackfillOnStartup {
+	if cfg.EODEnabled || cfg.BenchmarkBackfillOnStartup || cfg.IntradayIngestionEnabled {
 		writer, err := data.NewCandleWriter(pool)
 		if err != nil {
 			return fmt.Errorf("create candle writer: %w", err)
 		}
-		locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
-			return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockEODIngestion, fn)
+		candles := data.NewCandleReader(pool)
+		if cfg.EODEnabled || cfg.BenchmarkBackfillOnStartup {
+			locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
+				return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockEODIngestion, fn)
+			}
+			if err := startEODJobs(ctx, logger, cfg, settings, holidays, watchlist, candles, writer, locker); err != nil {
+				return fmt.Errorf("initialize EOD ingestion job: %w", err)
+			}
 		}
-		if err := startEODJobs(ctx, logger, cfg, settings, holidays, watchlist, data.NewCandleReader(pool), writer, locker); err != nil {
-			return fmt.Errorf("initialize EOD ingestion job: %w", err)
+		if cfg.IntradayIngestionEnabled {
+			locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
+				return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockIntradayIngestion, fn)
+			}
+			if err := startIntradayIngestionJob(ctx, logger, cfg, watchlist, holidays, candles, writer, locker); err != nil {
+				return fmt.Errorf("initialize intraday ingestion job: %w", err)
+			}
 		}
 	}
 	if cfg.FyersSymbolMasterRefreshEnabled {
@@ -120,6 +131,43 @@ func wireIngestionJobs(
 			return fmt.Errorf("initialize Fyers symbol master job: %w", err)
 		}
 	}
+	return nil
+}
+
+// startIntradayIngestionJob wires the scheduled intraday session-bar job
+// behind its Go-only gate; a disabled flag never constructs anything.
+func startIntradayIngestionJob(
+	ctx context.Context,
+	logger *slog.Logger,
+	cfg config.Config,
+	watchlist data.WatchlistReadStore,
+	holidays data.HolidayReadStore,
+	latest data.IntervalLatestStore,
+	writer *data.CandleWriter,
+	locker scheduler.Locker,
+) error {
+	if !cfg.IntradayIngestionEnabled {
+		return nil
+	}
+	client, err := data.NewYahooClient(yahooBaseURL, nil)
+	if err != nil {
+		return fmt.Errorf("create Yahoo market data client: %w", err)
+	}
+	ingestion, err := data.NewIntradayIngestion(watchlist, latest, holidays, client, writer, time.Now, logger)
+	if err != nil {
+		return err
+	}
+	scheduled, err := scheduler.NewIntradayIngestionScheduler(
+		scheduler.IntradayIngestionConfig{
+			Enabled: cfg.IntradayIngestionEnabled, LookbackDays: cfg.IntradayIngestionLookbackDays,
+		},
+		logger, time.Now, holidays, ingestion, locker,
+	)
+	if err != nil {
+		return err
+	}
+	logger.Info("intraday ingestion job started", "next_run", scheduler.NextIntradayIngestionRun(time.Now()))
+	go scheduled.StartLoop(ctx)
 	return nil
 }
 

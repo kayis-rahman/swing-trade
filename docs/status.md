@@ -1,8 +1,8 @@
 # Pre-Pilot Status
 
-Last checked: 2026-10-24 (Go Phase 2 read-surface continuation)
+Last checked: 2026-10-25 (Go Phase 2/3 migration continuation)
 
-- [ ] Added read-only Go routes for selected broker, Discord, GPUHub key configuration, trading, and scanning settings backed by sqlc/config, with Java-compatible defaults and focused data/controller tests; parity remains pending. `./bin/go-verify` passed all Go modules, including authorized development-database tests, race, coverage, vet, lint, vulnerability, and architecture checks. The Playwright parity test is not a gate per captain direction and was not rerun. Phase 2's remaining read endpoints and broader deterministic replay corpus remain incomplete; the comparator now replays a fixed `/api/watchlist/all` response pair. No Phase 3 work is claimed.
+- [ ] Added read-only Go routes for selected broker, Discord, GPUHub key configuration, trading, and scanning settings backed by sqlc/config, with Java-compatible defaults and focused data/controller tests; parity remains pending. `./bin/go-verify` passed all Go modules, including authorized development-database tests, race, coverage, vet, lint, vulnerability, and architecture checks. The Playwright parity test is not a gate per captain direction and was not rerun. Phase 2's remaining read endpoints and broader deterministic replay corpus remain incomplete; the comparator replays a fixed `/api/watchlist/all` response pair. Started a Phase 3 data slice with Java-compatible NSE 15-minute session bar starts and focused tests; Phase 3 remains incomplete.
 
 Last checked: 2026-10-24 (Go Phase 2 health, holiday, and watchlist read slices)
 

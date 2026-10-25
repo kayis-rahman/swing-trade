@@ -676,3 +676,16 @@ G0 was waived by the captain; these incomplete areas are retained as future migr
 
 Method for each: read the Java class, name the target Go file per [standards.md](standards.md) (Java class → named
 Go file or type), and record the Java tests. The endpoint, job and metric rows above are the template.
+
+## 12. Indicator rows (F-STRAT-IND)
+
+Expanded incrementally as indicators are ported; the remaining indicator,
+strategy, gate, and engine rows stay in the section 11 areas until their
+slices land.
+
+| ID | Kind | Java source | Module | Port notes | Java tests | Go path | Status |
+|---|---|---|---|---|---|---|---|
+| F-STRAT-IND-01 | indicator | `TechnicalIndicators#calculateSMA` | strategy | TA4J SMA: mean of the last `period` closes; float path | `TechnicalIndicatorsTest#CalculateSMATests` (5 methods), `#CalculateSMADoubleTests` | strategy/indicators.go | parity-pending |
+| F-STRAT-IND-02 | indicator | `TechnicalIndicators#calculateEMA` | strategy | TA4J EMA seeded at the first close, multiplier `2/(period+1)` | `TechnicalIndicatorsTest#CalculateEMATests` (5 methods), `#CalculateEMADoubleTests` | strategy/indicators.go | parity-pending |
+| F-STRAT-IND-03 | indicator | `TechnicalIndicators#calculateRSI` | strategy | TA4J Wilder averages (MMA multiplier `1/period`, zero seed) with the zero-average-loss boundaries and `100 - 100/(1+rs)` ordering | `TechnicalIndicatorsTest#CalculateRSITests` (6 methods), `#CalculateRSIDoubleTests` | strategy/indicators.go | parity-pending |
+| F-STRAT-IND-04 | indicator | `TechnicalIndicators#calculateVolumeMA` | strategy | SMA over the volume series with the `VolumeMA period must be positive` guard message | `TechnicalIndicatorsTest#CalculateVolumeMABigDecimalTests`, `#CalculateVolumeMADoubleTests` | strategy/indicators.go | parity-pending |

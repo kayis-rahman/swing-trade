@@ -12,15 +12,22 @@ import (
 
 type Querier interface {
 	CountDailyCandles(ctx context.Context, symbol string) (int64, error)
+	CountFyersSymbols(ctx context.Context) (int64, error)
 	DailyCandleExists(ctx context.Context, arg DailyCandleExistsParams) (bool, error)
+	DeleteAllFyersSymbols(ctx context.Context) error
+	FindFyersSymbolsByTradingSymbol(ctx context.Context, upper interface{}) ([]FyersSymbolMaster, error)
 	GetAppSetting(ctx context.Context, key string) (pgtype.Text, error)
 	GetEarliestDailyCandleDate(ctx context.Context, symbol string) (pgtype.Date, error)
 	GetHolidayByDate(ctx context.Context, holidayDate pgtype.Date) (GetHolidayByDateRow, error)
 	GetLatestDailyCandleDate(ctx context.Context, symbol string) (pgtype.Date, error)
+	InsertFyersSymbol(ctx context.Context, arg InsertFyersSymbolParams) error
 	ListActiveWatchlist(ctx context.Context) ([]Watchlist, error)
 	ListAllWatchlist(ctx context.Context) ([]Watchlist, error)
+	ListFyersSymbolsByExchange(ctx context.Context, upper interface{}) ([]FyersSymbolMaster, error)
+	ListFyersTradingSymbols(ctx context.Context) ([]string, error)
 	ListHolidaysByDateRange(ctx context.Context, arg ListHolidaysByDateRangeParams) ([]ListHolidaysByDateRangeRow, error)
 	ListUpcomingHolidays(ctx context.Context, holidayDate pgtype.Date) ([]ListUpcomingHolidaysRow, error)
+	SearchFyersSymbols(ctx context.Context, arg SearchFyersSymbolsParams) ([]FyersSymbolMaster, error)
 }
 
 var _ Querier = (*Queries)(nil)

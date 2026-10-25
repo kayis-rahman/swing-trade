@@ -15,6 +15,20 @@ type AppSetting struct {
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
+type FyersSymbolMaster struct {
+	ID            int64            `json:"id"`
+	FyToken       string           `json:"fy_token"`
+	FyersSymbol   string           `json:"fyers_symbol"`
+	TradingSymbol string           `json:"trading_symbol"`
+	Name          pgtype.Text      `json:"name"`
+	Exchange      string           `json:"exchange"`
+	Segment       pgtype.Text      `json:"segment"`
+	LotSize       pgtype.Int4      `json:"lot_size"`
+	TickSize      pgtype.Numeric   `json:"tick_size"`
+	Isin          pgtype.Text      `json:"isin"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+}
+
 type NseHoliday struct {
 	ID          int64            `json:"id"`
 	HolidayDate pgtype.Date      `json:"holiday_date"`

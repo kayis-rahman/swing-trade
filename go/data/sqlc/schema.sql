@@ -42,3 +42,20 @@ CREATE TABLE nse_holidays (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version INTEGER
 );
+
+CREATE TABLE fyers_symbol_master (
+    id BIGSERIAL PRIMARY KEY,
+    fy_token VARCHAR(32) NOT NULL UNIQUE,
+    fyers_symbol VARCHAR(64) NOT NULL,
+    trading_symbol VARCHAR(32) NOT NULL,
+    name TEXT,
+    exchange VARCHAR(16) NOT NULL DEFAULT 'NSE',
+    segment VARCHAR(16),
+    lot_size INTEGER,
+    tick_size NUMERIC(10,4),
+    isin VARCHAR(13),
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX ux_fyers_symbol_master_symbol ON fyers_symbol_master (fyers_symbol);
+CREATE INDEX ix_fyers_symbol_master_trading ON fyers_symbol_master (trading_symbol);

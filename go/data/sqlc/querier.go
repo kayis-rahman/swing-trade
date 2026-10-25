@@ -24,9 +24,11 @@ type Querier interface {
 	InsertFyersSymbol(ctx context.Context, arg InsertFyersSymbolParams) error
 	ListActiveWatchlist(ctx context.Context) ([]Watchlist, error)
 	ListAllWatchlist(ctx context.Context) ([]Watchlist, error)
+	ListDailyCandlesInDateRange(ctx context.Context, arg ListDailyCandlesInDateRangeParams) ([]ListDailyCandlesInDateRangeRow, error)
 	ListFyersSymbolsByExchange(ctx context.Context, upper interface{}) ([]FyersSymbolMaster, error)
 	ListFyersTradingSymbols(ctx context.Context) ([]string, error)
 	ListHolidaysByDateRange(ctx context.Context, arg ListHolidaysByDateRangeParams) ([]ListHolidaysByDateRangeRow, error)
+	ListNseCalendarCoverageYears(ctx context.Context, arg ListNseCalendarCoverageYearsParams) ([]ListNseCalendarCoverageYearsRow, error)
 	ListUpcomingHolidays(ctx context.Context, holidayDate pgtype.Date) ([]ListUpcomingHolidaysRow, error)
 	SearchFyersSymbols(ctx context.Context, arg SearchFyersSymbolsParams) ([]FyersSymbolMaster, error)
 }

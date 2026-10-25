@@ -29,6 +29,13 @@ type FyersSymbolMaster struct {
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 }
 
+type NseCalendarCoverage struct {
+	CalendarYear int32            `json:"calendar_year"`
+	Status       string           `json:"status"`
+	Source       pgtype.Text      `json:"source"`
+	VerifiedAt   pgtype.Timestamp `json:"verified_at"`
+}
+
 type NseHoliday struct {
 	ID          int64            `json:"id"`
 	HolidayDate pgtype.Date      `json:"holiday_date"`

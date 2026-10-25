@@ -53,6 +53,7 @@ func run(ctx context.Context) error {
 	var holidayReader data.HolidayReadStore
 	var settingsReader data.SettingsReadStore
 	var ingestionStatus data.IngestionStatusLookup
+	var reconciliation data.ReconciliationPreview
 	if cfg.DatabaseURL != "" {
 		pool, err := db.NewLocalOrReadOnlyPool(ctx, cfg.DatabaseURL)
 		if err != nil {
@@ -67,12 +68,23 @@ func run(ctx context.Context) error {
 			return fmt.Errorf("create ingestion status service: %w", err)
 		}
 		ingestionStatus = status
+		sourceClient, err := data.NewYahooClient(yahooBaseURL, nil)
+		if err != nil {
+			return fmt.Errorf("create Yahoo market data client: %w", err)
+		}
+		preview, err := data.NewReconciler(
+			data.NewCoverageReader(pool), holidayReader, data.NewCandleReader(pool), sourceClient,
+		)
+		if err != nil {
+			return fmt.Errorf("create reconciliation preview: %w", err)
+		}
+		reconciliation = preview
 		if err := wireIngestionJobs(ctx, logger, cfg, pool, settingsReader, holidayReader, watchlistReader); err != nil {
 			return err
 		}
 	}
 
-	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader, settingsReader, ingestionStatus)
+	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader, settingsReader, ingestionStatus, reconciliation)
 	if err != nil {
 		return fmt.Errorf("initialize HTTP platform: %w", err)
 	}

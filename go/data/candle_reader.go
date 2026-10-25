@@ -88,3 +88,31 @@ func dateValue(value pgtype.Date) *time.Time {
 	date := value.Time
 	return &date
 }
+
+// DailyCandleRow is one stored daily candle identity in a reconciliation range.
+type DailyCandleRow struct {
+	ID   int64
+	Date time.Time
+}
+
+// DailyCandlesInRange returns the stored daily rows for a symbol and inclusive
+// date range, ordered newest first like Java's findBySymbolAndDateRange.
+func (reader *CandleReader) DailyCandlesInRange(ctx context.Context, symbol string, from, to time.Time) ([]DailyCandleRow, error) {
+	rows, err := reader.queries.ListDailyCandlesInDateRange(ctx, sqlc.ListDailyCandlesInDateRangeParams{
+		Symbol: symbol,
+		Date:   pgtype.Date{Time: from, Valid: true},
+		Date_2: pgtype.Date{Time: to, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list daily candles in range: %w", err)
+	}
+	result := make([]DailyCandleRow, 0, len(rows))
+	for _, row := range rows {
+		date := dateValue(row.Date)
+		if date == nil {
+			continue
+		}
+		result = append(result, DailyCandleRow{ID: row.ID, Date: *date})
+	}
+	return result, nil
+}

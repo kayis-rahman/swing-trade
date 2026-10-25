@@ -134,3 +134,34 @@ func TestCandleReaderLatestIntervalDateAndEmptyResult(t *testing.T) {
 		t.Fatalf("empty latest = %v, %v", got, err)
 	}
 }
+
+func TestCandleReaderListsDailyCandlesInRange(t *testing.T) {
+	from := time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 9, 18, 0, 0, 0, 0, time.UTC)
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+	mock.ExpectQuery("date BETWEEN").WithArgs("TCS", pgtype.Date{Time: from, Valid: true}, pgtype.Date{Time: to, Valid: true}).
+		WillReturnRows(pgxmock.NewRows([]string{"id", "date"}).
+			AddRow(int64(2), pgtype.Date{Time: to, Valid: true}).
+			AddRow(int64(1), pgtype.Date{Time: from, Valid: true}))
+	rows, err := NewCandleReader(mock).DailyCandlesInRange(context.Background(), "TCS", from, to)
+	if err != nil || len(rows) != 2 || rows[0].ID != 2 || !rows[0].Date.Equal(to) || rows[1].ID != 1 {
+		t.Fatalf("range rows = %+v, %v", rows, err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+
+	failMock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer failMock.Close()
+	failMock.ExpectQuery("date BETWEEN").WillReturnError(errors.New("db down"))
+	if _, err := NewCandleReader(failMock).DailyCandlesInRange(context.Background(), "TCS", from, to); err == nil {
+		t.Fatal("range error = nil")
+	}
+}

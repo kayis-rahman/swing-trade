@@ -59,3 +59,10 @@ CREATE TABLE fyers_symbol_master (
 
 CREATE UNIQUE INDEX ux_fyers_symbol_master_symbol ON fyers_symbol_master (fyers_symbol);
 CREATE INDEX ix_fyers_symbol_master_trading ON fyers_symbol_master (trading_symbol);
+
+CREATE TABLE nse_calendar_coverage (
+    calendar_year INTEGER PRIMARY KEY,
+    status VARCHAR(16) NOT NULL CHECK (status IN ('VERIFIED', 'PENDING')),
+    source VARCHAR(255),
+    verified_at TIMESTAMP
+);

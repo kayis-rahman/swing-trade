@@ -30,3 +30,9 @@ FROM ohlcv_candles
 WHERE symbol = $1 AND timeframe = $2
 ORDER BY date DESC
 LIMIT 1;
+
+-- name: ListDailyCandlesInDateRange :many
+SELECT id, date
+FROM ohlcv_candles
+WHERE symbol = $1 AND timeframe = 'D' AND date BETWEEN $2 AND $3
+ORDER BY date DESC;

@@ -93,3 +93,41 @@ func (q *Queries) GetLatestIntervalCandleDate(ctx context.Context, arg GetLatest
 	err := row.Scan(&date)
 	return date, err
 }
+
+const listDailyCandlesInDateRange = `-- name: ListDailyCandlesInDateRange :many
+SELECT id, date
+FROM ohlcv_candles
+WHERE symbol = $1 AND timeframe = 'D' AND date BETWEEN $2 AND $3
+ORDER BY date DESC
+`
+
+type ListDailyCandlesInDateRangeParams struct {
+	Symbol string      `json:"symbol"`
+	Date   pgtype.Date `json:"date"`
+	Date_2 pgtype.Date `json:"date_2"`
+}
+
+type ListDailyCandlesInDateRangeRow struct {
+	ID   int64       `json:"id"`
+	Date pgtype.Date `json:"date"`
+}
+
+func (q *Queries) ListDailyCandlesInDateRange(ctx context.Context, arg ListDailyCandlesInDateRangeParams) ([]ListDailyCandlesInDateRangeRow, error) {
+	rows, err := q.db.Query(ctx, listDailyCandlesInDateRange, arg.Symbol, arg.Date, arg.Date_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDailyCandlesInDateRangeRow{}
+	for rows.Next() {
+		var i ListDailyCandlesInDateRangeRow
+		if err := rows.Scan(&i.ID, &i.Date); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

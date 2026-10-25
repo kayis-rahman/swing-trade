@@ -13,7 +13,7 @@ func TestLoadUsesSafeLocalDefaults(t *testing.T) {
 	if got.APIKeyEnabled || got.APIKey != "" || got.DatabaseURL != "" || got.GPUHubAPIKeyConfigured {
 		t.Fatalf("unexpected enabled integration in defaults: %+v", got)
 	}
-	if got.EODEnabled || got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 10 {
+	if got.EODEnabled || got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 10 || got.FyersSymbolMasterRefreshEnabled {
 		t.Fatalf("Go ingestion jobs must default off with a 10-year benchmark window: %+v", got)
 	}
 }
@@ -42,15 +42,16 @@ func TestLoadMapsExistingJavaEnvironmentProperties(t *testing.T) {
 
 func TestLoadMapsIngestionJobSettings(t *testing.T) {
 	values := map[string]string{
-		"EOD_INGESTION_ENABLED":         "true",
-		"BENCHMARK_BACKFILL_ON_STARTUP": "true",
-		"BENCHMARK_BACKFILL_YEARS":      "7",
+		"EOD_INGESTION_ENABLED":               "true",
+		"BENCHMARK_BACKFILL_ON_STARTUP":       "true",
+		"BENCHMARK_BACKFILL_YEARS":            "7",
+		"FYERS_SYMBOL_MASTER_REFRESH_ENABLED": "true",
 	}
 	got, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if !got.EODEnabled || !got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 7 {
+	if !got.EODEnabled || !got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 7 || !got.FyersSymbolMasterRefreshEnabled {
 		t.Fatalf("ingestion job settings mismatch: %+v", got)
 	}
 }
@@ -64,6 +65,7 @@ func TestLoadRejectsInvalidBoundaryConfiguration(t *testing.T) {
 		"bad eod boolean":         {"EOD_INGESTION_ENABLED": "later"},
 		"bad backfill boolean":    {"BENCHMARK_BACKFILL_ON_STARTUP": "maybe"},
 		"bad backfill years":      {"BENCHMARK_BACKFILL_YEARS": "0"},
+		"bad symbol master flag":  {"FYERS_SYMBOL_MASTER_REFRESH_ENABLED": "sometimes"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })

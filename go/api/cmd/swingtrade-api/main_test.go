@@ -224,6 +224,7 @@ func TestRunWiresEODJobsWithAuthorizedDatabase(t *testing.T) {
 	setLocalEnvironment(t, port)
 	t.Setenv("DATABASE_URL", databaseURL)
 	t.Setenv("EOD_INGESTION_ENABLED", "true")
+	t.Setenv("FYERS_SYMBOL_MASTER_REFRESH_ENABLED", "true")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -322,3 +323,63 @@ func writerStub(t *testing.T) *data.CandleWriter {
 }
 
 func stubLock(context.Context, func(context.Context) error) (bool, error) { return true, nil }
+
+func TestStartSymbolMasterJobDoesNothingWhenDisabled(t *testing.T) {
+	settings := &countingSettings{broker: "fyers"}
+	err := startSymbolMasterJob(context.Background(), slog.New(slog.NewTextHandler(io.Discard, nil)),
+		config.Config{}, settings, stubSymbolMasterJob{}, stubLock)
+	if err != nil {
+		t.Fatalf("startSymbolMasterJob() error = %v", err)
+	}
+	if settings.calls() != 0 {
+		t.Fatalf("disabled job read settings %d times", settings.calls())
+	}
+}
+
+func TestStartSymbolMasterJobStartsEnabledGates(t *testing.T) {
+	var buffer bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buffer, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	err := startSymbolMasterJob(ctx, logger,
+		config.Config{FyersSymbolMasterRefreshEnabled: true},
+		stubSettings{broker: "yahoo"}, stubSymbolMasterJob{}, stubLock)
+	if err != nil {
+		t.Fatalf("startSymbolMasterJob() error = %v", err)
+	}
+	if !strings.Contains(buffer.String(), "Fyers symbol master refresh job started") {
+		t.Fatalf("missing job start log: %s", buffer.String())
+	}
+}
+
+func TestStartSymbolMasterJobRejectsMissingJob(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	err := startSymbolMasterJob(context.Background(), logger,
+		config.Config{FyersSymbolMasterRefreshEnabled: true},
+		stubSettings{broker: "fyers"}, nil, stubLock)
+	if err == nil {
+		t.Fatal("nil symbol master accepted")
+	}
+}
+
+type countingSettings struct {
+	broker string
+	read   int
+}
+
+func (s *countingSettings) GetSetting(context.Context, string) (string, bool, error) {
+	return "", false, nil
+}
+
+func (s *countingSettings) GetSelectedBroker(context.Context) (string, error) {
+	s.read++
+	return s.broker, nil
+}
+
+func (s *countingSettings) calls() int { return s.read }
+
+type stubSymbolMasterJob struct{}
+
+func (stubSymbolMasterJob) Refresh(context.Context) (int, error) { return 0, nil }
+
+func (stubSymbolMasterJob) CountSymbols(context.Context) (int64, error) { return 0, nil }

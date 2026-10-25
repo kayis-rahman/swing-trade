@@ -14,6 +14,7 @@ The Go executable starts on loopback by default and exposes infrastructure route
 | `EOD_INGESTION_ENABLED` | Go-only job gate over Java's `data.eod.ingestion.enabled` | `false`; Go jobs stay off until the G8 switch even though Java defaults to `true`; starts the weekday 16:30 IST EOD loop when `DATABASE_URL` is set |
 | `BENCHMARK_BACKFILL_ON_STARTUP` | Go-only job gate over Java's `benchmark.backfill.on-startup` | `false`; startup NIFTY50 backfill requires this plus `DATABASE_URL` |
 | `BENCHMARK_BACKFILL_YEARS` | Go-only setting over Java's `benchmark.backfill.years` | `10`; positive integer |
+| `FYERS_SYMBOL_MASTER_REFRESH_ENABLED` | Go-only job gate; Java has no equivalent and refreshes whenever Fyers is active | `false`; starts the weekday 08:45 IST refresh loop and the startup refresh-when-empty path when `DATABASE_URL` is set, and only when `selectedBroker` is `fyers` |
 | `SPRING_DATASOURCE_URL` | `spring.datasource.url` | Read at test runtime from the authorized, gitignored worktree env file; the verifier rejects non-dev targets |
 | `SPRING_DATASOURCE_USERNAME` | `spring.datasource.username` | Read at test runtime only; never printed |
 | `SPRING_DATASOURCE_PASSWORD` | `spring.datasource.password` | Read at test runtime only; never printed |

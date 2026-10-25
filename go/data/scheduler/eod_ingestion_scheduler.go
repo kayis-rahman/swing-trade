@@ -245,11 +245,22 @@ func (s *EodIngestionScheduler) EnsureNiftyBenchmarkHistory(ctx context.Context)
 // StartLoop sleeps until the next weekday 16:30 IST fire time and runs the job
 // until ctx is cancelled.
 func (s *EodIngestionScheduler) StartLoop(ctx context.Context) {
+	runOnSchedule(ctx, s.waitFor, s.now, NextEodRun, s.IngestLatestForAll)
+}
+
+// runOnSchedule waits for each computed fire time and runs the job until ctx ends.
+func runOnSchedule(
+	ctx context.Context,
+	waitFor func(context.Context, time.Time) error,
+	now func() time.Time,
+	nextRun func(time.Time) time.Time,
+	run func(context.Context),
+) {
 	for ctx.Err() == nil {
-		if err := s.waitFor(ctx, NextEodRun(s.now())); err != nil {
+		if err := waitFor(ctx, nextRun(now())); err != nil {
 			return
 		}
-		s.IngestLatestForAll(ctx)
+		run(ctx)
 	}
 }
 
@@ -267,11 +278,21 @@ func waitForDeadline(ctx context.Context, deadline time.Time) error {
 
 // NextEodRun returns the next weekday 16:30 IST time strictly after now.
 func NextEodRun(now time.Time) time.Time {
+	return nextWeekdayFire(now, 16, 30)
+}
+
+// NextFyersSymbolMasterRun returns the next weekday 08:45 IST time strictly after now.
+func NextFyersSymbolMasterRun(now time.Time) time.Time {
+	return nextWeekdayFire(now, 8, 45)
+}
+
+// nextWeekdayFire returns the next weekday hour:minute IST strictly after now.
+func nextWeekdayFire(now time.Time, hour, minute int) time.Time {
 	local := now.In(ist)
-	next := time.Date(local.Year(), local.Month(), local.Day(), 16, 30, 0, 0, ist)
+	next := time.Date(local.Year(), local.Month(), local.Day(), hour, minute, 0, 0, ist)
 	for !next.After(now) || next.Weekday() == time.Saturday || next.Weekday() == time.Sunday {
 		next = next.AddDate(0, 0, 1)
-		next = time.Date(next.Year(), next.Month(), next.Day(), 16, 30, 0, 0, ist)
+		next = time.Date(next.Year(), next.Month(), next.Day(), hour, minute, 0, 0, ist)
 	}
 	return next
 }

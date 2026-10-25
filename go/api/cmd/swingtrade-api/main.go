@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/kayis-rahman/swing-trade/go/api"
 	coreclock "github.com/kayis-rahman/swing-trade/go/core/clock"
 	"github.com/kayis-rahman/swing-trade/go/core/config"
@@ -59,18 +61,8 @@ func run(ctx context.Context) error {
 		watchlistReader = data.NewWatchlistReader(pool)
 		holidayReader = data.NewHolidayReader(pool)
 		settingsReader = data.NewSettingsReader(pool)
-		candleReader := data.NewCandleReader(pool)
-		if cfg.EODEnabled || cfg.BenchmarkBackfillOnStartup {
-			writer, err := data.NewCandleWriter(pool)
-			if err != nil {
-				return fmt.Errorf("create candle writer: %w", err)
-			}
-			locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
-				return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockEODIngestion, fn)
-			}
-			if err := startEODJobs(ctx, logger, cfg, settingsReader, holidayReader, watchlistReader, candleReader, writer, locker); err != nil {
-				return fmt.Errorf("initialize EOD ingestion job: %w", err)
-			}
+		if err := wireIngestionJobs(ctx, logger, cfg, pool, settingsReader, holidayReader, watchlistReader); err != nil {
+			return err
 		}
 	}
 
@@ -90,6 +82,45 @@ func run(ctx context.Context) error {
 	}
 	logger.Info("API listening", "addr", cfg.HTTPAddr)
 	return serveHTTP(ctx, server, listener)
+}
+
+// wireIngestionJobs starts every explicitly enabled Go data job against the
+// live pool; disabled gates construct nothing.
+func wireIngestionJobs(
+	ctx context.Context,
+	logger *slog.Logger,
+	cfg config.Config,
+	pool *pgxpool.Pool,
+	settings data.SettingsReadStore,
+	holidays data.HolidayReadStore,
+	watchlist data.WatchlistReadStore,
+) error {
+	if cfg.EODEnabled || cfg.BenchmarkBackfillOnStartup {
+		writer, err := data.NewCandleWriter(pool)
+		if err != nil {
+			return fmt.Errorf("create candle writer: %w", err)
+		}
+		locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
+			return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockEODIngestion, fn)
+		}
+		if err := startEODJobs(ctx, logger, cfg, settings, holidays, watchlist, data.NewCandleReader(pool), writer, locker); err != nil {
+			return fmt.Errorf("initialize EOD ingestion job: %w", err)
+		}
+	}
+	if cfg.FyersSymbolMasterRefreshEnabled {
+		symbolMaster, err := data.NewFyersSymbolMaster(
+			data.NewFyersSymbolMasterClient(nil), data.NewFyersSymbolStore(pool), time.Now, logger)
+		if err != nil {
+			return fmt.Errorf("create Fyers symbol master service: %w", err)
+		}
+		locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
+			return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockFyersSymbolMaster, fn)
+		}
+		if err := startSymbolMasterJob(ctx, logger, cfg, settings, symbolMaster, locker); err != nil {
+			return fmt.Errorf("initialize Fyers symbol master job: %w", err)
+		}
+	}
+	return nil
 }
 
 // eodCandles is the daily-candle read surface the EOD ingestion job needs.
@@ -150,6 +181,36 @@ func startEODJobs(
 		logger.Info("EOD ingestion job loop started", "next_run", scheduler.NextEodRun(time.Now()))
 		go job.StartLoop(ctx)
 	}
+	return nil
+}
+
+// startSymbolMasterJob wires the symbol master refresh job behind its Go-only
+// gate; a disabled flag never constructs or starts anything.
+func startSymbolMasterJob(
+	ctx context.Context,
+	logger *slog.Logger,
+	cfg config.Config,
+	settings data.SettingsReadStore,
+	job scheduler.SymbolMasterJob,
+	locker scheduler.Locker,
+) error {
+	if !cfg.FyersSymbolMasterRefreshEnabled {
+		return nil
+	}
+	master, err := scheduler.NewFyersSymbolMasterScheduler(
+		scheduler.FyersSymbolMasterConfig{Enabled: cfg.FyersSymbolMasterRefreshEnabled},
+		logger,
+		time.Now,
+		func(ctx context.Context) (string, error) { return settings.GetSelectedBroker(ctx) },
+		job,
+		locker,
+	)
+	if err != nil {
+		return err
+	}
+	logger.Info("Fyers symbol master refresh job started", "next_run", scheduler.NextFyersSymbolMasterRun(time.Now()))
+	go master.RefreshIfEmpty(ctx)
+	go master.StartLoop(ctx)
 	return nil
 }
 

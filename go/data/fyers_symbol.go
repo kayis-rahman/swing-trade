@@ -380,6 +380,11 @@ func NewFyersSymbolMaster(client FyersSymbolCSVDownloader, store FyersSymbolRepl
 	return &FyersSymbolMaster{client: client, store: store, now: now, logger: logger}, nil
 }
 
+// CountSymbols returns the stored symbol-master size, mirroring Java's count().
+func (master *FyersSymbolMaster) CountSymbols(ctx context.Context) (int64, error) {
+	return master.store.CountFyersSymbols(ctx)
+}
+
 // Refresh downloads the master and replaces the stored rows. A failed or empty
 // download never reaches the wipe, matching Java's early return, while a
 // persistence failure aborts the transaction.

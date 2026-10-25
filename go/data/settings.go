@@ -14,7 +14,7 @@ const defaultSelectedBroker = "yahoo"
 
 // SettingsReadStore exposes read-only application settings needed by API reads.
 type SettingsReadStore interface {
-	GetSetting(context.Context, string) (string, error)
+	GetSetting(context.Context, string) (string, bool, error)
 	GetSelectedBroker(context.Context) (string, error)
 }
 
@@ -30,29 +30,29 @@ func NewSettingsReader(db sqlc.DBTX) *SettingsReader {
 
 // GetSelectedBroker matches the Java provider's default and invalid-value fallback.
 func (r *SettingsReader) GetSelectedBroker(ctx context.Context) (string, error) {
-	setting, err := r.GetSetting(ctx, "selectedBroker")
+	setting, found, err := r.GetSetting(ctx, "selectedBroker")
 	if err != nil {
 		return "", fmt.Errorf("get selected broker setting: %w", err)
 	}
-	if !isSupportedBroker(setting) {
+	if !found || !isSupportedBroker(setting) {
 		return defaultSelectedBroker, nil
 	}
 	return setting, nil
 }
 
-// GetSetting returns the persisted value, or an empty string when it is missing or null.
-func (r *SettingsReader) GetSetting(ctx context.Context, key string) (string, error) {
+// GetSetting returns the persisted value and whether the row contains a non-null value.
+func (r *SettingsReader) GetSetting(ctx context.Context, key string) (string, bool, error) {
 	setting, err := r.queries.GetAppSetting(ctx, key)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+		return "", false, nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("get app setting %q: %w", key, err)
+		return "", false, fmt.Errorf("get app setting %q: %w", key, err)
 	}
 	if !setting.Valid {
-		return "", nil
+		return "", false, nil
 	}
-	return setting.String, nil
+	return setting.String, true, nil
 }
 
 func isSupportedBroker(value string) bool {

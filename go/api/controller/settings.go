@@ -8,51 +8,87 @@ import (
 	"github.com/kayis-rahman/swing-trade/go/data"
 )
 
-// RegisterSettingsRoutes registers the read-only selected-provider settings endpoint.
+// RegisterSettingsRoutes registers read-only settings endpoints.
 func RegisterSettingsRoutes(mux *http.ServeMux, store data.SettingsReadStore, logger *slog.Logger, clk clock.Clock) {
 	mux.HandleFunc("GET /api/settings", func(w http.ResponseWriter, r *http.Request) {
-		if store == nil {
-			writeResponseJSON(w, http.StatusServiceUnavailable, apiEnvelope{
-				Data: nil, Error: stringValuePtr("settings data store is unavailable"), Timestamp: javaLocalDateTime(clk.Now()),
-			})
+		if unavailable(w, store, clk) {
 			return
 		}
 		broker, err := store.GetSelectedBroker(r.Context())
 		if err != nil {
-			logger.ErrorContext(r.Context(), "settings read failed", "module", "api")
-			writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
-				Data: nil, Error: stringValuePtr("Unable to read settings"), Timestamp: javaLocalDateTime(clk.Now()),
-			})
+			writeSettingsReadError(w, r, logger, clk)
 			return
 		}
-		writeResponseJSON(w, http.StatusOK, apiEnvelope{
-			Data: map[string]string{"selectedBroker": broker}, Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
-		})
+		writeSettingsResponse(w, clk, map[string]string{"selectedBroker": broker})
 	})
 	mux.HandleFunc("GET /api/settings/discord", func(w http.ResponseWriter, r *http.Request) {
-		if store == nil {
-			writeResponseJSON(w, http.StatusServiceUnavailable, apiEnvelope{
-				Data: nil, Error: stringValuePtr("settings data store is unavailable"), Timestamp: javaLocalDateTime(clk.Now()),
-			})
+		if unavailable(w, store, clk) {
 			return
 		}
-		webhookURL, err := store.GetSetting(r.Context(), "discord.webhook.url")
-		if err != nil {
-			writeSettingsReadError(w, r, logger, clk)
-			return
-		}
-		webhookEnabled, err := store.GetSetting(r.Context(), "discord.webhook.enabled")
-		if err != nil {
-			writeSettingsReadError(w, r, logger, clk)
-			return
-		}
-		if webhookEnabled == "" {
-			webhookEnabled = "false"
-		}
-		writeResponseJSON(w, http.StatusOK, apiEnvelope{
-			Data:  map[string]string{"discord.webhook.url": webhookURL, "discord.webhook.enabled": webhookEnabled},
-			Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
+		settings, err := readSettings(r, store, map[string]string{
+			"discord.webhook.url": "", "discord.webhook.enabled": "false",
 		})
+		if err != nil {
+			writeSettingsReadError(w, r, logger, clk)
+			return
+		}
+		writeSettingsResponse(w, clk, settings)
+	})
+	mux.HandleFunc("GET /api/settings/trading", func(w http.ResponseWriter, r *http.Request) {
+		if unavailable(w, store, clk) {
+			return
+		}
+		settings, err := readSettings(r, store, map[string]string{
+			"trading.mode": "paper", "trading.max_position_size": "10", "trading.stop_loss": "5",
+			"trading.take_profit": "15", "trading.allocation_per_position": "100000", "trading.initial_capital": "500000",
+		})
+		if err != nil {
+			writeSettingsReadError(w, r, logger, clk)
+			return
+		}
+		writeSettingsResponse(w, clk, settings)
+	})
+	mux.HandleFunc("GET /api/settings/scanning", func(w http.ResponseWriter, r *http.Request) {
+		if unavailable(w, store, clk) {
+			return
+		}
+		settings, err := readSettings(r, store, map[string]string{"candidate-scan.max-concurrent": "3"})
+		if err != nil {
+			writeSettingsReadError(w, r, logger, clk)
+			return
+		}
+		writeSettingsResponse(w, clk, settings)
+	})
+}
+
+func unavailable(w http.ResponseWriter, store data.SettingsReadStore, clk clock.Clock) bool {
+	if store != nil {
+		return false
+	}
+	writeResponseJSON(w, http.StatusServiceUnavailable, apiEnvelope{
+		Data: nil, Error: stringValuePtr("settings data store is unavailable"), Timestamp: javaLocalDateTime(clk.Now()),
+	})
+	return true
+}
+
+func readSettings(r *http.Request, store data.SettingsReadStore, defaults map[string]string) (map[string]string, error) {
+	settings := make(map[string]string, len(defaults))
+	for key, defaultValue := range defaults {
+		value, found, err := store.GetSetting(r.Context(), key)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			value = defaultValue
+		}
+		settings[key] = value
+	}
+	return settings, nil
+}
+
+func writeSettingsResponse(w http.ResponseWriter, clk clock.Clock, settings map[string]string) {
+	writeResponseJSON(w, http.StatusOK, apiEnvelope{
+		Data: settings, Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
 	})
 }
 

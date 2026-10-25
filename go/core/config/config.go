@@ -15,6 +15,7 @@ type Config struct {
 	PublicRateLimitPerMinute int
 	CORSAllowedOrigins       []string
 	DatabaseURL              string
+	GPUHubAPIKeyConfigured   bool
 }
 
 // Load reads the established Java deployment environment names through lookup.
@@ -53,6 +54,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		origins = splitOrigins(value)
 	}
 	databaseURL, _ := lookup("DATABASE_URL")
+	gpuHubAPIKey, _ := lookup("GPUHUB_API_KEY")
 
 	host := "127.0.0.1"
 	if value, ok := lookup("HTTP_HOST"); ok && strings.TrimSpace(value) != "" {
@@ -66,6 +68,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		PublicRateLimitPerMinute: limit,
 		CORSAllowedOrigins:       origins,
 		DatabaseURL:              strings.TrimSpace(databaseURL),
+		GPUHubAPIKeyConfigured:   strings.TrimSpace(gpuHubAPIKey) != "",
 	}, nil
 }
 

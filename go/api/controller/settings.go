@@ -3,13 +3,15 @@ package controller
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/kayis-rahman/swing-trade/go/core/clock"
 	"github.com/kayis-rahman/swing-trade/go/data"
 )
 
 // RegisterSettingsRoutes registers read-only settings endpoints.
-func RegisterSettingsRoutes(mux *http.ServeMux, store data.SettingsReadStore, logger *slog.Logger, clk clock.Clock) {
+func RegisterSettingsRoutes(mux *http.ServeMux, store data.SettingsReadStore, logger *slog.Logger, clk clock.Clock, environmentGPUHubKeyConfigured ...bool) {
+	gpuHubKeyConfiguredFromEnvironment := len(environmentGPUHubKeyConfigured) > 0 && environmentGPUHubKeyConfigured[0]
 	mux.HandleFunc("GET /api/settings", func(w http.ResponseWriter, r *http.Request) {
 		if unavailable(w, store, clk) {
 			return
@@ -33,6 +35,25 @@ func RegisterSettingsRoutes(mux *http.ServeMux, store data.SettingsReadStore, lo
 			return
 		}
 		writeSettingsResponse(w, clk, settings)
+	})
+	mux.HandleFunc("GET /api/settings/gpuhub", func(w http.ResponseWriter, r *http.Request) {
+		if unavailable(w, store, clk) {
+			return
+		}
+		configured := gpuHubKeyConfiguredFromEnvironment
+		if !configured {
+			key, found, err := store.GetSetting(r.Context(), "gpuhub.api_key")
+			if err != nil {
+				writeSettingsReadError(w, r, logger, clk)
+				return
+			}
+			configured = found && strings.TrimSpace(key) != ""
+		}
+		value := "false"
+		if configured {
+			value = "true"
+		}
+		writeSettingsResponse(w, clk, map[string]string{"gpuhub.api_key.configured": value})
 	})
 	mux.HandleFunc("GET /api/settings/trading", func(w http.ResponseWriter, r *http.Request) {
 		if unavailable(w, store, clk) {

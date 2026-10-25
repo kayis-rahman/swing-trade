@@ -10,7 +10,7 @@ func TestLoadUsesSafeLocalDefaults(t *testing.T) {
 	if got.HTTPAddr != "127.0.0.1:8081" || got.PublicRateLimitPerMinute != 100 {
 		t.Fatalf("unexpected defaults: %+v", got)
 	}
-	if got.APIKeyEnabled || got.APIKey != "" || got.DatabaseURL != "" {
+	if got.APIKeyEnabled || got.APIKey != "" || got.DatabaseURL != "" || got.GPUHubAPIKeyConfigured {
 		t.Fatalf("unexpected enabled integration in defaults: %+v", got)
 	}
 }
@@ -23,12 +23,13 @@ func TestLoadMapsExistingJavaEnvironmentProperties(t *testing.T) {
 		"API_PUBLIC_RATE_LIMIT_PER_MINUTE": "7",
 		"CORS_ALLOWED_ORIGINS":             "http://localhost:3000, https://dashboard.example",
 		"DATABASE_URL":                     "postgres://localhost/test",
+		"GPUHUB_API_KEY":                   " configured-secret ",
 	}
 	got, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if got.HTTPAddr != "127.0.0.1:9090" || !got.APIKeyEnabled || got.APIKey != "local-test-key" || got.PublicRateLimitPerMinute != 7 {
+	if got.HTTPAddr != "127.0.0.1:9090" || !got.APIKeyEnabled || got.APIKey != "local-test-key" || got.PublicRateLimitPerMinute != 7 || !got.GPUHubAPIKeyConfigured {
 		t.Fatalf("environment mapping mismatch: %+v", got)
 	}
 	if len(got.CORSAllowedOrigins) != 2 || got.CORSAllowedOrigins[1] != "https://dashboard.example" {

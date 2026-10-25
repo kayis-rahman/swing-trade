@@ -78,7 +78,7 @@ func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock corecloc
 	controller.RegisterHealthRoutes(mux, watchlist != nil, clock, clock.Now())
 	controller.RegisterHolidayRoutes(mux, holidays, logger, clock)
 	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
-	controller.RegisterSettingsRoutes(mux, settings, logger, clock)
+	controller.RegisterSettingsRoutes(mux, settings, logger, clock, cfg.GPUHubAPIKeyConfigured)
 	mux.HandleFunc("GET /api/admin/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
 	})

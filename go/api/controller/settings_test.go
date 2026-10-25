@@ -75,6 +75,38 @@ func TestDiscordSettingsReadReturnsJavaDefaultsAndSettings(t *testing.T) {
 	}
 }
 
+func TestGpuHubSettingsReadExposesOnlyConfiguredFlag(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		reader fakeSettingsReader
+		env    bool
+		want   string
+	}{
+		{name: "unset", want: "false"},
+		{name: "database key", reader: fakeSettingsReader{settings: map[string]string{"gpuhub.api_key": "secret"}}, want: "true"},
+		{name: "environment key", env: true, want: "true"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			RegisterSettingsRoutes(mux, test.reader, slog.New(slog.NewTextHandler(io.Discard, nil)), fixedClock{now: time.Now()}, test.env)
+			response := httptest.NewRecorder()
+			mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/settings/gpuhub", nil))
+			var body struct {
+				Data map[string]string `json:"data"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if response.Code != http.StatusOK || body.Data["gpuhub.api_key.configured"] != test.want {
+				t.Fatalf("GPUHub settings = %d %#v", response.Code, body.Data)
+			}
+			if _, leaked := body.Data["gpuhub.api_key"]; leaked {
+				t.Fatal("response exposed the GPUHub API key")
+			}
+		})
+	}
+}
+
 func TestSettingsReadsPreserveTradingAndScanningDefaults(t *testing.T) {
 	for _, test := range []struct {
 		path string
@@ -107,7 +139,7 @@ func TestSettingsReadsPreserveTradingAndScanningDefaults(t *testing.T) {
 func TestSettingsReadWithoutStoreReturnsServiceUnavailable(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterSettingsRoutes(mux, nil, nil, fixedClock{now: time.Now()})
-	for _, path := range []string{"/api/settings", "/api/settings/discord", "/api/settings/trading", "/api/settings/scanning"} {
+	for _, path := range []string{"/api/settings", "/api/settings/discord", "/api/settings/gpuhub", "/api/settings/trading", "/api/settings/scanning"} {
 		response := httptest.NewRecorder()
 		mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 		if response.Code != http.StatusServiceUnavailable {

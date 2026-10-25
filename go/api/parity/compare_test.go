@@ -35,6 +35,7 @@ func TestConfiguredReadParity(t *testing.T) {
 		{Path: "/api/watchlist/all"},
 		{Path: "/api/settings"},
 		{Path: "/api/settings/discord"},
+		{Path: "/api/settings/gpuhub"},
 		{Path: "/api/settings/trading"},
 		{Path: "/api/settings/scanning"},
 	})

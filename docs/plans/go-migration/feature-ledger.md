@@ -33,7 +33,7 @@ cross-checked against the Java test tree (`backend/*/src/test`) and the Playwrig
 the `Counter.builder`/`Timer.builder`/`Gauge.builder`/`meterRegistry.` call sites under `backend/*/src/main`.
 Row IDs are stable: `F-API-<AREA>-<NN>` (endpoints), `F-SCHED-<NN>` (jobs), `F-OBS-<NN>` / `F-OBS-P<NN>` (metrics),
 `F-API-SEC-<NN>` (cross-cutting security/error concerns), `F-DATA-ENT-<NN>` (entities), `F-DATA-REPO-<NN>`
-(repository interfaces and the one interface projection).
+(repository interfaces and the one interface projection), `F-DOMAIN-<NN>` (shared domain model types).
 
 ## Row template
 
@@ -704,3 +704,12 @@ implementation above covers both Java classes, pinned by
 variants of the core indicators likewise share one Go implementation each,
 contract-tested alongside the primary suites.
 | F-STRAT-IND-11 | gate | `DataQualityGate#evaluate` | strategy | Blocks excluded symbols before a portfolio run: empty window, non-positive prices, >8% missing Mon-Fri bars (holiday-blind by design), and the >40% unadjusted-split heuristic computed as BigDecimal divide scale6 HALF_UP | `DataQualityGateTest` (4 tests) | strategy/data_quality_gate.go | parity-pending |
+
+## 13. Domain and decision rows (F-DOMAIN, decision shape)
+
+| ID | Kind | Java source | Module | Port notes | Java tests | Go path | Status |
+|---|---|---|---|---|---|---|---|
+| F-DOMAIN-01 | domain | `Signal.SignalType` (nested enum) | core | String enum with Java's names for wire compatibility plus `getDescription()` texts | `SignalTest.SignalTypeEnumTests` (descriptions and identity subset; full `Signal` entity deferred) | core/domain/signal.go | parity-pending |
+| F-DOMAIN-02 | domain | `SentimentResult` record and `SentimentScore` enum | core |17 nullable components as pointers, `create` factory with confidence clamp and defaults, score predicates, `supportsEntry`, rank ordering NEGATIVE < NEUTRAL/UNKNOWN < POSITIVE, Java-record `toString` shape; hashCode is Java-specific and value equality is Go struct semantics | `SentimentResultTest` (creation, clamp, predicates, SupportsEntry, enum, toString groups) | core/domain/sentiment.go | parity-pending |
+| F-STRAT-IND-12 | gate | `GateEvaluator` with `GateOutcome`, `GateResult`, `RegimeGateConfig`, `SentimentGateConfig`, `IndexSeries` | strategy | Composable regime and sentiment overlays: pass-through for non-BUY, recorded skips, stale/negative sentiment blocks, Java reason strings verbatim, `IndexSeries` kept fakeable per plan5.5 | `GateEvaluatorTest` (13 methods) | strategy/gate_evaluator.go | parity-pending |
+| F-STRAT-IND-13 | decision | `StrategyDecision` and `RuleOutcome` records | strategy | Validation messages kept verbatim with nolint where staticcheck conflicts; rules copied like `List.copyOf`; named `Decision` in Go to avoid package stuttering | validation covered by Go tests; used by `GateEvaluatorTest` and engine tests | strategy/strategy_decision.go | parity-pending |

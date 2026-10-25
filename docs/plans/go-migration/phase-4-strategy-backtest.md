@@ -50,3 +50,6 @@ Zero diff on decimal paths; trade lists identical; documented tolerances only on
   types plus the strategy-local `StrategyDecision`, `RuleOutcome`,
   `GateOutcome`, `RegimeGateConfig`, `SentimentGateConfig`, and the
   `IndexSeries` interface (Java keeps it fakeable for tests; mirror that).
+- Go naming: Java's `StrategyDecision` becomes `strategy.Decision` (package
+  stutter rule); its `NewDecision` constructor keeps the Java validation
+  messages verbatim with nolint annotations where staticcheck conflicts.

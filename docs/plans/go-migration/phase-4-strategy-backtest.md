@@ -58,3 +58,17 @@ Zero diff on decimal paths; trade lists identical; documented tolerances only on
   string). Range messages render at financial scale where Java prints plain
   BigDecimal text; the Java tests pin only substring contracts (name plus
   bound keyword), so asserted parity holds.
+
+- MarketContext recipe (the next big slice): it runs TA4J on **DecimalNum**
+  (BigDecimal-backed Num), so G4's decimal bit-exactness lives here. Recover
+  DecimalNum's add/subtract/multiply/divide scale rules from the cached ta4j
+  jar bytecode before implementing EMA/RSI/ATR/SMA/highest/lowest/Bollinger/
+  Keltner math. The slice also needs: `IndicatorKey` (plus the period and
+  scaled cache keys), the core `OhlcvCandle` domain type with
+  `adjustedForAnalysis()`, the intraday series build (timestamps + 15
+  minutes), the `View` no-look-ahead guard with Java's exact
+  `IllegalStateException` text, bbWidth's divide scale10 HALF_UP, the lazy
+  `(indicator, period)` cache with `cachedIndicatorCount`, and
+  `MarketContextTest`'s pinned behaviors. `UniformExitEvaluator` plus its
+ 141-line test follows once `MarketContext.View`, `StrategyParamsView`, and
+  `OpenPosition` all exist.

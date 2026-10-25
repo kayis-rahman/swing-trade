@@ -66,6 +66,21 @@ func (reader *CandleReader) CandleExistsOnDate(ctx context.Context, symbol strin
 	return exists, nil
 }
 
+// LatestIntervalCandleDate returns the newest stored date for a symbol and
+// timeframe, or nil when no row exists.
+func (reader *CandleReader) LatestIntervalCandleDate(ctx context.Context, symbol, timeframe string) (*time.Time, error) {
+	date, err := reader.queries.GetLatestIntervalCandleDate(ctx, sqlc.GetLatestIntervalCandleDateParams{
+		Symbol: symbol, Timeframe: timeframe,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get latest interval candle date: %w", err)
+	}
+	return dateValue(date), nil
+}
+
 func dateValue(value pgtype.Date) *time.Time {
 	if !value.Valid {
 		return nil

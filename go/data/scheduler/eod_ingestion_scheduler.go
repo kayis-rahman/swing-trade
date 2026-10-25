@@ -300,8 +300,7 @@ func nextWeekdayFire(now time.Time, hour, minute int) time.Time {
 // dateOnly maps an instant to its IST calendar date at UTC midnight, the date
 // convention the Go candle stores and provider fetches already use.
 func dateOnly(t time.Time) time.Time {
-	local := t.In(ist)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	return data.DateOnlyIST(t)
 }
 
 // marketClosed mirrors Java's NseHolidayService.isMarketClosed: weekends close

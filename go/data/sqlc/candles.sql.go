@@ -73,3 +73,23 @@ func (q *Queries) GetLatestDailyCandleDate(ctx context.Context, symbol string) (
 	err := row.Scan(&date)
 	return date, err
 }
+
+const getLatestIntervalCandleDate = `-- name: GetLatestIntervalCandleDate :one
+SELECT date
+FROM ohlcv_candles
+WHERE symbol = $1 AND timeframe = $2
+ORDER BY date DESC
+LIMIT 1
+`
+
+type GetLatestIntervalCandleDateParams struct {
+	Symbol    string `json:"symbol"`
+	Timeframe string `json:"timeframe"`
+}
+
+func (q *Queries) GetLatestIntervalCandleDate(ctx context.Context, arg GetLatestIntervalCandleDateParams) (pgtype.Date, error) {
+	row := q.db.QueryRow(ctx, getLatestIntervalCandleDate, arg.Symbol, arg.Timeframe)
+	var date pgtype.Date
+	err := row.Scan(&date)
+	return date, err
+}

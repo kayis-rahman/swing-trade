@@ -23,3 +23,10 @@ SELECT EXISTS(
     FROM ohlcv_candles
     WHERE symbol = $1 AND timeframe = 'D' AND date = $2
 );
+
+-- name: GetLatestIntervalCandleDate :one
+SELECT date
+FROM ohlcv_candles
+WHERE symbol = $1 AND timeframe = $2
+ORDER BY date DESC
+LIMIT 1;

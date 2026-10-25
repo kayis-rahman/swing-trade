@@ -39,3 +39,23 @@ func TestExpectedNSESessionBarStartsUsesISTCalendarDate(t *testing.T) {
 		t.Fatalf("first bar local timestamp = %s", got)
 	}
 }
+
+func TestIsNormalSessionBarTimeMatchesJavaWindow(t *testing.T) {
+	for name, tc := range map[string]struct {
+		barTime time.Time
+		want    bool
+	}{
+		"pre-open bar is rejected":    {barTime: time.Date(2000, 1, 1, 9, 0, 0, 0, time.UTC), want: false},
+		"first session bar is kept":   {barTime: time.Date(2000, 1, 1, 9, 15, 0, 0, time.UTC), want: true},
+		"mid-session bar is kept":     {barTime: time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC), want: true},
+		"last session bar is kept":    {barTime: time.Date(2000, 1, 1, 15, 15, 0, 0, time.UTC), want: true},
+		"exact close is rejected":     {barTime: time.Date(2000, 1, 1, 15, 30, 0, 0, time.UTC), want: false},
+		"closing auction is rejected": {barTime: time.Date(2000, 1, 1, 15, 45, 0, 0, time.UTC), want: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := IsNormalSessionBarTime(tc.barTime); got != tc.want {
+				t.Fatalf("IsNormalSessionBarTime(%s) = %v, want %v", tc.barTime.Format("15:04:05"), got, tc.want)
+			}
+		})
+	}
+}

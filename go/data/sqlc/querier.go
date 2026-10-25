@@ -20,6 +20,7 @@ type Querier interface {
 	GetEarliestDailyCandleDate(ctx context.Context, symbol string) (pgtype.Date, error)
 	GetHolidayByDate(ctx context.Context, holidayDate pgtype.Date) (GetHolidayByDateRow, error)
 	GetLatestDailyCandleDate(ctx context.Context, symbol string) (pgtype.Date, error)
+	GetLatestIntervalCandleDate(ctx context.Context, arg GetLatestIntervalCandleDateParams) (pgtype.Date, error)
 	InsertFyersSymbol(ctx context.Context, arg InsertFyersSymbolParams) error
 	ListActiveWatchlist(ctx context.Context) ([]Watchlist, error)
 	ListAllWatchlist(ctx context.Context) ([]Watchlist, error)

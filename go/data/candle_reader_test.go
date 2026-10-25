@@ -108,3 +108,29 @@ func TestCandleReaderWrapsExistenceErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCandleReaderLatestIntervalDateAndEmptyResult(t *testing.T) {
+	date := time.Date(2026, 9, 15, 0, 0, 0, 0, time.UTC)
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+	mock.ExpectQuery("ORDER BY date DESC").WithArgs("TCS", "15m").
+		WillReturnRows(pgxmock.NewRows([]string{"date"}).AddRow(pgtype.Date{Time: date, Valid: true}))
+	got, err := NewCandleReader(mock).LatestIntervalCandleDate(context.Background(), "TCS", "15m")
+	if err != nil || got == nil || !got.Equal(date) {
+		t.Fatalf("latest = %v, %v", got, err)
+	}
+
+	emptyMock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer emptyMock.Close()
+	emptyMock.ExpectQuery("ORDER BY date DESC").WithArgs("NEW", "15m").WillReturnError(pgx.ErrNoRows)
+	got, err = NewCandleReader(emptyMock).LatestIntervalCandleDate(context.Background(), "NEW", "15m")
+	if err != nil || got != nil {
+		t.Fatalf("empty latest = %v, %v", got, err)
+	}
+}

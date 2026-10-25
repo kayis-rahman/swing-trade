@@ -41,3 +41,12 @@ Zero diff on decimal paths; trade lists identical; documented tolerances only on
 - The `BigDecimal` and `Double` Java variants feed the same TA4J math through
   `doubleValue()`, so one Go implementation per indicator covers both where
   the Java classes only differ in input type.
+
+- Domain placement for the gate slice is already answered by the standards,
+  not an open decision: `com.swingtrade.domain` types (`Signal.SignalType`,
+  `SentimentResult`) belong in `go/core/domain/` (the core README reserves
+  `domain` packages for them; strategy, llm, and data may all import core).
+  The GateEvaluator slice therefore needs `core/domain` signal and sentiment
+  types plus the strategy-local `StrategyDecision`, `RuleOutcome`,
+  `GateOutcome`, `RegimeGateConfig`, `SentimentGateConfig`, and the
+  `IndexSeries` interface (Java keeps it fakeable for tests; mirror that).

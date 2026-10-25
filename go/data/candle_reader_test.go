@@ -67,3 +67,44 @@ func TestCandleReaderWrapsDatabaseErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCandleReaderChecksDailyCandleExistence(t *testing.T) {
+	date := time.Date(2026, 10, 24, 0, 0, 0, 0, time.UTC)
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+	mock.ExpectQuery("EXISTS").WithArgs("ABC", pgtype.Date{Time: date, Valid: true}).
+		WillReturnRows(pgxmock.NewRows([]string{"exists"}).AddRow(true))
+	exists, err := NewCandleReader(mock).CandleExistsOnDate(context.Background(), "ABC", date)
+	if err != nil || !exists {
+		t.Fatalf("exists = %v, %v", exists, err)
+	}
+	mock.ExpectQuery("EXISTS").WithArgs("ABC", pgtype.Date{Time: date, Valid: true}).
+		WillReturnRows(pgxmock.NewRows([]string{"exists"}).AddRow(false))
+	exists, err = NewCandleReader(mock).CandleExistsOnDate(context.Background(), "ABC", date)
+	if err != nil || exists {
+		t.Fatalf("exists = %v, %v", exists, err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCandleReaderWrapsExistenceErrors(t *testing.T) {
+	date := time.Date(2026, 10, 24, 0, 0, 0, 0, time.UTC)
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+	mock.ExpectQuery("EXISTS").WithArgs("ABC", pgtype.Date{Time: date, Valid: true}).
+		WillReturnError(errors.New("offline"))
+	if _, err := NewCandleReader(mock).CandleExistsOnDate(context.Background(), "ABC", date); err == nil {
+		t.Fatal("existence error = nil")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}

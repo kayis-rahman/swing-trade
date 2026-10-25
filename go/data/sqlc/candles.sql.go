@@ -24,6 +24,26 @@ func (q *Queries) CountDailyCandles(ctx context.Context, symbol string) (int64, 
 	return column_1, err
 }
 
+const dailyCandleExists = `-- name: DailyCandleExists :one
+SELECT EXISTS(
+    SELECT 1
+    FROM ohlcv_candles
+    WHERE symbol = $1 AND timeframe = 'D' AND date = $2
+)
+`
+
+type DailyCandleExistsParams struct {
+	Symbol string      `json:"symbol"`
+	Date   pgtype.Date `json:"date"`
+}
+
+func (q *Queries) DailyCandleExists(ctx context.Context, arg DailyCandleExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, dailyCandleExists, arg.Symbol, arg.Date)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getEarliestDailyCandleDate = `-- name: GetEarliestDailyCandleDate :one
 SELECT date
 FROM ohlcv_candles

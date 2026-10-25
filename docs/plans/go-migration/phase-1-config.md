@@ -11,6 +11,9 @@ The Go executable starts on loopback by default and exposes infrastructure route
 | `API_PUBLIC_RATE_LIMIT_PER_MINUTE` | `app.security.public-rate-limit-per-minute` | `100`; positive integer |
 | `CORS_ALLOWED_ORIGINS` | `spring.web.cors.allowed-origins` | `http://localhost:3000,http://localhost:8080`; comma-separated exact origins |
 | `DATABASE_URL` | Go-only direct URL equivalent of `spring.datasource.url` | Empty; if set, Go uses a pgx pool with `default_transaction_read_only=on` and rejects any target outside the authorized development host and port |
+| `EOD_INGESTION_ENABLED` | Go-only job gate over Java's `data.eod.ingestion.enabled` | `false`; Go jobs stay off until the G8 switch even though Java defaults to `true`; starts the weekday 16:30 IST EOD loop when `DATABASE_URL` is set |
+| `BENCHMARK_BACKFILL_ON_STARTUP` | Go-only job gate over Java's `benchmark.backfill.on-startup` | `false`; startup NIFTY50 backfill requires this plus `DATABASE_URL` |
+| `BENCHMARK_BACKFILL_YEARS` | Go-only setting over Java's `benchmark.backfill.years` | `10`; positive integer |
 | `SPRING_DATASOURCE_URL` | `spring.datasource.url` | Read at test runtime from the authorized, gitignored worktree env file; the verifier rejects non-dev targets |
 | `SPRING_DATASOURCE_USERNAME` | `spring.datasource.username` | Read at test runtime only; never printed |
 | `SPRING_DATASOURCE_PASSWORD` | `spring.datasource.password` | Read at test runtime only; never printed |

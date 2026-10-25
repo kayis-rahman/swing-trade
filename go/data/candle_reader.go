@@ -57,6 +57,15 @@ func (reader *CandleReader) CountDailyCandles(ctx context.Context, symbol string
 	return count, nil
 }
 
+// CandleExistsOnDate reports whether a daily candle row already exists for a symbol and date.
+func (reader *CandleReader) CandleExistsOnDate(ctx context.Context, symbol string, date time.Time) (bool, error) {
+	exists, err := reader.queries.DailyCandleExists(ctx, sqlc.DailyCandleExistsParams{Symbol: symbol, Date: sqlDate(date)})
+	if err != nil {
+		return false, fmt.Errorf("check daily candle existence: %w", err)
+	}
+	return exists, nil
+}
+
 func dateValue(value pgtype.Date) *time.Time {
 	if !value.Valid {
 		return nil

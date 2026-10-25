@@ -17,7 +17,11 @@ import (
 	corelog "github.com/kayis-rahman/swing-trade/go/core/log"
 	"github.com/kayis-rahman/swing-trade/go/data"
 	"github.com/kayis-rahman/swing-trade/go/data/db"
+	"github.com/kayis-rahman/swing-trade/go/data/scheduler"
 )
+
+// yahooBaseURL matches Java's yahoo.api.base-url default.
+const yahooBaseURL = "https://query1.finance.yahoo.com"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -55,6 +59,19 @@ func run(ctx context.Context) error {
 		watchlistReader = data.NewWatchlistReader(pool)
 		holidayReader = data.NewHolidayReader(pool)
 		settingsReader = data.NewSettingsReader(pool)
+		candleReader := data.NewCandleReader(pool)
+		if cfg.EODEnabled || cfg.BenchmarkBackfillOnStartup {
+			writer, err := data.NewCandleWriter(pool)
+			if err != nil {
+				return fmt.Errorf("create candle writer: %w", err)
+			}
+			locker := func(ctx context.Context, fn func(context.Context) error) (bool, error) {
+				return db.WithAdvisoryLock(ctx, pool, scheduler.JobLockEODIngestion, fn)
+			}
+			if err := startEODJobs(ctx, logger, cfg, settingsReader, holidayReader, watchlistReader, candleReader, writer, locker); err != nil {
+				return fmt.Errorf("initialize EOD ingestion job: %w", err)
+			}
+		}
 	}
 
 	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader, settingsReader)
@@ -73,6 +90,67 @@ func run(ctx context.Context) error {
 	}
 	logger.Info("API listening", "addr", cfg.HTTPAddr)
 	return serveHTTP(ctx, server, listener)
+}
+
+// eodCandles is the daily-candle read surface the EOD ingestion job needs.
+type eodCandles interface {
+	data.CandleReadStore
+	CandleExistsOnDate(ctx context.Context, symbol string, date time.Time) (bool, error)
+}
+
+// startEODJobs wires the EOD ingestion job over the selected market data broker.
+// Java's provider map has no Fyers token source in Go yet, so a Fyers selection
+// refuses to start rather than silently ingesting through a different provider.
+func startEODJobs(
+	ctx context.Context,
+	logger *slog.Logger,
+	cfg config.Config,
+	settings data.SettingsReadStore,
+	holidays data.HolidayReadStore,
+	watchlist data.WatchlistReadStore,
+	candles eodCandles,
+	writer *data.CandleWriter,
+	locker scheduler.Locker,
+) error {
+	broker, err := settings.GetSelectedBroker(ctx)
+	if err != nil {
+		return fmt.Errorf("read selected market data broker: %w", err)
+	}
+	switch broker {
+	case "fyers":
+		logger.Warn("EOD ingestion job not started: the selected broker has no Go token source yet", "broker", broker)
+		return nil
+	case "yahoo":
+	default:
+		logger.Info("selected market data broker is unavailable in Go; using Yahoo like Java's fallback", "broker", broker)
+	}
+	client, err := data.NewYahooClient(yahooBaseURL, nil)
+	if err != nil {
+		return fmt.Errorf("create Yahoo market data client: %w", err)
+	}
+	ingester, err := data.NewCandleIngester(client, writer, holidays)
+	if err != nil {
+		return fmt.Errorf("create candle ingester: %w", err)
+	}
+	job, err := scheduler.NewEodIngestionScheduler(
+		scheduler.EodConfig{
+			Enabled:                    cfg.EODEnabled,
+			BenchmarkBackfillOnStartup: cfg.BenchmarkBackfillOnStartup,
+			BenchmarkBackfillYears:     cfg.BenchmarkBackfillYears,
+		},
+		logger, time.Now, watchlist, holidays, candles, candles, ingester, locker,
+	)
+	if err != nil {
+		return err
+	}
+	if cfg.BenchmarkBackfillOnStartup {
+		go job.EnsureNiftyBenchmarkHistory(ctx)
+	}
+	if cfg.EODEnabled {
+		logger.Info("EOD ingestion job loop started", "next_run", scheduler.NextEodRun(time.Now()))
+		go job.StartLoop(ctx)
+	}
+	return nil
 }
 
 func serveHTTP(ctx context.Context, server *http.Server, listener net.Listener) error {

@@ -16,3 +16,10 @@ LIMIT 1;
 SELECT COUNT(*)::bigint
 FROM ohlcv_candles
 WHERE symbol = $1 AND timeframe = 'D';
+
+-- name: DailyCandleExists :one
+SELECT EXISTS(
+    SELECT 1
+    FROM ohlcv_candles
+    WHERE symbol = $1 AND timeframe = 'D' AND date = $2
+);

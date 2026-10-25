@@ -13,6 +13,9 @@ func TestLoadUsesSafeLocalDefaults(t *testing.T) {
 	if got.APIKeyEnabled || got.APIKey != "" || got.DatabaseURL != "" || got.GPUHubAPIKeyConfigured {
 		t.Fatalf("unexpected enabled integration in defaults: %+v", got)
 	}
+	if got.EODEnabled || got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 10 {
+		t.Fatalf("Go ingestion jobs must default off with a 10-year benchmark window: %+v", got)
+	}
 }
 
 func TestLoadMapsExistingJavaEnvironmentProperties(t *testing.T) {
@@ -37,12 +40,30 @@ func TestLoadMapsExistingJavaEnvironmentProperties(t *testing.T) {
 	}
 }
 
+func TestLoadMapsIngestionJobSettings(t *testing.T) {
+	values := map[string]string{
+		"EOD_INGESTION_ENABLED":         "true",
+		"BENCHMARK_BACKFILL_ON_STARTUP": "true",
+		"BENCHMARK_BACKFILL_YEARS":      "7",
+	}
+	got, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !got.EODEnabled || !got.BenchmarkBackfillOnStartup || got.BenchmarkBackfillYears != 7 {
+		t.Fatalf("ingestion job settings mismatch: %+v", got)
+	}
+}
+
 func TestLoadRejectsInvalidBoundaryConfiguration(t *testing.T) {
 	for name, values := range map[string]map[string]string{
 		"invalid port":            {"SERVER_PORT": "70000"},
 		"invalid limit":           {"API_PUBLIC_RATE_LIMIT_PER_MINUTE": "0"},
 		"missing enabled API key": {"API_KEY_AUTH_ENABLED": "true"},
 		"bad boolean":             {"API_KEY_AUTH_ENABLED": "sometimes"},
+		"bad eod boolean":         {"EOD_INGESTION_ENABLED": "later"},
+		"bad backfill boolean":    {"BENCHMARK_BACKFILL_ON_STARTUP": "maybe"},
+		"bad backfill years":      {"BENCHMARK_BACKFILL_YEARS": "0"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })

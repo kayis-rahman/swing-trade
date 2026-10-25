@@ -9,13 +9,16 @@ import (
 
 // Config contains the runtime settings for the no-traffic platform skeleton.
 type Config struct {
-	HTTPAddr                 string
-	APIKey                   string
-	APIKeyEnabled            bool
-	PublicRateLimitPerMinute int
-	CORSAllowedOrigins       []string
-	DatabaseURL              string
-	GPUHubAPIKeyConfigured   bool
+	HTTPAddr                   string
+	APIKey                     string
+	APIKeyEnabled              bool
+	PublicRateLimitPerMinute   int
+	CORSAllowedOrigins         []string
+	DatabaseURL                string
+	GPUHubAPIKeyConfigured     bool
+	EODEnabled                 bool
+	BenchmarkBackfillOnStartup bool
+	BenchmarkBackfillYears     int
 }
 
 // Load reads the established Java deployment environment names through lookup.
@@ -55,6 +58,10 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 	}
 	databaseURL, _ := lookup("DATABASE_URL")
 	gpuHubAPIKey, _ := lookup("GPUHUB_API_KEY")
+	eodEnabled, benchmarkBackfillOnStartup, benchmarkBackfillYears, err := loadIngestionJobSettings(lookup)
+	if err != nil {
+		return Config{}, err
+	}
 
 	host := "127.0.0.1"
 	if value, ok := lookup("HTTP_HOST"); ok && strings.TrimSpace(value) != "" {
@@ -63,13 +70,42 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 	return Config{
 		HTTPAddr: net.JoinHostPort(host, strconv.Itoa(portNumber)),
 
-		APIKey:                   apiKey,
-		APIKeyEnabled:            apiKeyEnabled,
-		PublicRateLimitPerMinute: limit,
-		CORSAllowedOrigins:       origins,
-		DatabaseURL:              strings.TrimSpace(databaseURL),
-		GPUHubAPIKeyConfigured:   strings.TrimSpace(gpuHubAPIKey) != "",
+		APIKey:                     apiKey,
+		APIKeyEnabled:              apiKeyEnabled,
+		PublicRateLimitPerMinute:   limit,
+		CORSAllowedOrigins:         origins,
+		DatabaseURL:                strings.TrimSpace(databaseURL),
+		GPUHubAPIKeyConfigured:     strings.TrimSpace(gpuHubAPIKey) != "",
+		EODEnabled:                 eodEnabled,
+		BenchmarkBackfillOnStartup: benchmarkBackfillOnStartup,
+		BenchmarkBackfillYears:     benchmarkBackfillYears,
 	}, nil
+}
+
+// loadIngestionJobSettings reads the Go-only ingestion job gates. The enabled
+// flags default false so Go jobs stay off until the G8 switch even though
+// Java's data.eod.ingestion.enabled defaults to true.
+func loadIngestionJobSettings(lookup func(string) (string, bool)) (eodEnabled, backfillOnStartup bool, backfillYears int, err error) {
+	backfillYears = 10
+	if value, ok := lookup("EOD_INGESTION_ENABLED"); ok && strings.TrimSpace(value) != "" {
+		eodEnabled, err = strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return false, false, 0, fmt.Errorf("EOD_INGESTION_ENABLED must be a boolean: %w", err)
+		}
+	}
+	if value, ok := lookup("BENCHMARK_BACKFILL_ON_STARTUP"); ok && strings.TrimSpace(value) != "" {
+		backfillOnStartup, err = strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return false, false, 0, fmt.Errorf("BENCHMARK_BACKFILL_ON_STARTUP must be a boolean: %w", err)
+		}
+	}
+	if value, ok := lookup("BENCHMARK_BACKFILL_YEARS"); ok && strings.TrimSpace(value) != "" {
+		backfillYears, err = strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || backfillYears < 1 {
+			return false, false, 0, fmt.Errorf("BENCHMARK_BACKFILL_YEARS must be a positive integer")
+		}
+	}
+	return eodEnabled, backfillOnStartup, backfillYears, nil
 }
 
 func splitOrigins(value string) []string {

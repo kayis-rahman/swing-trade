@@ -12,6 +12,16 @@ type HistoricalCandleProvider interface {
 	FetchCandles(context.Context, string, time.Time, time.Time, string) ([]YahooCandle, error)
 }
 
+// Outcome values match Java's BackfillOutcome.sourceOutcome vocabulary.
+const (
+	OutcomeInvalidRequest         = "INVALID_REQUEST"
+	OutcomeTransientSourceFailure = "TRANSIENT_SOURCE_FAILURE"
+	OutcomeAlreadyCurrent         = "ALREADY_CURRENT"
+	OutcomeNoUsableData           = "NO_USABLE_DATA"
+	OutcomeInvalidRowsRejected    = "INVALID_ROWS_REJECTED"
+	OutcomeDataReceived           = "DATA_RECEIVED"
+)
+
 // IngestionOutcome summarizes one provider range fetch and its persistence result.
 type IngestionOutcome struct {
 	SourceOutcome string
@@ -43,21 +53,21 @@ func NewCandleIngester(provider HistoricalCandleProvider, writer *CandleWriter, 
 // If the stored history does not reach the requested start, it re-fetches the full range safely.
 func (ingester *CandleIngester) IngestIncremental(ctx context.Context, reader CandleReadStore, symbol string, from, to time.Time, providerInterval, storageTimeframe string) IngestionOutcome {
 	if reader == nil {
-		return IngestionOutcome{SourceOutcome: "INVALID_REQUEST", ErrorMessage: "candle reader is required"}
+		return IngestionOutcome{SourceOutcome: OutcomeInvalidRequest, ErrorMessage: "candle reader is required"}
 	}
 	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) {
-		return IngestionOutcome{SourceOutcome: "INVALID_REQUEST", ErrorMessage: "symbol and ordered date range are required"}
+		return IngestionOutcome{SourceOutcome: OutcomeInvalidRequest, ErrorMessage: "symbol and ordered date range are required"}
 	}
 	window, err := reader.GetDailyDateWindow(ctx, symbol)
 	if err != nil {
-		return IngestionOutcome{SourceOutcome: "TRANSIENT_SOURCE_FAILURE", ErrorMessage: fmt.Errorf("read existing candle window: %w", err).Error()}
+		return IngestionOutcome{SourceOutcome: OutcomeTransientSourceFailure, ErrorMessage: fmt.Errorf("read existing candle window: %w", err).Error()}
 	}
 	effectiveFrom := from
 	if (window.Earliest == nil || !window.Earliest.After(from)) && window.Latest != nil && !window.Latest.Before(from) {
 		effectiveFrom = window.Latest.AddDate(0, 0, 1)
 	}
 	if effectiveFrom.After(to) {
-		return IngestionOutcome{SourceOutcome: "ALREADY_CURRENT"}
+		return IngestionOutcome{SourceOutcome: OutcomeAlreadyCurrent}
 	}
 	return ingester.IngestRange(ctx, symbol, effectiveFrom, to, providerInterval, storageTimeframe)
 }
@@ -65,9 +75,9 @@ func (ingester *CandleIngester) IngestIncremental(ctx context.Context, reader Ca
 // IngestRange fetches, validates, and idempotently stores a single symbol's inclusive range.
 func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, from, to time.Time, providerInterval, storageTimeframe string) IngestionOutcome {
 	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) || strings.TrimSpace(providerInterval) == "" || strings.TrimSpace(storageTimeframe) == "" {
-		return IngestionOutcome{SourceOutcome: "INVALID_REQUEST", ErrorMessage: "symbol, intervals, and ordered date range are required"}
+		return IngestionOutcome{SourceOutcome: OutcomeInvalidRequest, ErrorMessage: "symbol, intervals, and ordered date range are required"}
 	}
-	outcome := IngestionOutcome{SourceOutcome: "NO_USABLE_DATA"}
+	outcome := IngestionOutcome{SourceOutcome: OutcomeNoUsableData}
 	for chunkStart := from; !chunkStart.After(to); {
 		chunkEnd := chunkStart.AddDate(0, 0, defaultIngestionChunkDays-1)
 		if chunkEnd.After(to) {
@@ -75,13 +85,13 @@ func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, 
 		}
 		candles, err := ingester.provider.FetchCandles(ctx, symbol, chunkStart, chunkEnd, providerInterval)
 		if err != nil {
-			outcome.SourceOutcome = "TRANSIENT_SOURCE_FAILURE"
+			outcome.SourceOutcome = OutcomeTransientSourceFailure
 			outcome.ErrorMessage = err.Error()
 			return outcome
 		}
 		outcome.FetchedRows += len(candles)
 		if err := ingester.storeChunk(ctx, &outcome, candles, chunkStart, chunkEnd, storageTimeframe); err != nil {
-			outcome.SourceOutcome = "TRANSIENT_SOURCE_FAILURE"
+			outcome.SourceOutcome = OutcomeTransientSourceFailure
 			outcome.ErrorMessage = err.Error()
 			return outcome
 		}
@@ -89,11 +99,11 @@ func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, 
 	}
 	switch {
 	case outcome.FetchedRows == 0:
-		outcome.SourceOutcome = "NO_USABLE_DATA"
+		outcome.SourceOutcome = OutcomeNoUsableData
 	case outcome.InvalidRows > 0 && outcome.SavedRows == 0:
-		outcome.SourceOutcome = "INVALID_ROWS_REJECTED"
+		outcome.SourceOutcome = OutcomeInvalidRowsRejected
 	default:
-		outcome.SourceOutcome = "DATA_RECEIVED"
+		outcome.SourceOutcome = OutcomeDataReceived
 	}
 	return outcome
 }

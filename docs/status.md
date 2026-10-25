@@ -2,7 +2,7 @@
 
 Last checked: 2026-10-24 (Go Phase 2 read-surface continuation)
 
-- [ ] Added read-only Go routes for selected broker, Discord, trading, and scanning settings backed by sqlc, with Java-compatible defaults and focused data/controller tests; parity remains pending because the local Java API cannot run without an installed JDK. `./bin/go-verify` passed all Go modules, including authorized development-database tests, race, coverage, vet, lint, vulnerability, and architecture checks. The Playwright parity test is not a gate per captain direction and was not rerun. Phase 2's remaining read endpoints and deterministic fixture replay remain incomplete; no Phase 3 work is claimed.
+- [ ] Added read-only Go routes for selected broker, Discord, trading, and scanning settings backed by sqlc, with Java-compatible defaults and focused data/controller tests; parity remains pending because the local Java API cannot run without an installed JDK. `./bin/go-verify` passed all Go modules, including authorized development-database tests, race, coverage, vet, lint, vulnerability, and architecture checks. The Playwright parity test is not a gate per captain direction and was not rerun. Phase 2's remaining read endpoints and broader deterministic replay corpus remain incomplete; the comparator now replays a fixed `/api/watchlist/all` response pair. No Phase 3 work is claimed.
 
 Last checked: 2026-10-24 (Go Phase 2 health, holiday, and watchlist read slices)
 

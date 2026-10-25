@@ -1,12 +1,19 @@
 package parity
 
 import (
+	_ "embed"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
 )
+
+//go:embed testdata/watchlist-all-java.json
+var watchlistJavaFixture []byte
+
+//go:embed testdata/watchlist-all-go.json
+var watchlistGoFixture []byte
 
 func TestConfiguredReadParity(t *testing.T) {
 	javaBaseURL := os.Getenv("JAVA_SERVICE_URL")
@@ -42,12 +49,12 @@ func TestConfiguredReadParity(t *testing.T) {
 func TestCompareWatchlistAllMatchesRecordsByID(t *testing.T) {
 	java := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"id":2,"symbol":"TCS"},{"id":1,"symbol":"RELIANCE"}]}`))
+		_, _ = w.Write(watchlistJavaFixture)
 	}))
 	defer java.Close()
 	goServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"id":1,"symbol":"RELIANCE"},{"id":2,"symbol":"TCS"}]}`))
+		_, _ = w.Write(watchlistGoFixture)
 	}))
 	defer goServer.Close()
 

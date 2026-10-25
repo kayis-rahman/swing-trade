@@ -16,3 +16,28 @@ Goal: bit-exact results on decimal paths for indicators, strategies and backtest
 
 ## Gate G4 exit criteria
 Zero diff on decimal paths; trade lists identical; documented tolerances only on float paths that are float in Java too; performance recorded.
+
+## Porting notes (2026-10-25, worker v2)
+
+- Java's indicator classes (`TechnicalIndicators`, `AdvancedTechnicalIndicators`,
+  `TechnicalIndicatorsDouble`) are thin wrappers over `org.ta4j:ta4j-core:0.16`
+  and every public method returns `Double`, so indicator values are float
+  paths under G4: reproduce the TA4J algorithm and assert against the Java
+  test expectations with tight tolerances. Decimal bit-exactness applies at
+  the strategy, gate, and engine layers that consume these values.
+- `TechnicalIndicatorsTest` (86 methods, nested per indicator) is mostly
+  behavioral: nulls for short inputs, `IllegalArgumentException` for bad
+  periods, boundary sizes, with only five exact-value assertions (SMA 102.0,
+  EMA 100.0 twice, VolumeMA 1000000.0 twice). Port every behavioral branch
+  first; the deeper numeric regression arrives with step 3 golden signals and
+  step 6's parallel run. Do not add new Java probe classes to harvest
+  vectors: the pipeline removed `FinancialGoldenProbe` and no equivalent is
+  authorized.
+- For algorithms whose seeding or smoothing is unclear (EMA's first value,
+  Wilder-style RSI, TA4J's ATR), the exact implementation is in the cached
+  jar `~/.gradle/caches/modules-2/files-2.1/org.ta4j/ta4j-core/0.16/` (no
+  sources jar is cached); extract the class file and read `javap -c` output
+  rather than guessing from generic descriptions.
+- The `BigDecimal` and `Double` Java variants feed the same TA4J math through
+  `doubleValue()`, so one Go implementation per indicator covers both where
+  the Java classes only differ in input type.

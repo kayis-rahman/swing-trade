@@ -116,13 +116,7 @@ func (client *FyersHistoryClient) request(ctx context.Context, target, authoriza
 			if ctx.Err() != nil {
 				return nil, 0, ctx.Err()
 			}
-			if attempt == 4 {
-				return nil, 0, fmt.Errorf("request Fyers history: %w", err)
-			}
-			if err := waitRetry(ctx, time.Second*time.Duration(1<<attempt)); err != nil {
-				return nil, 0, err
-			}
-			continue
+			return nil, 0, fmt.Errorf("request Fyers history: %w", err)
 		}
 		body, readErr := io.ReadAll(response.Body)
 		closeErr := response.Body.Close()

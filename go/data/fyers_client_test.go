@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -66,6 +67,28 @@ func TestFyersHistoryClientBuildsRequestAndUsesRefreshAfterUnauthorized(t *testi
 	}
 	if auth.refreshes != 1 || requests != 2 {
 		t.Fatalf("refreshes=%d requests=%d", auth.refreshes, requests)
+	}
+}
+
+type fyersRoundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (fn fyersRoundTripperFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return fn(request)
+}
+
+func TestFyersHistoryRequestDoesNotRetryNetworkErrors(t *testing.T) {
+	calls := 0
+	transport := fyersRoundTripperFunc(func(*http.Request) (*http.Response, error) {
+		calls++
+		return nil, errors.New("network unavailable")
+	})
+	client, err := NewFyersHistoryClient("https://example.invalid", &fyersTestAuth{token: "token"}, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = client.request(context.Background(), "https://example.invalid/data/history", "app-id:token")
+	if err == nil || calls != 1 {
+		t.Fatalf("err=%v calls=%d, want immediate single failure", err, calls)
 	}
 }
 

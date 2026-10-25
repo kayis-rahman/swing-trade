@@ -695,3 +695,11 @@ slices land.
 | F-STRAT-IND-08 | indicator | `TechnicalIndicators#calculateBollingerBands` | strategy | SMA middle with population standard deviation (divided by the period) scaled by the multiplier | `TechnicalIndicatorsTest#CalculateBollingerBandsTests` (5 methods) | strategy/indicators_advanced.go | parity-pending |
 | F-STRAT-IND-09 | indicator | `TechnicalIndicators#calculateVWAP` | strategy | Volume-weighted typical price in double arithmetic; zero total volume returns null | `TechnicalIndicatorsTest#CalculateVWAPTests` (3 methods) | strategy/indicators_advanced.go | parity-pending |
 | F-STRAT-IND-10 | indicator | `TechnicalIndicators#calculateADX` | strategy | Hand-rolled directional movement with `calculateSmoothedADX` as an identity (DX approximation, placeholder parity with Java) | `TechnicalIndicatorsTest#CalculateADXTests` (2 methods) | strategy/indicators_advanced.go | parity-pending |
+
+`AdvancedTechnicalIndicators` duplicates the Stochastic, Bollinger, VWAP, and
+ADX methods (with its own record types) byte for byte; the single Go
+implementation above covers both Java classes, pinned by
+`AdvancedTechnicalIndicatorsTest` through
+`TestAdvancedTechnicalIndicatorsClassBehaviors`. The `BigDecimal` and `Double`
+variants of the core indicators likewise share one Go implementation each,
+contract-tested alongside the primary suites.

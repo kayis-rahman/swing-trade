@@ -221,3 +221,39 @@ func TestIndicatorNilValueAndErrorContract(t *testing.T) {
 		})
 	}
 }
+
+// TestDoubleVariantContractGuardsMatchJava pins the guard branches that
+// TechnicalIndicatorsTest's Double-variant groups assert for the six core
+// methods; one Go implementation serves both input types.
+func TestDoubleVariantContractGuardsMatchJava(t *testing.T) {
+	assertMessage := func(err error, want string) {
+		t.Helper()
+		if err == nil || err.Error() != want {
+			t.Fatalf("error = %v, want %q", err, want)
+		}
+	}
+	if _, err := CalculateRSI(seqPrices(20, 1), -1); err == nil {
+		t.Fatal("negative RSI period accepted")
+	}
+	if _, err := CalculateSMA(seqPrices(20, 1), -5); err == nil {
+		t.Fatal("negative SMA period accepted")
+	}
+	_, err := CalculateRSI(seqPrices(20, 1), 0)
+	assertMessage(err, "RSI period must be positive")
+	_, err = CalculateSMA(seqPrices(20, 1), 0)
+	assertMessage(err, "SMA period must be positive")
+	_, err = CalculateMACD(seqPrices(50, 1), 12, 0, 9)
+	assertMessage(err, "MACD periods must be positive")
+	_, err = CalculateMACD(seqPrices(50, 1), 12, 12, 9)
+	assertMessage(err, "Fast period must be less than slow period")
+	_, err = CalculateATR(candlesFixture(20), -2)
+	assertMessage(err, "ATR period must be positive")
+}
+
+func candlesFixture(count int) []CandleWithPrices {
+	candles := make([]CandleWithPrices, count)
+	for i := range candles {
+		candles[i] = CandleWithPrices{Open: 100, High: 105, Low: 95, Close: 102, Volume: 1_000_000}
+	}
+	return candles
+}

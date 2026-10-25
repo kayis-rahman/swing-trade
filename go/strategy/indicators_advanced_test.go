@@ -287,3 +287,98 @@ func TestAdvancedIndicatorGuardOrderKeepsEmptyInputsNull(t *testing.T) {
 		})
 	}
 }
+
+// Java's AdvancedTechnicalIndicators duplicates Stochastic, Bollinger, VWAP,
+// and ADX with their own record types; one Go implementation covers both
+// classes, pinned by the AdvancedTechnicalIndicatorsTest behaviors below.
+func TestAdvancedTechnicalIndicatorsClassBehaviors(t *testing.T) {
+	advancedCandles := func(count int) []CandleWithPrices {
+		candles := make([]CandleWithPrices, count)
+		for i := range candles {
+			candles[i] = CandleWithPrices{
+				Open: 100 + float64(i), High: 102 + float64(i),
+				Low: 99 + float64(i), Close: 101 + float64(i), Volume: 100 + float64(i),
+			}
+		}
+		return candles
+	}
+	flat := func(count int) []CandleWithPrices {
+		candles := make([]CandleWithPrices, count)
+		for i := range candles {
+			candles[i] = CandleWithPrices{Open: 100, High: 100, Low: 100, Close: 100, Volume: 100}
+		}
+		return candles
+	}
+
+	t.Run("stochastic validates inputs and stays in range", func(t *testing.T) {
+		if value, err := CalculateStochastic(nil, 3, 2); err != nil || value != nil {
+			t.Fatalf("nil input = %v, %v", value, err)
+		}
+		if value, err := CalculateStochastic([]CandleWithPrices{}, 3, 2); err != nil || value != nil {
+			t.Fatalf("empty input = %v, %v", value, err)
+		}
+		if value, err := CalculateStochastic(advancedCandles(2), 3, 2); err != nil || value != nil {
+			t.Fatalf("short input = %v, %v", value, err)
+		}
+		if _, err := CalculateStochastic(advancedCandles(3), -1, 2); err == nil {
+			t.Fatal("negative k period accepted")
+		}
+		value, err := CalculateStochastic(advancedCandles(20), 3, 2)
+		if err != nil || value == nil {
+			t.Fatalf("stochastic = %v, %v", value, err)
+		}
+		if value.K < 0 || value.K > 100 || value.D < 0 || value.D > 100 {
+			t.Fatalf("stochastic out of range: %+v", value)
+		}
+	})
+
+	t.Run("bollinger mean of one to three is exact", func(t *testing.T) {
+		if value, err := CalculateBollingerBands(nil, 3, 2.0); err != nil || value != nil {
+			t.Fatalf("nil input = %v, %v", value, err)
+		}
+		if value, err := CalculateBollingerBands([]float64{1}, 3, 2.0); err != nil || value != nil {
+			t.Fatalf("short input = %v, %v", value, err)
+		}
+		value, err := CalculateBollingerBands([]float64{1, 2, 3}, 3, 2.0)
+		if err != nil || value == nil {
+			t.Fatalf("bands = %v, %v", value, err)
+		}
+		if value.Middle != 2.0 || !(value.Upper > value.Middle && value.Middle > value.Lower) {
+			t.Fatalf("bands = %+v, want middle exactly 2", value)
+		}
+	})
+
+	t.Run("vwap matches the Java offset calculation", func(t *testing.T) {
+		value, err := CalculateVWAP([]CandleWithPrices{
+			{Open: 10, High: 12, Low: 8, Close: 11, Volume: 2},
+			{Open: 20, High: 22, Low: 18, Close: 21, Volume: 1},
+		})
+		if err != nil || value == nil {
+			t.Fatalf("VWAP = %v, %v", value, err)
+		}
+		want := ((12.0 + 8 + 11) / 3.0 * 2) + ((22.0 + 18 + 21) / 3.0 * 1)
+		want /= 3.0
+		diff := *value - want
+		if diff > 0.0001 || diff < -0.0001 {
+			t.Fatalf("VWAP = %v, want %v within 0.0001", *value, want)
+		}
+	})
+
+	t.Run("adx validates and matches the small-period cases", func(t *testing.T) {
+		if value, err := CalculateADX(nil, 3); err != nil || value != nil {
+			t.Fatalf("nil input = %v, %v", value, err)
+		}
+		if value, err := CalculateADX(advancedCandles(3), 3); err != nil || value != nil {
+			t.Fatalf("short input = %v, %v, want nil at size == period", value, err)
+		}
+		if _, err := CalculateADX(advancedCandles(4), 0); err == nil {
+			t.Fatal("zero period accepted")
+		}
+		if value, err := CalculateADX(flat(10), 3); err != nil || value != nil {
+			t.Fatalf("flat candles = %v, %v, want nil", value, err)
+		}
+		if value, err := CalculateADX(advancedCandles(10), 3); err != nil || value == nil {
+			t.Fatalf("rising candles = %v, %v, want a value", value, err)
+		}
+	})
+}

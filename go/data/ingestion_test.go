@@ -27,6 +27,16 @@ func (stub *historicalProviderStub) FetchCandles(_ context.Context, _ string, fr
 	return stub.candles, stub.err
 }
 
+type candleReadStub struct {
+	window CandleDateWindow
+	err    error
+}
+
+func (stub candleReadStub) GetDailyDateWindow(context.Context, string) (CandleDateWindow, error) {
+	return stub.window, stub.err
+}
+func (candleReadStub) CountDailyCandles(context.Context, string) (int64, error) { return 0, nil }
+
 type ingestionHolidayStub struct {
 	dates map[string]*Holiday
 	err   error
@@ -95,6 +105,41 @@ func TestCandleIngesterReturnsProviderAndCalendarFailures(t *testing.T) {
 		t.Fatalf("calendar outcome = %+v", outcome)
 	}
 }
+
+func TestCandleIngesterIncrementalFetchesTailOrRepairsIncompleteHistory(t *testing.T) {
+	from := time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC)
+	latest := time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC)
+	candle := validYahooCandle()
+	provider := &historicalProviderStub{candles: []YahooCandle{candle}}
+	writer, err := NewCandleWriter(&candleExecStub{result: pgconn.NewCommandTag("INSERT 0 1")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ingester, err := NewCandleIngester(provider, writer, ingestionHolidayStub{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	window := CandleDateWindow{Earliest: timePointer(from.AddDate(0, 0, 1)), Latest: &latest}
+	outcome := ingester.IngestIncremental(context.Background(), candleReadStub{window: window}, "ABC", from, to, "1d", "D")
+	if outcome.SourceOutcome != "DATA_RECEIVED" || len(provider.calls) != 1 || !provider.calls[0][0].Equal(from) {
+		t.Fatalf("incomplete-history outcome=%+v calls=%v", outcome, provider.calls)
+	}
+	provider.calls = nil
+	window.Earliest = timePointer(from.AddDate(0, 0, -10))
+	outcome = ingester.IngestIncremental(context.Background(), candleReadStub{window: window}, "ABC", from, to, "1d", "D")
+	if outcome.SourceOutcome != "DATA_RECEIVED" || len(provider.calls) != 1 || !provider.calls[0][0].Equal(latest.AddDate(0, 0, 1)) {
+		t.Fatalf("tail outcome=%+v calls=%v", outcome, provider.calls)
+	}
+	provider.calls = nil
+	window.Latest = timePointer(to)
+	outcome = ingester.IngestIncremental(context.Background(), candleReadStub{window: window}, "ABC", from, to, "1d", "D")
+	if outcome.SourceOutcome != "ALREADY_CURRENT" || len(provider.calls) != 0 {
+		t.Fatalf("current outcome=%+v calls=%v", outcome, provider.calls)
+	}
+}
+
+func timePointer(value time.Time) *time.Time { return &value }
 
 func TestCandleIngesterUses365DayChunksAndStopsAfterProviderFailure(t *testing.T) {
 	providerErr := errors.New("provider timeout")

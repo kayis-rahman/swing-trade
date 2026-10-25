@@ -39,6 +39,29 @@ func NewCandleIngester(provider HistoricalCandleProvider, writer *CandleWriter, 
 	return &CandleIngester{provider: provider, writer: writer, holidays: holidays}, nil
 }
 
+// IngestIncremental fetches the unpopulated tail of a requested range where history is complete.
+// If the stored history does not reach the requested start, it re-fetches the full range safely.
+func (ingester *CandleIngester) IngestIncremental(ctx context.Context, reader CandleReadStore, symbol string, from, to time.Time, providerInterval, storageTimeframe string) IngestionOutcome {
+	if reader == nil {
+		return IngestionOutcome{SourceOutcome: "INVALID_REQUEST", ErrorMessage: "candle reader is required"}
+	}
+	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) {
+		return IngestionOutcome{SourceOutcome: "INVALID_REQUEST", ErrorMessage: "symbol and ordered date range are required"}
+	}
+	window, err := reader.GetDailyDateWindow(ctx, symbol)
+	if err != nil {
+		return IngestionOutcome{SourceOutcome: "TRANSIENT_SOURCE_FAILURE", ErrorMessage: fmt.Errorf("read existing candle window: %w", err).Error()}
+	}
+	effectiveFrom := from
+	if (window.Earliest == nil || !window.Earliest.After(from)) && window.Latest != nil && !window.Latest.Before(from) {
+		effectiveFrom = window.Latest.AddDate(0, 0, 1)
+	}
+	if effectiveFrom.After(to) {
+		return IngestionOutcome{SourceOutcome: "ALREADY_CURRENT"}
+	}
+	return ingester.IngestRange(ctx, symbol, effectiveFrom, to, providerInterval, storageTimeframe)
+}
+
 // IngestRange fetches, validates, and idempotently stores a single symbol's inclusive range.
 func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, from, to time.Time, providerInterval, storageTimeframe string) IngestionOutcome {
 	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) || strings.TrimSpace(providerInterval) == "" || strings.TrimSpace(storageTimeframe) == "" {

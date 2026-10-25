@@ -92,7 +92,7 @@ func waitForHealth(t *testing.T, client *http.Client, baseURL string, cmd *exec.
 
 func assertDatabaseReadRoutesRequireDatabase(t *testing.T, client *http.Client, baseURL string) {
 	t.Helper()
-	for _, path := range []string{"/api/watchlist", "/api/watchlist/all", "/api/holidays", "/api/holidays/today"} {
+	for _, path := range []string{"/api/watchlist", "/api/watchlist/all", "/api/holidays", "/api/holidays/today", "/api/settings"} {
 		response := makeRequest(t, client, http.MethodGet, baseURL+path, "")
 		body, err := io.ReadAll(response.Body)
 		_ = response.Body.Close()

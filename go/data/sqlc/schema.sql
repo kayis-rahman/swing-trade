@@ -10,6 +10,13 @@ CREATE TABLE watchlist (
     candle_count INTEGER DEFAULT 0
 );
 
+CREATE TABLE app_settings (
+    id BIGSERIAL PRIMARY KEY,
+    key VARCHAR(64) NOT NULL UNIQUE,
+    value TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE nse_holidays (
     id BIGSERIAL PRIMARY KEY,
     holiday_date DATE NOT NULL UNIQUE,

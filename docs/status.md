@@ -1,5 +1,9 @@
 # Pre-Pilot Status
 
+Last checked: 2026-10-24 (Go Phase 2 read-surface continuation)
+
+- [ ] Added the read-only `GET /api/settings` selected-broker slice with sqlc query, Java-default fallback, handler and reader tests; parity remains pending because the local Java API cannot run without an installed JDK. `./bin/go-verify` passed all Go modules, including the authorized development-database tests, race, coverage, vet, lint, vulnerability, and architecture checks. The Playwright parity test is not a gate per captain direction and was not rerun. Phase 2's remaining read endpoints and deterministic fixture replay remain incomplete; no Phase 3 work is claimed.
+
 Last checked: 2026-10-24 (Go Phase 2 health, holiday, and watchlist read slices)
 
 - [x] Added Java-compatible Go health reads, read-only NSE holiday list/today endpoints, and focused data/controller/database integration tests; applied the decision to preserve Java-era health field names while mapping runtime version and heap values to Go, reserving a schema rename for Phase 8. Added the sqlc holiday queries/schema subset and marked affected ledger rows parity-pending. Fixed `bin/go-verify` to propagate tidy, vet, lint, and vulnerability-scan failures from its module checks, then moved the workspace toolchain to Go 1.27.3 to clear GO-2026-6809. `./bin/go-verify` passed every Go module with authorized development-database integration, race, coverage, vet, lint, govulncheck, and architecture checks. Docker context `pi-node` had the PostgreSQL 16 dev service already running; no services were restarted, and no stage systems were touched.

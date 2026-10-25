@@ -8,11 +8,15 @@ import (
 )
 
 type calendarHolidayStore struct {
-	holiday *Holiday
-	err     error
+	holiday       *Holiday
+	holidayByDate map[string]*Holiday
+	err           error
 }
 
-func (s calendarHolidayStore) GetHolidayByDate(context.Context, time.Time) (*Holiday, error) {
+func (s calendarHolidayStore) GetHolidayByDate(_ context.Context, date time.Time) (*Holiday, error) {
+	if s.holidayByDate != nil {
+		return s.holidayByDate[date.Format("2006-01-02")], s.err
+	}
 	return s.holiday, s.err
 }
 
@@ -44,6 +48,27 @@ func TestIsNSETradingSessionMatchesHolidayAndWeekendRules(t *testing.T) {
 				t.Fatalf("IsNSETradingSession() = %v, %v; want %v", got, err, test.want)
 			}
 		})
+	}
+}
+
+func TestExpectedNSETradingSessionsUsesInclusiveRangeAndHolidayOverrides(t *testing.T) {
+	ist := time.FixedZone("IST", 5*60*60+30*60)
+	from := time.Date(2026, 10, 24, 0, 0, 0, 0, ist) // Saturday
+	to := time.Date(2026, 10, 26, 0, 0, 0, 0, ist)   // Monday
+	store := calendarHolidayStore{holidayByDate: map[string]*Holiday{
+		"2026-10-25": {Type: "PARTIAL"}, // Sunday Muhurat session
+		"2026-10-26": {Type: "FULL"},
+	}}
+	sessions, err := ExpectedNSETradingSessions(context.Background(), from, to, store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || sessions[0].Format("2006-01-02") != "2026-10-25" {
+		t.Fatalf("sessions = %v, want only partial Sunday session", sessions)
+	}
+	empty, err := ExpectedNSETradingSessions(context.Background(), to, from, store)
+	if err != nil || empty == nil || len(empty) != 0 {
+		t.Fatalf("reversed range sessions = %v, %v; want empty", empty, err)
 	}
 }
 

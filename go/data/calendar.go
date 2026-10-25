@@ -10,7 +10,26 @@ import (
 
 var errHolidayStoreUnavailable = errors.New("holiday store is unavailable")
 
-// IsNSETradingSession mirrors Java MarketCalendar's holiday-first decision.
+// ExpectedNSETradingSessions returns the trading dates in the inclusive date range.
+func ExpectedNSETradingSessions(ctx context.Context, from, to time.Time, holidays HolidayReadStore) ([]time.Time, error) {
+	ist := time.FixedZone("IST", 5*60*60+30*60)
+	start, end := from.In(ist), to.In(ist)
+	first := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, ist)
+	last := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, ist)
+	sessions := make([]time.Time, 0)
+	for date := first; !date.After(last); date = date.AddDate(0, 0, 1) {
+		trading, err := IsNSETradingSession(ctx, date, holidays)
+		if err != nil {
+			return nil, err
+		}
+		if trading {
+			sessions = append(sessions, date)
+		}
+	}
+	return sessions, nil
+}
+
+// IsNSETradingSession reports whether a date is a market session using Java's holiday-first decision.
 func IsNSETradingSession(ctx context.Context, date time.Time, holidays HolidayReadStore) (bool, error) {
 	if holidays == nil {
 		return false, errHolidayStoreUnavailable

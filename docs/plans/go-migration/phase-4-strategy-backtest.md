@@ -53,3 +53,8 @@ Zero diff on decimal paths; trade lists identical; documented tolerances only on
 - Go naming: Java's `StrategyDecision` becomes `strategy.Decision` (package
   stutter rule); its `NewDecision` constructor keeps the Java validation
   messages verbatim with nolint annotations where staticcheck conflicts.
+- Parameter validation resolved maps use Go-native value types (INT -> int,
+  DECIMAL -> `coredecimal.Decimal` at financial scale, BOOL -> bool, ENUM ->
+  string). Range messages render at financial scale where Java prints plain
+  BigDecimal text; the Java tests pin only substring contracts (name plus
+  bound keyword), so asserted parity holds.

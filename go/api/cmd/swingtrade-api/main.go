@@ -52,6 +52,7 @@ func run(ctx context.Context) error {
 	var watchlistReader data.WatchlistReadStore
 	var holidayReader data.HolidayReadStore
 	var settingsReader data.SettingsReadStore
+	var ingestionStatus data.IngestionStatusLookup
 	if cfg.DatabaseURL != "" {
 		pool, err := db.NewLocalOrReadOnlyPool(ctx, cfg.DatabaseURL)
 		if err != nil {
@@ -61,12 +62,17 @@ func run(ctx context.Context) error {
 		watchlistReader = data.NewWatchlistReader(pool)
 		holidayReader = data.NewHolidayReader(pool)
 		settingsReader = data.NewSettingsReader(pool)
+		status, err := data.NewIngestionStatusService(watchlistReader, data.NewCandleReader(pool), time.Now)
+		if err != nil {
+			return fmt.Errorf("create ingestion status service: %w", err)
+		}
+		ingestionStatus = status
 		if err := wireIngestionJobs(ctx, logger, cfg, pool, settingsReader, holidayReader, watchlistReader); err != nil {
 			return err
 		}
 	}
 
-	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader, settingsReader)
+	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader, settingsReader, ingestionStatus)
 	if err != nil {
 		return fmt.Errorf("initialize HTTP platform: %w", err)
 	}

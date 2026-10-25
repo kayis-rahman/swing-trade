@@ -29,13 +29,19 @@ func (stub *historicalProviderStub) FetchCandles(_ context.Context, _ string, fr
 
 type candleReadStub struct {
 	window CandleDateWindow
+	count  int64
 	err    error
 }
 
 func (stub candleReadStub) GetDailyDateWindow(context.Context, string) (CandleDateWindow, error) {
 	return stub.window, stub.err
 }
-func (candleReadStub) CountDailyCandles(context.Context, string) (int64, error) { return 0, nil }
+func (stub candleReadStub) CountDailyCandles(context.Context, string) (int64, error) {
+	if stub.err != nil {
+		return 0, stub.err
+	}
+	return stub.count, nil
+}
 
 type ingestionHolidayStub struct {
 	dates map[string]*Holiday

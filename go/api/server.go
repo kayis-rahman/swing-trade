@@ -38,11 +38,11 @@ func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock corecloc
 
 // NewHandlerWithWatchlist builds the HTTP handler with an optional read-only watchlist store.
 func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore) (http.Handler, error) {
-	return NewHandlerWithStores(cfg, logger, clock, watchlist, nil, nil)
+	return NewHandlerWithStores(cfg, logger, clock, watchlist, nil, nil, nil)
 }
 
 // NewHandlerWithStores builds the HTTP handler with optional read-only data stores.
-func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore) (http.Handler, error) {
+func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore, ingestionStatus data.IngestionStatusLookup) (http.Handler, error) {
 	if clock == nil {
 		clock = coreclock.System{}
 	}
@@ -78,6 +78,7 @@ func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock corecloc
 	controller.RegisterHealthRoutes(mux, watchlist != nil, clock, clock.Now())
 	controller.RegisterHolidayRoutes(mux, holidays, logger, clock)
 	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
+	controller.RegisterIngestionRoutes(mux, ingestionStatus, logger, clock)
 	controller.RegisterSettingsRoutes(mux, settings, logger, clock, cfg.GPUHubAPIKeyConfigured)
 	mux.HandleFunc("GET /api/admin/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})

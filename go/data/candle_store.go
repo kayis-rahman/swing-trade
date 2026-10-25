@@ -16,6 +16,17 @@ INSERT INTO ohlcv_candles (
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (symbol, timeframe, date, bar_time) DO NOTHING`
 
+func storageTimeframe(interval string) string {
+	switch strings.ToLower(interval) {
+	case "1d", "d":
+		return "D"
+	case "15m", "15":
+		return "15m"
+	default:
+		return interval
+	}
+}
+
 // CandleWriteDB is the PostgreSQL execution surface required by the candle writer.
 type CandleWriteDB interface {
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)

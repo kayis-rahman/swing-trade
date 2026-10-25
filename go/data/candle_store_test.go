@@ -83,5 +83,5 @@ func validYahooCandle() YahooCandle {
 	high, _ := coredecimal.Parse("12")
 	low, _ := coredecimal.Parse("9")
 	closePrice, _ := coredecimal.Parse("11")
-	return YahooCandle{Symbol: "ABC", Date: time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC), BarTime: time.Date(2026, 10, 23, 9, 30, 0, 0, time.UTC), Open: open, High: high, Low: low, Close: closePrice, AdjustedClose: closePrice, Volume: 100}
+	return YahooCandle{Symbol: "ABC", Timeframe: "15m", Date: time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC), BarTime: time.Date(2026, 10, 23, 9, 30, 0, 0, time.UTC), Open: open, High: high, Low: low, Close: closePrice, AdjustedClose: closePrice, Volume: 100}
 }

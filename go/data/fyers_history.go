@@ -73,5 +73,5 @@ func parseFyersBar(row []json.RawMessage, symbol, interval string, ist *time.Loc
 	if interval != "D" {
 		barTime = bar
 	}
-	return YahooCandle{Symbol: symbol, Date: date, BarTime: barTime, Open: prices[0], High: prices[1], Low: prices[2], Close: prices[3], AdjustedClose: prices[3], Volume: volume}, true, nil
+	return YahooCandle{Symbol: symbol, Timeframe: storageTimeframe(interval), Date: date, BarTime: barTime, Open: prices[0], High: prices[1], Low: prices[2], Close: prices[3], AdjustedClose: prices[3], Volume: volume}, true, nil
 }

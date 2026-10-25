@@ -11,6 +11,7 @@ import (
 // YahooCandle is one accepted OHLCV bar parsed from Yahoo's chart endpoint.
 type YahooCandle struct {
 	Symbol        string
+	Timeframe     string
 	Date          time.Time
 	BarTime       time.Time
 	Open          coredecimal.Decimal
@@ -144,7 +145,7 @@ func parseYahooBar(quote struct {
 	if interval != "1d" {
 		barTime = bar
 	}
-	return YahooCandle{Symbol: symbol, Date: date, BarTime: barTime, Open: open, High: high, Low: low, Close: closePrice, AdjustedClose: adjustedClose, Volume: *quote.Volume[i]}, true, nil
+	return YahooCandle{Symbol: symbol, Timeframe: storageTimeframe(interval), Date: date, BarTime: barTime, Open: open, High: high, Low: low, Close: closePrice, AdjustedClose: adjustedClose, Volume: *quote.Volume[i]}, true, nil
 }
 
 func yahooPrice(value *json.Number, field string, index int) (coredecimal.Decimal, error) {

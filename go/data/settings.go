@@ -14,6 +14,7 @@ const defaultSelectedBroker = "yahoo"
 
 // SettingsReadStore exposes read-only application settings needed by API reads.
 type SettingsReadStore interface {
+	GetSetting(context.Context, string) (string, error)
 	GetSelectedBroker(context.Context) (string, error)
 }
 
@@ -29,15 +30,27 @@ func NewSettingsReader(db sqlc.DBTX) *SettingsReader {
 
 // GetSelectedBroker matches the Java provider's default and invalid-value fallback.
 func (r *SettingsReader) GetSelectedBroker(ctx context.Context) (string, error) {
-	setting, err := r.queries.GetAppSetting(ctx, "selectedBroker")
-	if errors.Is(err, pgx.ErrNoRows) {
-		return defaultSelectedBroker, nil
-	}
+	setting, err := r.GetSetting(ctx, "selectedBroker")
 	if err != nil {
 		return "", fmt.Errorf("get selected broker setting: %w", err)
 	}
-	if !setting.Valid || !isSupportedBroker(setting.String) {
+	if !isSupportedBroker(setting) {
 		return defaultSelectedBroker, nil
+	}
+	return setting, nil
+}
+
+// GetSetting returns the persisted value, or an empty string when it is missing or null.
+func (r *SettingsReader) GetSetting(ctx context.Context, key string) (string, error) {
+	setting, err := r.queries.GetAppSetting(ctx, key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("get app setting %q: %w", key, err)
+	}
+	if !setting.Valid {
+		return "", nil
 	}
 	return setting.String, nil
 }

@@ -27,6 +27,7 @@ func TestConfiguredReadParity(t *testing.T) {
 		{Path: "/api/watchlist"},
 		{Path: "/api/watchlist/all"},
 		{Path: "/api/settings"},
+		{Path: "/api/settings/discord"},
 	})
 	if err != nil {
 		t.Fatal(err)

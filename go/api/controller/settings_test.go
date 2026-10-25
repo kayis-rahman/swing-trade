@@ -13,12 +13,17 @@ import (
 )
 
 type fakeSettingsReader struct {
-	broker string
-	err    error
+	broker   string
+	settings map[string]string
+	err      error
 }
 
 func (f fakeSettingsReader) GetSelectedBroker(context.Context) (string, error) {
 	return f.broker, f.err
+}
+
+func (f fakeSettingsReader) GetSetting(_ context.Context, key string) (string, error) {
+	return f.settings[key], f.err
 }
 
 func TestSettingsReadReturnsSelectedBrokerInJavaEnvelope(t *testing.T) {
@@ -38,6 +43,34 @@ func TestSettingsReadReturnsSelectedBrokerInJavaEnvelope(t *testing.T) {
 	}
 	if response.Code != http.StatusOK || body.Data["selectedBroker"] != "fyers" || !body.Success || body.Error != nil || body.Timestamp != "2026-10-24T12:01:02.000000" {
 		t.Fatalf("settings response = %d %#v", response.Code, body)
+	}
+}
+
+func TestDiscordSettingsReadReturnsJavaDefaultsAndSettings(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		settings map[string]string
+		wantURL  string
+		wantOn   string
+	}{
+		{name: "defaults", wantOn: "false"},
+		{name: "configured", settings: map[string]string{"discord.webhook.url": "https://hooks.example.test/abc", "discord.webhook.enabled": "true"}, wantURL: "https://hooks.example.test/abc", wantOn: "true"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			RegisterSettingsRoutes(mux, fakeSettingsReader{settings: test.settings}, slog.New(slog.NewTextHandler(io.Discard, nil)), fixedClock{now: time.Now()})
+			response := httptest.NewRecorder()
+			mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/settings/discord", nil))
+			var body struct {
+				Data map[string]string `json:"data"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if response.Code != http.StatusOK || body.Data["discord.webhook.url"] != test.wantURL || body.Data["discord.webhook.enabled"] != test.wantOn {
+				t.Fatalf("discord settings = %d %#v", response.Code, body.Data)
+			}
+		})
 	}
 }
 

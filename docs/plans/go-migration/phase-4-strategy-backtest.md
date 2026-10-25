@@ -72,3 +72,19 @@ Zero diff on decimal paths; trade lists identical; documented tolerances only on
   `MarketContextTest`'s pinned behaviors. `UniformExitEvaluator` plus its
  141-line test follows once `MarketContext.View`, `StrategyParamsView`, and
   `OpenPosition` all exist.
+- DecimalNum semantics recovered from ta4j-core0.16 bytecode (use these
+  instead of re-deriving): every instance carries a MathContext and a
+  BigDecimal delegate; the double constructor uses `MathContext(32,
+  HALF_UP)` with `BigDecimal.valueOf(double)`, the String constructor uses
+  `MathContext(max(precision, 32), HALF_UP)` over the raw string, and the
+  `(String, int)` constructor rounds the input itself at that precision.
+  `plus`/`minus` apply the instance's MathContext and `multipliedBy`/
+  `dividedBy` apply `MathContext(thisPrecision, HALF_UP)`, re-wrapping each
+  result at the same precision - so all ops are exact while results stay
+  under the instance precision (32+ significant digits). Comparisons use
+  plain BigDecimal.compareTo. Still to confirm during implementation:
+  `valueOf(BigDecimal)` and `valueOf(int)` precision bases (likely the same
+  max(precision,32) pattern - extract before coding), and `getDelegate`
+  round-tripping through `numToBigDecimal`. The Go port should be a small
+  `decimalNum` type replicating these rules rather than reusing
+  coredecimal's fixed MoneyScale4.

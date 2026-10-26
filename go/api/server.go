@@ -9,10 +9,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/kayis-rahman/swing-trade/go/api/controller"
 	"github.com/kayis-rahman/swing-trade/go/api/middleware"
 	coreclock "github.com/kayis-rahman/swing-trade/go/core/clock"
 	"github.com/kayis-rahman/swing-trade/go/core/config"
 	corelog "github.com/kayis-rahman/swing-trade/go/core/log"
+	"github.com/kayis-rahman/swing-trade/go/data"
 )
 
 type healthResponse struct {
@@ -24,13 +26,23 @@ type healthComponent struct {
 	Status string `json:"status"`
 }
 
-// NewHandler builds the infrastructure-only HTTP handler with a discard logger.
+// NewHandler builds an HTTP handler without a configured data store or logger.
 func NewHandler(cfg config.Config) (http.Handler, error) {
 	return NewHandlerWithLogger(cfg, corelog.New(io.Discard, slog.LevelInfo, "api"), coreclock.System{})
 }
 
-// NewHandlerWithLogger builds the infrastructure-only handler with injected logging and time.
+// NewHandlerWithLogger builds an HTTP handler with injected logging and time but no data store.
 func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock coreclock.Clock) (http.Handler, error) {
+	return NewHandlerWithWatchlist(cfg, logger, clock, nil)
+}
+
+// NewHandlerWithWatchlist builds the HTTP handler with an optional read-only watchlist store.
+func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore) (http.Handler, error) {
+	return NewHandlerWithStores(cfg, logger, clock, watchlist, nil, nil, nil, nil)
+}
+
+// NewHandlerWithStores builds the HTTP handler with optional read-only data stores.
+func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore, ingestionStatus data.IngestionStatusLookup, reconciliation data.ReconciliationPreview) (http.Handler, error) {
 	if clock == nil {
 		clock = coreclock.System{}
 	}
@@ -63,9 +75,12 @@ func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock corecloc
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
-	})
+	controller.RegisterHealthRoutes(mux, watchlist != nil, clock, clock.Now())
+	controller.RegisterHolidayRoutes(mux, holidays, logger, clock)
+	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
+	controller.RegisterIngestionRoutes(mux, ingestionStatus, logger, clock)
+	controller.RegisterIngestionReconcileRoute(mux, watchlist, reconciliation, logger, clock)
+	controller.RegisterSettingsRoutes(mux, settings, logger, clock, cfg.GPUHubAPIKeyConfigured)
 	mux.HandleFunc("GET /api/admin/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
 	})

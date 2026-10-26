@@ -11,6 +11,12 @@ The Go executable starts on loopback by default and exposes infrastructure route
 | `API_PUBLIC_RATE_LIMIT_PER_MINUTE` | `app.security.public-rate-limit-per-minute` | `100`; positive integer |
 | `CORS_ALLOWED_ORIGINS` | `spring.web.cors.allowed-origins` | `http://localhost:3000,http://localhost:8080`; comma-separated exact origins |
 | `DATABASE_URL` | Go-only direct URL equivalent of `spring.datasource.url` | Empty; if set, Go uses a pgx pool with `default_transaction_read_only=on` and rejects any target outside the authorized development host and port |
+| `EOD_INGESTION_ENABLED` | Go-only job gate over Java's `data.eod.ingestion.enabled` | `false`; Go jobs stay off until the G8 switch even though Java defaults to `true`; starts the weekday 16:30 IST EOD loop when `DATABASE_URL` is set |
+| `BENCHMARK_BACKFILL_ON_STARTUP` | Go-only job gate over Java's `benchmark.backfill.on-startup` | `false`; startup NIFTY50 backfill requires this plus `DATABASE_URL` |
+| `BENCHMARK_BACKFILL_YEARS` | Go-only setting over Java's `benchmark.backfill.years` | `10`; positive integer |
+| `FYERS_SYMBOL_MASTER_REFRESH_ENABLED` | Go-only job gate; Java has no equivalent and refreshes whenever Fyers is active | `false`; starts the weekday 08:45 IST refresh loop and the startup refresh-when-empty path when `DATABASE_URL` is set, and only when `selectedBroker` is `fyers` |
+| `INTRADAY_INGESTION_ENABLED` | Go-only job gate over Java's `intraday.ingestion.enabled` | `false`; Go jobs stay off until the G8 switch even though Java defaults to `true`; starts the weekday 15:45 IST session-bar loop when `DATABASE_URL` is set |
+| `INTRADAY_INGESTION_LOOKBACK_DAYS` | Go-only setting over Java's `intraday.ingestion.lookback-days` | `10`; any integer, negative values clamped to zero at run time like Java's `Math.max(0, lookbackDays)` |
 | `SPRING_DATASOURCE_URL` | `spring.datasource.url` | Read at test runtime from the authorized, gitignored worktree env file; the verifier rejects non-dev targets |
 | `SPRING_DATASOURCE_USERNAME` | `spring.datasource.username` | Read at test runtime only; never printed |
 | `SPRING_DATASOURCE_PASSWORD` | `spring.datasource.password` | Read at test runtime only; never printed |

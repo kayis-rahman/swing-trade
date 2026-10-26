@@ -83,10 +83,13 @@ for module in "${modules[@]}"; do
   echo "== go/$module: module tidy, race tests, vet, lint, vulnerability scan =="
   if ! (
     cd "$REPO_ROOT/go/$module"
-    "$GO_BIN" mod tidy -diff
+    if ! "$GO_BIN" mod tidy -diff; then
+      echo "Go module tidy check failed in go/$module." >&2
+      exit 1
+    fi
     test_status=0
-    if [[ "$module" == "data" ]]; then
-      if [[ "$use_local_test_database" == "true" ]]; then
+    if [[ "$module" == "data" || ( "$module" == "api" && "$use_local_test_database" == "false" ) ]]; then
+      if [[ "$module" == "data" && "$use_local_test_database" == "true" ]]; then
         if test_output="$(SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1 SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
       elif test_output="$(SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
     else
@@ -107,17 +110,26 @@ if failed:
     sys.exit(1)'; then
       exit 1
     fi
-    "$GO_BIN" vet ./...
+    if ! "$GO_BIN" vet ./...; then
+      echo "Go vet failed in go/$module." >&2
+      exit 1
+    fi
     if [[ ! -x "$LINTER" ]]; then
       echo "golangci-lint is required at $LINTER" >&2
       exit 1
     fi
-    "$LINTER" run --config "$REPO_ROOT/.golangci.yml" ./...
+    if ! "$LINTER" run --config "$REPO_ROOT/.golangci.yml" ./...; then
+      echo "Go lint failed in go/$module." >&2
+      exit 1
+    fi
     if [[ ! -x "$VULN_CHECK" ]]; then
       echo "govulncheck is required at $VULN_CHECK" >&2
       exit 1
     fi
-    "$VULN_CHECK" ./...
+    if ! "$VULN_CHECK" ./...; then
+      echo "Go vulnerability scan failed in go/$module." >&2
+      exit 1
+    fi
     if [[ "$test_status" -ne 0 ]]; then
       echo "Go tests failed in go/$module." >&2
       exit "$test_status"
@@ -125,7 +137,7 @@ if failed:
   ); then
     failures=$((failures + 1))
   fi
-  if [[ "$module" == "data" ]]; then unset dev_db_url; fi
+  if [[ "$module" == "api" ]]; then unset dev_db_url; fi
 done
 
 "$REPO_ROOT/bin/check-go-architecture"

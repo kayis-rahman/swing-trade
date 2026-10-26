@@ -20,6 +20,7 @@ func TestRealBinaryServesEveryInfrastructureRoute(t *testing.T) {
 	cmd, output, baseURL := startAPIBinary(t, binary)
 	waitForHealth(t, client, baseURL, cmd, output)
 	assertHealthRoutes(t, client, baseURL)
+	assertDatabaseReadRoutesRequireDatabase(t, client, baseURL)
 	assertAdminRoute(t, client, baseURL)
 	assertAdminPreflight(t, client, baseURL)
 	assertPrometheusRoute(t, client, baseURL)
@@ -85,6 +86,21 @@ func waitForHealth(t *testing.T, client *http.Client, baseURL string, cmd *exec.
 		case <-timer.C:
 			_ = cmd.Process.Kill()
 			t.Fatalf("real API binary did not become healthy; output:\n%s", output.String())
+		}
+	}
+}
+
+func assertDatabaseReadRoutesRequireDatabase(t *testing.T, client *http.Client, baseURL string) {
+	t.Helper()
+	for _, path := range []string{"/api/watchlist", "/api/watchlist/all", "/api/holidays", "/api/holidays/today", "/api/settings", "/api/settings/discord", "/api/settings/gpuhub", "/api/settings/trading", "/api/settings/scanning", "/api/ingestion/status", "/api/ingestion/reconcile?from=2026-09-14&to=2026-09-18"} {
+		response := makeRequest(t, client, http.MethodGet, baseURL+path, "")
+		body, err := io.ReadAll(response.Body)
+		_ = response.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if response.StatusCode != http.StatusServiceUnavailable {
+			t.Errorf("GET %s without database = %d, want 503: %s", path, response.StatusCode, body)
 		}
 	}
 }

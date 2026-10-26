@@ -83,8 +83,9 @@ Zero diff on decimal paths; trade lists identical; documented tolerances only on
   result at the same precision - so all ops are exact while results stay
   under the instance precision (32+ significant digits). Comparisons use
   plain BigDecimal.compareTo. Still to confirm during implementation:
-  `valueOf(BigDecimal)` and `valueOf(int)` precision bases (likely the same
-  max(precision,32) pattern - extract before coding), and `getDelegate`
-  round-tripping through `numToBigDecimal`. The Go port should be a small
-  `decimalNum` type replicating these rules rather than reusing
-  coredecimal's fixed MoneyScale4.
+  `valueOf(BigDecimal)` retains the unrounded delegate and uses its own
+  significant-digit count as precision, while `valueOf(int)` uses precision
+  32; `getDelegate` returns the stored BigDecimal unchanged. These were
+  verified with `javap` plus a local Java probe before porting. The Go port
+  should be a small `decimalNum` type replicating these rules rather than
+  reusing coredecimal's fixed MoneyScale4.

@@ -1,6 +1,6 @@
 # Java to Go migration plan
 
-Status: planned. **Only Phase 0 is authorized.** Every later phase needs explicit captain approval at its gate.
+Status: Phase 1 local no-traffic skeleton authorized. Phase 0 and G0 were waived by captain decision on 2026-10-17; later phases still require explicit approval at their gates.
 Source analysis: a read-only scout of the repository at `c691c504` (module sizes, endpoints, schedulers, deployment, observability, safety flags); file references point at this repository. Repo baseline: `c691c504`.
 
 ## Decisions (captain, 2026-10-13)
@@ -18,14 +18,18 @@ Source analysis: a read-only scout of the repository at `c691c504` (module sizes
 | Rollback triggers | See [rollback.md](rollback.md) |
 | End state | Retire Java at G8 |
 | Structure and process | Same module separation, same scanners, test-first (see [standards.md](standards.md)) |
+| G0 and native-image comparison | Captain decision (2026-10-17): waive Phase 0/G0 and the native-image baseline; stop evidence collection, write no G0 report, and proceed with Phase 1 locally under [the authorization record](phase-1-authorization.md). |
 
 ## Document map
 
 | File | Purpose |
 |---|---|
 | [standards.md](standards.md) | Module layout, dependency rules, static scanning, coding standards, TDD loop |
-| [phase-0-characterization.md](phase-0-characterization.md) | Authorized now: baseline, goldens, ledger, traceability |
+| [phase-0-characterization.md](phase-0-characterization.md) | Historical characterization record; Phase 0/G0 were waived |
 | [phase-1-platform-skeleton.md](phase-1-platform-skeleton.md) | Go workspace, tooling, observability, no traffic |
+| [phase-1-authorization.md](phase-1-authorization.md) | Phase 0/G0 waiver and Phase 1 operational boundaries |
+| [phase-1-config.md](phase-1-config.md) | Go environment mapping, safe local commands, database-test limits |
+| [phase-1-metrics.md](phase-1-metrics.md) | Micrometer-compatible platform metric names for the skeleton |
 | [phase-2-read-edge.md](phase-2-read-edge.md) | Read-only endpoints, shadow comparison |
 | [phase-3-data-ingestion.md](phase-3-data-ingestion.md) | Providers, calendar, ingestion jobs |
 | [phase-4-strategy-backtest.md](phase-4-strategy-backtest.md) | Indicators, strategies, backtests |

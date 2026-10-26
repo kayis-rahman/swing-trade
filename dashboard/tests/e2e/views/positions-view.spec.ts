@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { mockDashboardApi } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
 
@@ -35,6 +36,7 @@ const closedPositions = [
 ]
 
 async function mockPositionApi(page: Page) {
+  await mockDashboardApi(page)
   await page.route(/^https?:\/\/[^/]+\/api\/positions(?:\/closed)?(?:\?.*)?$/, async (route) => {
     const request = route.request()
     if (request.method() !== 'GET') {

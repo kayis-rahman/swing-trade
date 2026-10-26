@@ -181,8 +181,9 @@ Four families coexist; the dashboard branches per call site on `direct` vs `enve
 | 429 | public fixed-window limiter | empty body, `Retry-After: 17`, `X-RateLimit-Limit: 100`, `X-RateLimit-Remaining: 0` |
 | 500 | `/api/admin/data/status?symbol=RELIANCE&days=30` | **not** the `ErrorResponse` envelope: `{"data":null,"error":"Failed to get data status: null","success":false,"timestamp":...}` — an internal message leaks into a 500 body |
 
-Not yet captured (still owed for step 4): a 409 conflict, a 422, and any golden that exercises a
-populated money path. All of those need either a seeded database or the stage read path.
+The 409 conflict and 422 empty-body shapes were captured on a later isolated local run; see
+[sse-errors-runtime.md](sse-errors-runtime.md). Populated money-path goldens remain outstanding and
+need a seeded database or an approved read path.
 
 ## 6. The 429 bucket is one deployment-wide counter, demonstrated live
 
@@ -214,9 +215,10 @@ bucket (and the `Retry-After` value is the remaining window seconds, not a fixed
 ## 8. Remaining gaps in this deliverable
 
 1. Golden vectors for money paths (positions, P&L, backtest metrics) need a seeded database.
-2. SSE event streams must be captured with `curl -N` as raw text; the three endpoints are
-   `POST /api/signals/generate-all/stream`, `GET /api/candidate-scans/{runId}/stream` and
-   `POST /api/analysis/run-full`.
+2. The three SSE endpoints are `POST /api/signals/generate-all/stream`,
+   `GET /api/candidate-scans/{runId}/stream` and `POST /api/analysis/run-full`. The first two
+   were captured locally; the latter remains outstanding because it starts the full orchestration
+   pipeline. See [sse-errors-runtime.md](sse-errors-runtime.md).
 3. The runtime confirmation half of step 8 (metrics inventory) is now possible: `/actuator/prometheus`
    answered 200 with `Accept: */*` on the throwaway run, and the corpus records its first bytes.
    Note it answers **500 `No acceptable representation`** (via `GlobalExceptionHandler`) when the

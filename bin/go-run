@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/swingtrade-api.XXXXXX")"
+SERVICE_PID=""
+cleanup() {
+  if [[ -n "$SERVICE_PID" ]]; then
+    kill -INT "$SERVICE_PID" 2>/dev/null || true
+    wait "$SERVICE_PID" 2>/dev/null || true
+  fi
+  rm -rf "$TEMP_DIR"
+}
+handle_signal() {
+  if [[ -n "$SERVICE_PID" ]]; then
+    kill -INT "$SERVICE_PID" 2>/dev/null || true
+    wait "$SERVICE_PID" 2>/dev/null || true
+    SERVICE_PID=""
+  fi
+  exit 0
+}
+trap cleanup EXIT
+trap handle_signal INT TERM
+
+cd "$REPO_ROOT/go/api"
+go build -o "$TEMP_DIR/swingtrade-api" ./cmd/swingtrade-api
+"$TEMP_DIR/swingtrade-api" &
+SERVICE_PID=$!
+wait "$SERVICE_PID"
+SERVICE_PID=""

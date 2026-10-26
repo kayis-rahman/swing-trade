@@ -3,7 +3,7 @@
 
 Phase 0 step 4: "Record golden request and response pairs per endpoint: success,
 validation error, not found, conflict, rate-limit, unauthorized admin; include
-headers and the five SSE event streams."
+headers and the three SSE event streams."
 
 This script is the reproducible capture half of that deliverable. It is read-only
 against the API: every case is a GET unless it is explicitly listed as a writable

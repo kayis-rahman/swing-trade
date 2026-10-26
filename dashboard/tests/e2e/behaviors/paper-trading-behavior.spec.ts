@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test'
+import { mockDashboardApi } from '../fixtures/api'
 
 const DASHBOARD = 'http://localhost:3003'
 
 test.describe('Paper Trading Behavior', () => {
+  test.beforeEach(async ({ page }) => mockDashboardApi(page))
+
   test('positions page renders with data or empty state', async ({ page }) => {
     await page.goto(`${DASHBOARD}/positions`)
     await page.waitForLoadState('networkidle')

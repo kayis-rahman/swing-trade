@@ -3,7 +3,7 @@
 Goal: the stateful pipeline and all write endpoints in Go, still not serving production.
 
 ## Scope
-Job orchestrator (runs, stages, cancel and interrupt, orphan reaper, summary and notifier), signal pipeline and arbiter, candidate scans with pause/resume/cancel, the five SSE streams, settings writes, strategy config writes with `lock_version`, watchlist writes, admin endpoints (symbols, data validate), Discord and Telegram notifications, remaining schedulers.
+Job orchestrator (runs, stages, cancel and interrupt, orphan reaper, summary and notifier), signal pipeline and arbiter, candidate scans with pause/resume/cancel, the three SSE streams, settings writes, strategy config writes with `lock_version`, watchlist writes, admin endpoints (symbols, data validate), Discord and Telegram notifications, remaining schedulers.
 
 ## Steps
 1. Ledger rows per stage, endpoint and scheduler.

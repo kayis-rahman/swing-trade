@@ -1,0 +1,59 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - depguard
+    - errcheck
+    - forbidigo
+    - funlen
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - nilerr
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - unused
+  settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          deny:
+            - pkg: math/rand
+              desc: use crypto/rand for identifiers and security-sensitive values
+    forbidigo:
+      forbid:
+        - pattern: time[.]Sleep
+          msg: use a context-aware timer instead of an uninterruptible sleep
+    funlen:
+      lines: 150
+      statements: 0
+    revive:
+      rules:
+        - name: exported
+        - name: var-naming
+        - name: indent-error-flow
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/kayis-rahman/swing-trade/go
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

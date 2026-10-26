@@ -1,0 +1,25 @@
+# Package the prebuilt Linux Go API for the stage container.
+# The binary is cross-compiled on the deployment workstation so pi-node only
+# needs to package and run it, matching the existing Java stage flow.
+FROM alpine:3.22
+
+ARG BUILD_COMMIT=unknown
+LABEL org.opencontainers.image.revision="${BUILD_COMMIT}" \
+      org.opencontainers.image.source="swing-trade"
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && addgroup -S -g 10001 swingtrade \
+    && adduser -S -D -H -u 10001 -G swingtrade swingtrade
+
+WORKDIR /app
+COPY --chown=10001:10001 swingtrade-api /app/swingtrade-api
+RUN chmod 0555 /app/swingtrade-api
+
+ENV TZ=Asia/Kolkata
+USER 10001:10001
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8080/actuator/health >/dev/null || exit 1
+
+ENTRYPOINT ["/app/swingtrade-api"]

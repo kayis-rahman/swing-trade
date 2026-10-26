@@ -2,6 +2,21 @@ package decimal
 
 import "testing"
 
+func TestCmpComparesNumerically(t *testing.T) {
+	one, err := Parse("1.00")
+	if err != nil {
+		t.Fatal(err)
+	}
+	two, err := Parse("2.00")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oneCopy := one
+	if one.Cmp(two) != -1 || two.Cmp(one) != 1 || one.Cmp(oneCopy) != 0 {
+		t.Fatal("Cmp returned unexpected ordering")
+	}
+}
+
 func TestParseUsesFinancialScaleAndHalfUp(t *testing.T) {
 	got, err := Parse("1.00005")
 	if err != nil {

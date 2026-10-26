@@ -1,0 +1,141 @@
+package data
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+)
+
+// HistoricalCandleProvider supplies candles for an inclusive requested window.
+type HistoricalCandleProvider interface {
+	FetchCandles(context.Context, string, time.Time, time.Time, string) ([]YahooCandle, error)
+}
+
+// Outcome values match Java's BackfillOutcome.sourceOutcome vocabulary.
+const (
+	OutcomeInvalidRequest         = "INVALID_REQUEST"
+	OutcomeTransientSourceFailure = "TRANSIENT_SOURCE_FAILURE"
+	OutcomeAlreadyCurrent         = "ALREADY_CURRENT"
+	OutcomeNoUsableData           = "NO_USABLE_DATA"
+	OutcomeInvalidRowsRejected    = "INVALID_ROWS_REJECTED"
+	OutcomeDataReceived           = "DATA_RECEIVED"
+)
+
+// IngestionOutcome summarizes one provider range fetch and its persistence result.
+type IngestionOutcome struct {
+	SourceOutcome string
+	FetchedRows   int
+	SavedRows     int
+	InvalidRows   int
+	ErrorMessage  string
+}
+
+// CandleIngester validates provider candles against the NSE calendar before storage.
+const defaultIngestionChunkDays = 365
+
+// CandleIngester coordinates historical provider reads, session validation, and storage.
+type CandleIngester struct {
+	provider HistoricalCandleProvider
+	writer   *CandleWriter
+	holidays HolidayReadStore
+}
+
+// NewCandleIngester constructs an ingestion service over explicit provider and storage ports.
+func NewCandleIngester(provider HistoricalCandleProvider, writer *CandleWriter, holidays HolidayReadStore) (*CandleIngester, error) {
+	if provider == nil || writer == nil || holidays == nil {
+		return nil, fmt.Errorf("provider, candle writer, and holiday store are required")
+	}
+	return &CandleIngester{provider: provider, writer: writer, holidays: holidays}, nil
+}
+
+// IngestIncremental fetches the unpopulated tail of a requested range where history is complete.
+// If the stored history does not reach the requested start, it re-fetches the full range safely.
+func (ingester *CandleIngester) IngestIncremental(ctx context.Context, reader CandleReadStore, symbol string, from, to time.Time, providerInterval, storageTimeframe string) IngestionOutcome {
+	if reader == nil {
+		return IngestionOutcome{SourceOutcome: OutcomeInvalidRequest, ErrorMessage: "candle reader is required"}
+	}
+	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) {
+		return IngestionOutcome{SourceOutcome: OutcomeInvalidRequest, ErrorMessage: "symbol and ordered date range are required"}
+	}
+	window, err := reader.GetDailyDateWindow(ctx, symbol)
+	if err != nil {
+		return IngestionOutcome{SourceOutcome: OutcomeTransientSourceFailure, ErrorMessage: fmt.Errorf("read existing candle window: %w", err).Error()}
+	}
+	effectiveFrom := from
+	if (window.Earliest == nil || !window.Earliest.After(from)) && window.Latest != nil && !window.Latest.Before(from) {
+		effectiveFrom = window.Latest.AddDate(0, 0, 1)
+	}
+	if effectiveFrom.After(to) {
+		return IngestionOutcome{SourceOutcome: OutcomeAlreadyCurrent}
+	}
+	return ingester.IngestRange(ctx, symbol, effectiveFrom, to, providerInterval, storageTimeframe)
+}
+
+// IngestRange fetches, validates, and idempotently stores a single symbol's inclusive range.
+func (ingester *CandleIngester) IngestRange(ctx context.Context, symbol string, from, to time.Time, providerInterval, storageTimeframe string) IngestionOutcome {
+	if strings.TrimSpace(symbol) == "" || from.IsZero() || to.IsZero() || from.After(to) || strings.TrimSpace(providerInterval) == "" || strings.TrimSpace(storageTimeframe) == "" {
+		return IngestionOutcome{SourceOutcome: OutcomeInvalidRequest, ErrorMessage: "symbol, intervals, and ordered date range are required"}
+	}
+	outcome := IngestionOutcome{SourceOutcome: OutcomeNoUsableData}
+	for chunkStart := from; !chunkStart.After(to); {
+		chunkEnd := chunkStart.AddDate(0, 0, defaultIngestionChunkDays-1)
+		if chunkEnd.After(to) {
+			chunkEnd = to
+		}
+		candles, err := ingester.provider.FetchCandles(ctx, symbol, chunkStart, chunkEnd, providerInterval)
+		if err != nil {
+			outcome.SourceOutcome = OutcomeTransientSourceFailure
+			outcome.ErrorMessage = err.Error()
+			return outcome
+		}
+		outcome.FetchedRows += len(candles)
+		if err := ingester.storeChunk(ctx, &outcome, candles, chunkStart, chunkEnd, storageTimeframe); err != nil {
+			outcome.SourceOutcome = OutcomeTransientSourceFailure
+			outcome.ErrorMessage = err.Error()
+			return outcome
+		}
+		chunkStart = chunkEnd.AddDate(0, 0, 1)
+	}
+	switch {
+	case outcome.FetchedRows == 0:
+		outcome.SourceOutcome = OutcomeNoUsableData
+	case outcome.InvalidRows > 0 && outcome.SavedRows == 0:
+		outcome.SourceOutcome = OutcomeInvalidRowsRejected
+	default:
+		outcome.SourceOutcome = OutcomeDataReceived
+	}
+	return outcome
+}
+
+func (ingester *CandleIngester) storeChunk(ctx context.Context, outcome *IngestionOutcome, candles []YahooCandle, from, to time.Time, timeframe string) error {
+	for _, candle := range candles {
+		if candle.Date.Before(from) || candle.Date.After(to) || !isValidYahooCandle(&candle) {
+			outcome.InvalidRows++
+			continue
+		}
+		trading, err := IsNSETradingSession(ctx, candle.Date, ingester.holidays)
+		if err != nil {
+			return fmt.Errorf("check NSE session: %w", err)
+		}
+		if !trading {
+			outcome.InvalidRows++
+			continue
+		}
+		inserted, err := ingester.writer.InsertIfAbsent(ctx, candle, timeframe)
+		if err != nil {
+			return err
+		}
+		if inserted {
+			outcome.SavedRows++
+		}
+	}
+	return nil
+}
+
+func isValidYahooCandle(candle *YahooCandle) bool {
+	if candle == nil || candle.Volume <= 0 || candle.Symbol == "" || candle.Date.IsZero() {
+		return false
+	}
+	return IsValidCandle(&CandleData{Symbol: candle.Symbol, Open: &candle.Open, High: &candle.High, Low: &candle.Low, Close: &candle.Close, Volume: candle.Volume})
+}

@@ -8,7 +8,7 @@
  "response": {
   "body": {
    "kind": "json",
-   "value": "{\n \"data\": {\n  \"failureReason\": \"\",\n  \"idleStops\": 0,\n  \"inFlightRequests\": 0,\n  \"message\": \"Pi llama-server is not running\",\n  \"modelPath\": \"<local-model-path>\",\n  \"readinessMillis\": -1,\n  \"running\": false,\n  \"startAttempts\": 0,\n  \"state\": \"STOPPED\",\n  \"success\": true\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:49.474276\"\n}"
+   "value": "{\n \"data\": {\n  \"failureReason\": \"\",\n  \"idleStops\": 0,\n  \"inFlightRequests\": 0,\n  \"message\": \"Pi llama-server is not running\",\n  \"modelPath\": \"/home/dietpi/.synapse/models/Qwen3.5-2B_Q4_k_m.gguf\",\n  \"readinessMillis\": -1,\n  \"running\": false,\n  \"startAttempts\": 0,\n  \"state\": \"STOPPED\",\n  \"success\": true\n },\n \"error\": null,\n \"success\": true,\n \"timestamp\": \"2026-10-15T07:43:49.474276\"\n}"
   },
   "body_truncated": false,
   "expected_status": 200,

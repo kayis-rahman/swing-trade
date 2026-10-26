@@ -18,7 +18,7 @@ read over SSH (read-only).
 ## 1. Summary
 
 | Measure | Value |
-|---|---|
+| --- | --- |
 | Logback configurations in the repo | 1 (`backend/api/src/main/resources/logback-spring.xml`); no log4j2, no `logging.structured.*` anywhere |
 | Appenders | 2 on the root logger for both `local` and `stage` profiles: `CONSOLE` and `ASYNC_FILE` (wraps `FILE`); every event is formatted twice and written twice |
 | MDC fields | 3: `traceId`, `symbol`, `module` - all written only by `TraceIdFilter` on HTTP request threads; empty on every scheduler/background thread |
@@ -58,7 +58,7 @@ Spring Boot 4.1.1 binding rules that matter here (verified from `spring-boot-4.1
 Environment-variable chain for the file sink:
 
 | Environment | `LOG_FILE` | Resulting file | Set by |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | local dev (`dev-stack.sh start`) | `$BACKEND_DIR/logs/swing-trade-local.log` | `backend/logs/swing-trade-local.log` (CWD is `backend/`) | `dev-stack.sh:110` |
 | stage container | `/var/log/swing-trade/stage.log` | same, inside the `stage_logs` named volume | `infra/docker-compose.infra-stage.yml:47` |
 | fallback (no env) | - | `./logs/swing-trade-local.log` | `logback-spring.xml:12,14` and `application.properties:259` |
@@ -70,7 +70,7 @@ timestamps are IST in every real deployment.
 ## 3. Line formats, per sink and environment
 
 | Sink | local profile | stage profile | other profiles |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | console | `%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n` (`application-local.properties:139`, no thread name) | `%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n` (`application-stage.properties:113`) | Spring Boot 4 default with ANSI colors: `%clr(%d{ISO8601+zone}){faint} %clr(%5p) ... --- [name] [thread] logger : %m%n%wEx` |
 | file | identical pattern for both profiles, hard-coded in `logback-spring.xml:16` (see below) | same | n/a - the file appender exists under `local` and `stage` profile blocks only |
 
@@ -106,7 +106,7 @@ node) contains exactly the console-pattern lines, one entry per physical line, n
 ## 4. MDC fields
 
 | Field | Value | Set by | Scope |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `traceId` | first 8 chars of a `UUID.randomUUID()` | `TraceIdFilter.doFilter`, per request | HTTP request thread only; cleared in `finally` |
 | `symbol` | query param `symbol`, else `code`, else the last path segment when the URI contains `/signals/` or `/positions/`; omitted when absent/blank | same | same |
 | `module` | constant `"api"` | same | same |
@@ -125,7 +125,7 @@ overhead. `queueSize=512` with `discardingThreshold=0` means the queue never dis
 ## 5. Per-profile logger levels
 
 | Logger | base (`application.properties:242-256`) | `application-local.properties:124-136` | `application-stage.properties:94-107` | `logback-spring.xml` springProfile |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | root | INFO | INFO | INFO | INFO (both profiles) |
 | `com.swingtrade` | DEBUG | DEBUG | INFO | local: DEBUG, stage: INFO |
 | `com.swingtrade.api` | DEBUG | DEBUG | INFO | - |
@@ -170,7 +170,7 @@ Spring `actuator.endpoint.jmx` WARN. The `application-test.properties` (test sco
 ## 7. Consumer inventory for `logs/*.log` and console output
 
 | # | Consumer | Consumes | Configuration location | Evidence / state |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 1 | promtail (`pi-promtail`, pi-stack on pi-node) | **container stdout only**, via `docker_sd_configs` against `/var/run/docker.sock` for **all** containers; labels `job=docker`, `container_name`, `service_name` (both from the container name); **no file paths, no `pipeline_stages`, no level parsing** | node-local `/home/dietpi/pi-stack/promtail/promtail-config.yml` (a `.bak-20260828` sits beside it) - **not in this repo** | confirmed live: Loki label values include `swing-trade-stage-api`; a 7-day `{container_name="swing-trade-stage-api"}` query returns one stream of clean console-pattern lines. The `FILE` appender file is **not** scraped |
 | 2 | Loki (`pi-loki`, pi-stack) | receives the promtail push to `http://loki:3100/loki/api/v1/push`; schema v13/tsdb, filesystem store in the `loki_data` volume | node-local `/home/dietpi/pi-stack/loki/config.yml` | confirmed: `retention_period: 168h` with `retention_enabled: true`; port published on the tailnet IP only (100.104.74.58:3100) |
 | 3 | Grafana (`pi-grafana`) | a `Loki` datasource is provisioned (`/home/dietpi/pi-stack/grafana/provisioning/datasources/datasources.yml`, uid `loki`, url `http://loki:3100`) | node-local provisioning + repo `infra/monitoring/provisioning/dashboards/swingtrade.json` | the repo dashboard (15 panels) is **100% Prometheus; zero panels query Loki** - nothing dashboard-side depends on the log format |

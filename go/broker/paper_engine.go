@@ -20,6 +20,12 @@ func NewPaperEngine(cash coredecimal.Decimal) *PaperEngine {
 // PlaceBuy validates cash without mutating state; order accounting is a later
 // phase 7 slice.
 func (e *PaperEngine) PlaceBuy(quantity int, price coredecimal.Decimal) error {
+	if quantity <= 0 {
+		return fmt.Errorf("quantity must be positive")
+	}
+	if price.Cmp(coredecimal.Decimal{}) < 0 {
+		return fmt.Errorf("price must be non-negative")
+	}
 	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(coredecimal.MoneyScale), nil)
 	costRat := new(big.Rat).Mul(
 		new(big.Rat).SetFrac(price.Units(), scale),

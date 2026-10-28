@@ -19,15 +19,19 @@ type OhlcvCandle struct {
 	AdjClose coredecimal.Decimal
 }
 
+// NewOhlcvCandle builds a candle with an explicit adjusted close.
 func NewOhlcvCandle(symbol string, date time.Time, open, high, low, close coredecimal.Decimal, volume int64, adjClose coredecimal.Decimal) OhlcvCandle {
 	v := volume
 	return OhlcvCandle{Symbol: symbol, Date: date, Open: open, High: high, Low: low, Close: close, Volume: &v, AdjClose: adjClose}
 }
 
+// OhlcvCandleOf builds a candle whose adjusted close equals its close.
 func OhlcvCandleOf(symbol string, date time.Time, open, high, low, close coredecimal.Decimal, volume int64) OhlcvCandle {
 	return NewOhlcvCandle(symbol, date, open, high, low, close, volume, close)
 }
 
+// AdjustedForAnalysis applies the adjustment factor to OHLC while leaving the
+// adjusted close as the analysis close, matching Java's behavior.
 func (c OhlcvCandle) AdjustedForAnalysis() OhlcvCandle {
 	if c.Close.Cmp(coredecimal.Decimal{}) <= 0 || c.AdjClose.Cmp(coredecimal.Decimal{}) <= 0 {
 		return c
@@ -42,10 +46,13 @@ func (c OhlcvCandle) AdjustedForAnalysis() OhlcvCandle {
 	return out
 }
 
+// GetRange returns high minus low.
 func (c OhlcvCandle) GetRange() coredecimal.Decimal { return c.High.Sub(c.Low) }
 
+// IsBullish reports close above open.
 func (c OhlcvCandle) IsBullish() bool { return c.Close.Cmp(c.Open) > 0 }
 
+// IsBearish reports close below open.
 func (c OhlcvCandle) IsBearish() bool { return c.Close.Cmp(c.Open) < 0 }
 
 func decimalToRat(d coredecimal.Decimal) *big.Rat {

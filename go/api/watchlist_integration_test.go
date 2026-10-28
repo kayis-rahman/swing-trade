@@ -30,7 +30,7 @@ func TestReadEndpointsAgainstAuthorizedDevelopmentDatabase(t *testing.T) {
 	defer pool.Close()
 
 	cfg := config.Config{HTTPAddr: "127.0.0.1:0", PublicRateLimitPerMinute: 100}
-	handler, err := NewHandlerWithStores(cfg, nil, coreclock.System{}, data.NewWatchlistReader(pool), data.NewHolidayReader(pool), data.NewSettingsReader(pool), nil, nil)
+	handler, err := NewHandlerWithStores(cfg, nil, coreclock.System{}, data.NewWatchlistReader(pool), data.NewHolidayReader(pool), data.NewSettingsReader(pool), nil, nil, data.NewSignalReader(pool))
 	if err != nil {
 		t.Fatal(err)
 	}

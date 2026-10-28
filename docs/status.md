@@ -25,11 +25,11 @@ Last checked: 2026-10-24 (Go Phase 2 health, holiday, and watchlist read slices)
 
 Last checked: 2026-10-18 (Go Phase 1, PR #139 comprehensive regression documented)
 
-- [x] Captain feedback addressed on PR #139 (https://github.com/kayis-rahman/swing-trade/pull/139): comprehensive pre-existing file regression documentation committed (hash `19832cf8`). All 25 pre-existing files modified are documented with reasons and proofs. No Java/backend code was modified. All 6 dashboard test file changes are stabilization (RouterLink stubs, mockDashboardApi fixtures). Proof of Go isolation: no docker-compose/nginx/port changes in PR. Regression tests: Backend API+Data tests passed (25 tasks), Dashboard tests passed (61 files, 375 tests), Dashboard build passed (872ms). Rate-limiter live test passed (HTTP 429 on 101st request, HTTP 200 after window expiry). Live rate-limiter evidence captured: real binary tested with 101 sequential HTTP requests, HTTP 429 returned on request 101, HTTP 200 after 65-second wait (window expiry). Stage deploy is held until this evidence is reviewed. Docker compose unavailable, so full Java+dashboard+Go stack screenshots not captured - unit/e2e tests and build evidence provided instead.
+- [x] Captain feedback addressed on PR #139 (<https://github.com/kayis-rahman/swing-trade/pull/139>): comprehensive pre-existing file regression documentation committed (hash `19832cf8`). All 25 pre-existing files modified are documented with reasons and proofs. No Java/backend code was modified. All 6 dashboard test file changes are stabilization (RouterLink stubs, mockDashboardApi fixtures). Proof of Go isolation: no docker-compose/nginx/port changes in PR. Regression tests: Backend API+Data tests passed (25 tasks), Dashboard tests passed (61 files, 375 tests), Dashboard build passed (872ms). Rate-limiter live test passed (HTTP 429 on 101st request, HTTP 200 after window expiry). Live rate-limiter evidence captured: real binary tested with 101 sequential HTTP requests, HTTP 429 returned on request 101, HTTP 200 after 65-second wait (window expiry). Stage deploy is held until this evidence is reviewed. Docker compose unavailable, so full Java+dashboard+Go stack screenshots not captured - unit/e2e tests and build evidence provided instead.
 
 Last checked: 2026-10-18 (Go Phase 1, rate limiter cleanup and G0 waiver documentation, PR #139)
 
-- [x] Submitted rate-limiter cleanup and G0 waiver documentation on `fm/swing-trade-go-migration-impl-v1` (commit `e5b4c5f3`): (1) bounded memory behavior to the RateLimiter - expired client entries are evicted after every 10 requests, verified by unit test `TestRateLimiterBoundedMemory`; (2) removed post-waiver SSE/error characterization entry and recorded G0 waiver status in `phase-0-characterization.md`. Pipeline run `01M57KNBNEYKRTTDAKMFZMP0MR` completed rebase, review (fixed rate-limit cleanup test, approved pre-waiver artifact R1 and Java compatibility R2), test (rate-limiter cleanup unit-tested), document, lint, push, and PR. PR created: https://github.com/kayis-rahman/swing-trade/pull/139. CI is running (GitHub checks still registering after ~53 minutes). Go-specific checks all pass: race tests, 80% coverage for tested packages, vet, golangci-lint, govulncheck, architecture checks.
+- [x] Submitted rate-limiter cleanup and G0 waiver documentation on `fm/swing-trade-go-migration-impl-v1` (commit `e5b4c5f3`): (1) bounded memory behavior to the RateLimiter - expired client entries are evicted after every 10 requests, verified by unit test `TestRateLimiterBoundedMemory`; (2) removed post-waiver SSE/error characterization entry and recorded G0 waiver status in `phase-0-characterization.md`. Pipeline run `01M57KNBNEYKRTTDAKMFZMP0MR` completed rebase, review (fixed rate-limit cleanup test, approved pre-waiver artifact R1 and Java compatibility R2), test (rate-limiter cleanup unit-tested), document, lint, push, and PR. PR created: <https://github.com/kayis-rahman/swing-trade/pull/139>. CI is running (GitHub checks still registering after ~53 minutes). Go-specific checks all pass: race tests, 80% coverage for tested packages, vet, golangci-lint, govulncheck, architecture checks.
 
 Last checked: 2026-10-18 (Go Phase 1, local DB and browser verification)
 
@@ -47,7 +47,7 @@ Last checked: 2026-10-11 (candidate-to-intraday handoff local verification)
   the explicit replay against the local seeded API: 4/4 cutoff bars, `PAPER_SIMULATION`, zero live
   broker calls, and no browser errors. Evidence is outside the repo at
   `firstmate/data/swing-trade-intraday-scanner-local-v1/candidate-handoff-report.md` and its
-  adjacent screenshot/JSON/script. Captain review URL: http://127.0.0.1:3003/candidate-explorer.
+  adjacent screenshot/JSON/script. Captain review URL: <http://127.0.0.1:3003/candidate-explorer>.
   No commit, push, or PR; awaiting captain review.
 
 Last checked: 2026-10-11 (intraday paper scanner local captain review)
@@ -63,7 +63,7 @@ Last checked: 2026-10-11 (intraday paper scanner local captain review)
   with 0 live broker calls. Headless browser acceptance confirmed scan results and the candidate
   handoff; screenshot/report artifacts are outside the repo at
   `firstmate/data/swing-trade-intraday-scanner-local-v1/`. Captain review URL:
-  http://127.0.0.1:3003/intraday. Local-only stack uses a unique throwaway DB project, loopback
+  <http://127.0.0.1:3003/intraday>. Local-only stack uses a unique throwaway DB project, loopback
   bindings, and disabled scheduling; no shared/stage infrastructure was changed. Awaiting captain
   review before considering any PR.
 
@@ -527,6 +527,7 @@ Self-hosted personal project — no CI gate. `dev-stack.sh` against pi-node infr
 The development database was intentionally reset on 2026-08-29 for a clean verification run, then repopulated the same day: 10 active watchlist symbols, each backfilled with 3yr/738 candles, and one full `/api/backtest/run-all` pass (see Strategy section). The current database is no longer empty: runtime verification on 2026-09-02 loaded 2 open and 8 closed paper positions/trades. The API runs in local paper-trading mode with Yahoo Finance as the active market-data client. Historical verification claims below the Strategy section still describe the earlier reset dataset and are not claims about current state.
 
 **Post-stage follow-ups verification (2026-09-15, commit `e947f7f9`)** — full backend/dashboard check from `docs/plans/2026-09-14-post-stage-follow-ups.md`:
+
 - Backend: `./gradlew :data:test :api:test --no-daemon` green. `./gradlew :api:integrationTest --tests '*SignalPipelineSellExitIntegrationTest' --no-daemon` green. The core and GPUHub JaCoCo gates are now green; a fresh full-build result is still pending.
 - Dashboard: `yarn typecheck` and `yarn test:run` (281 tests) green. `yarn build` fails at the `format:check` step on pre-existing Prettier drift in `DashboardView.vue` and `OrchestratorView.vue`, confirmed present on `main` with no dashboard files modified this session.
 - All three follow-up plan items (equity-curve status, Position decomposition, Docker-capable SELL integration test) are implementation-complete; this entry closes the plan's final "full verification recorded" checklist item.
@@ -760,6 +761,7 @@ The development database was intentionally reset on 2026-08-29 for a clean verif
 - [x] Exit reason, realized P&L, and Trade audit record — **PASS, fixed and covered by tests.** `PositionService.closePosition()` uses the latest candle for the exit price, persists the corresponding `Trade` close, and `PaperTradingStateService.closePosition()` preserves the supplied `ExitReason` instead of hardcoding `manual`. The remote TestContainers integration test remains unavailable because the configured Docker daemon is remote; unit and dev-stack verification are green.
 
 **Fixed 2026-08-29, via TDD (RED-GREEN, verified by re-running `./gradlew :broker:test :api:test :data:test :core:test` independently — BUILD SUCCESSFUL, no regressions):**
+
 - [x] Exit reason bug — `PaperTradingStateService.closePosition()` now uses the real reason passed in (`closedPos.exitReason()`), falling back to `ExitReason.MANUAL.name()` only when null.
 - [x] Missing Trade audit record — `Trade.open()` now called at position entry, `Trade.close()` at exit (`PositionService`), via a new `TradeStore.findOpenByPositionId()` / `TradeRepository` query. Every close now produces a real `trades` row.
 - [x] Stale exit price / wrong P&L — `PositionService.closePosition()` now sources exit price from `CandleStore.findLatestBySymbol()` (latest ingested OHLCV close, same source `PaperTradingMonitorService` uses), falling back to `currentPrice`/`entryPrice` only if no candle exists.
@@ -794,6 +796,7 @@ Per-position risk is also aligned at ₹100,000 (20% of the ₹500,000 paper bas
 20 phases completed from architecture audit (64 findings):
 
 ### Backend (8 phases)
+
 - [x] H5: TradeRequest.isValid() operator precedence fix
 - [x] H6: Null direction guards in 3 places (PaperTradingServiceImpl, LiveTradingService, PositionService)
 - [x] H7: PositionEntity.toDomain() null status → defaults to OPEN
@@ -807,12 +810,13 @@ Per-position risk is also aligned at ₹100,000 (20% of the ₹500,000 paper bas
 - [x] H14: Portfolio totalValue/totalPnL populated in PerformanceResponse
 
 ### Frontend (9 phases)
+
 - [x] H9: 19 `as any` casts → `unwrap<T>()` helper (1 remaining safe `as any`)
 - [x] H10: SSE 60s timeout with AbortController (both generators)
 - [x] H11: Position type synced (24 fields: brokerType, direction, entryReason, etc.)
 - [x] H12: rawFetch retry with exponential backoff (1s/2s/4s, max 3 retries)
 - [x] C8: ErrorBoundary component created and applied to all 9 views
-- [x] H8: useAsyncData<T>() composable replacing ~63 lines of boilerplate
+- [x] H8: `useAsyncData<T>()` composable replacing ~63 lines of boilerplate
 - [x] M14: Currency standardized to `Rs.` across all views
 - [x] H15: Allocation read from settings store (allocationPerPosition)
 - [x] View integration: all 9 views wrapped in ErrorBoundary + useAsyncData
@@ -822,7 +826,7 @@ Dismissed (not bugs): C1 (param order safe), C3 (.env not in git), C5 (backtest 
 ### Remaining — Backend
 
 | Finding | Priority | Status | Notes |
-|---------|----------|--------|-------|
+| --------- | ---------- | -------- | ------- |
 | M1: DailyLossCircuitBreaker timezone | P3 | ✅ Done | `MARKET_ZONE = ZoneId.of("Asia/Kolkata")` added, all 8 unqualified `LocalDate/LocalDateTime.now()` calls fixed, test added |
 | M9: Position god object (23 fields) | P3 | ✅ Done | `backend/core/domain/Position.java` is grouped into `PositionEntry`, `PositionRisk`, `PositionValuation`, and `PositionExit`, with compatibility accessors for existing callers; the obsolete API DTO is absent. Core position tests pass. |
 | M10: VARCHAR(10) symbols | P3 | ✅ Done | New migration `V36__widen_symbol_column.sql` widens `symbol` to VARCHAR(20) across all 9 tables; V1 untouched |
@@ -832,7 +836,7 @@ Dismissed (not bugs): C1 (param order safe), C3 (.env not in git), C5 (backtest 
 ### Remaining — Frontend
 
 | Finding | Priority | Status | Notes |
-|---------|----------|--------|-------|
+| --------- | ---------- | -------- | ------- |
 | C7: appState not Pinia | P1 | ✅ Done | Rewritten as `defineStore` setup-store matching `notifications.ts`; consumers (App.vue, BackendDownBanner.vue) and tests updated |
 | M3: NaN validation gap | P3 | ✅ Done | New `dashboard/src/utils/format.ts` (safeNumber/formatCurrency/formatPercent/etc.) falling back to `—`; wired into DashboardView, PerformanceMetrics, PositionCard, PositionsView |
 | M12: API client 1096 lines | P3 | ✅ Done | Split into 14 domain modules (commit `22232700`) |

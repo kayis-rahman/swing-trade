@@ -1,27 +1,23 @@
 package strategy
 
-import coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
+import (
+	"fmt"
 
-import "fmt"
+	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
+)
 
-
-func parseDecimalCoreString(s string) decimalNum {
-	d, _ := newDecimalNum(s)
-	return d
-}
-
+// computeSMA mirrors TA4J's SMAIndicator: the trailing window is clamped to
+// the available bars, so early values are partial averages rather than zero.
 func computeSMA(series []decimalNum, period int) []decimalNum {
 	out := make([]decimalNum, len(series))
 	for i := range series {
-		if i+1 < period {
-			out[i] = decimalNumFromInt(0)
-			continue
-		}
+		start := maxInt(0, i-period+1)
 		sum := decimalNumFromInt(0)
-		for j := i - period + 1; j <= i; j++ {
+		for j := start; j <= i; j++ {
 			sum = sum.add(series[j])
 		}
-		q, _ := sum.divide(decimalNumFromInt(period))
+		observations := minInt(period, i+1)
+		q, _ := sum.divide(decimalNumFromInt(observations))
 		out[i] = q
 	}
 	return out
@@ -171,21 +167,21 @@ func computeBBLower(series []decimalNum, period int, k decimalNum) []decimalNum 
 	return out
 }
 
+// computeStdDev mirrors TA4J's StandardDeviationIndicator over
+// VarianceIndicator: a population variance over the clamped trailing window,
+// square-rooted. Early bars use the observations available so far.
 func computeStdDev(series []decimalNum, period int) []decimalNum {
 	out := make([]decimalNum, len(series))
 	for i := range series {
-		if i+1 < period {
-			continue
-		}
-		// population? TA4J StandardDeviationIndicator likely sample? Use population for simplicity
-		start := i - period + 1
-		mean, _ := sumRange(series, start, i).divide(decimalNumFromInt(period))
-		var sq decimalNum
+		start := maxInt(0, i-period+1)
+		observations := minInt(period, i+1)
+		mean, _ := sumRange(series, start, i).divide(decimalNumFromInt(observations))
+		sq := decimalNumFromInt(0)
 		for j := start; j <= i; j++ {
 			d := series[j].sub(mean)
 			sq = sq.add(d.multiply(d))
 		}
-		variance, _ := sq.divide(decimalNumFromInt(period))
+		variance, _ := sq.divide(decimalNumFromInt(observations))
 		out[i] = sqrtDecimal(variance)
 	}
 	return out
@@ -212,8 +208,14 @@ func sqrtDecimal(d decimalNum) decimalNum {
 }
 
 func computeKeltnerUpper(seriesClose, seriesHigh, seriesLow []decimalNum, period int, mult coredecimal.Decimal) []decimalNum {
-	// middle = SMA close (Keltner middle typically EMA but TA4J Keltner uses SMA? Actually KeltnerChannelMiddle uses SMA)
-	mid := computeSMA(seriesClose, period)
+	// TA4J 0.16: KeltnerChannelMiddleIndicator is an EMA of the typical price
+	// ((high+low+close)/3) and KeltnerChannelUpperIndicator adds ATR*mult.
+	typical := make([]decimalNum, len(seriesClose))
+	for i := range seriesClose {
+		sum := seriesHigh[i].add(seriesLow[i]).add(seriesClose[i])
+		typical[i], _ = sum.divide(decimalNumFromInt(3))
+	}
+	mid := computeEMA(typical, period)
 	atr := computeATR(seriesHigh, seriesLow, seriesClose, period)
 	km, _ := newDecimalNum(mult.String())
 	out := make([]decimalNum, len(seriesClose))

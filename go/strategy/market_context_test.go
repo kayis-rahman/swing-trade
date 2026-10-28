@@ -76,6 +76,6 @@ func TestMarketContextCache(t *testing.T) {
 }
 
 func mustDecimal(s string) coredecimal.Decimal {
-	d,_ := coredecimal.Parse(s)
+	d, _ := coredecimal.Parse(s)
 	return d
 }

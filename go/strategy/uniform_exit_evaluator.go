@@ -6,6 +6,8 @@ import (
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
 )
 
+// UniformExitEvaluate applies the shared stop, target, signal, trailing, and
+// time exits to one bar, matching Java's UniformExitEvaluator.
 func UniformExitEvaluate(view View, position OpenPosition, params StrategyParamsView, signalExitTriggered bool) (ExitDecision, error) {
 	low := view.Low()
 	high := view.High()
@@ -59,13 +61,16 @@ func UniformExitEvaluate(view View, position OpenPosition, params StrategyParams
 	return ExitHold(), nil
 }
 
-// Java-style alias
+// UniformExitEvaluatorEvaluate is the Java-style alias for UniformExitEvaluate.
 func UniformExitEvaluatorEvaluate(view View, position OpenPosition, params StrategyParamsView, signalExitTriggered bool) (ExitDecision, error) {
 	return UniformExitEvaluate(view, position, params, signalExitTriggered)
 }
 
+// UniformExitEvaluator exposes Evaluate for callers that keep a Java-shaped
+// evaluator instance.
 type UniformExitEvaluator struct{}
 
+// Evaluate delegates to UniformExitEvaluate.
 func (UniformExitEvaluator) Evaluate(view View, position OpenPosition, params StrategyParamsView, signalExitTriggered bool) (ExitDecision, error) {
 	return UniformExitEvaluate(view, position, params, signalExitTriggered)
 }

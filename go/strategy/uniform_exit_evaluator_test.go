@@ -25,4 +25,3 @@ func TestUniformExitStopLoss(t *testing.T) {
 		t.Fatalf("expected stop loss, got %+v", dec)
 	}
 }
-

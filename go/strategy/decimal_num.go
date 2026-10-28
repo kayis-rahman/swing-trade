@@ -62,30 +62,30 @@ func (value decimalNum) add(other decimalNum) decimalNum {
 	scale := max(value.scale, other.scale)
 	left := scaleCoefficient(value.coefficient, scale-value.scale)
 	right := scaleCoefficient(other.coefficient, scale-other.scale)
-	return newDecimalNumFromPartsRounded(new(big.Int).Add(left, right), scale, value.precision)
+	return newDecimalNumFromPartsRounded(new(big.Int).Add(left, right), scale, value.effectivePrecision())
 }
 
 func (value decimalNum) sub(other decimalNum) decimalNum {
 	scale := max(value.scale, other.scale)
 	left := scaleCoefficient(value.coefficient, scale-value.scale)
 	right := scaleCoefficient(other.coefficient, scale-other.scale)
-	return newDecimalNumFromPartsRounded(new(big.Int).Sub(left, right), scale, value.precision)
+	return newDecimalNumFromPartsRounded(new(big.Int).Sub(left, right), scale, value.effectivePrecision())
 }
 
 func (value decimalNum) multiply(other decimalNum) decimalNum {
 	return newDecimalNumFromPartsRounded(
-		new(big.Int).Mul(value.coefficient, other.coefficient),
+		new(big.Int).Mul(cloneBigInt(value.coefficient), cloneBigInt(other.coefficient)),
 		value.scale+other.scale,
-		value.precision,
+		value.effectivePrecision(),
 	)
 }
 
 func (value decimalNum) divide(other decimalNum) (decimalNum, error) {
-	if other.coefficient.Sign() == 0 {
+	if cloneBigInt(other.coefficient).Sign() == 0 {
 		return decimalNum{}, fmt.Errorf("division by zero")
 	}
 
-	numerator, denominator := new(big.Int).Set(value.coefficient), new(big.Int).Set(other.coefficient)
+	numerator, denominator := cloneBigInt(value.coefficient), cloneBigInt(other.coefficient)
 	shift := other.scale - value.scale
 	if shift >= 0 {
 		numerator = scaleCoefficient(numerator, shift)
@@ -93,11 +93,12 @@ func (value decimalNum) divide(other decimalNum) (decimalNum, error) {
 		denominator = scaleCoefficient(denominator, -shift)
 	}
 
+	precision := value.effectivePrecision()
 	if coefficient, scale, ok := exactDecimalQuotient(numerator, denominator, value.scale-other.scale); ok {
-		return newDecimalNumFromPartsRounded(coefficient, scale, value.precision), nil
+		return newDecimalNumFromPartsRounded(coefficient, scale, precision), nil
 	}
 
-	scale := value.precision - decimalExponent(numerator, denominator) - 1
+	scale := precision - decimalExponent(numerator, denominator) - 1
 	quotient, remainder := divideAtScale(numerator, denominator, scale)
 	if shouldRoundHalfUp(remainder, denominator) {
 		if numerator.Sign()*denominator.Sign() >= 0 {
@@ -106,7 +107,42 @@ func (value decimalNum) divide(other decimalNum) (decimalNum, error) {
 			quotient.Sub(quotient, big.NewInt(1))
 		}
 	}
-	return newDecimalNumFromPartsRounded(quotient, scale, value.precision), nil
+	return newDecimalNumFromPartsRounded(quotient, scale, precision), nil
+}
+
+// divideRounded mirrors BigDecimal.divide(other, scale, HALF_UP): a fixed
+// result scale independent of either operand's significant digits.
+func (value decimalNum) divideRounded(other decimalNum, scale int) (decimalNum, error) {
+	if cloneBigInt(other.coefficient).Sign() == 0 {
+		return decimalNum{}, fmt.Errorf("division by zero")
+	}
+	numerator, denominator := cloneBigInt(value.coefficient), cloneBigInt(other.coefficient)
+	shift := other.scale - value.scale
+	if shift >= 0 {
+		numerator = scaleCoefficient(numerator, shift)
+	} else {
+		denominator = scaleCoefficient(denominator, -shift)
+	}
+	quotient, remainder := divideAtScale(numerator, denominator, scale)
+	if shouldRoundHalfUp(remainder, denominator) {
+		if numerator.Sign()*denominator.Sign() >= 0 {
+			quotient.Add(quotient, big.NewInt(1))
+		} else {
+			quotient.Sub(quotient, big.NewInt(1))
+		}
+	}
+	return newDecimalNumFromPartsRounded(quotient, scale, max(scale, value.effectivePrecision())), nil
+}
+
+// effectivePrecision makes the zero value usable: Java's DecimalNum always
+// carries a MathContext, while a Go zero struct carries none. Without this,
+// an accumulator declared as `var sum decimalNum` would round every result to
+// zero significant digits.
+func (value decimalNum) effectivePrecision() int {
+	if value.precision <= 0 {
+		return 32
+	}
+	return value.precision
 }
 
 // String is BigDecimal.toPlainString-compatible for the finite values used by
@@ -258,7 +294,7 @@ func decimalPrecision(coefficient *big.Int) int {
 }
 
 func scaleCoefficient(coefficient *big.Int, scale int) *big.Int {
-	return new(big.Int).Mul(coefficient, decimalNumPow10(scale))
+	return new(big.Int).Mul(cloneBigInt(coefficient), decimalNumPow10(scale))
 }
 
 func decimalNumPow10(exponent int) *big.Int {
@@ -274,4 +310,12 @@ func cloneBigInt(value *big.Int) *big.Int {
 		return new(big.Int)
 	}
 	return new(big.Int).Set(value)
+}
+
+// compare mirrors BigDecimal.compareTo for indicator values.
+func (value decimalNum) compare(other decimalNum) int {
+	scale := max(value.scale, other.scale)
+	left := scaleCoefficient(value.coefficient, scale-value.scale)
+	right := scaleCoefficient(other.coefficient, scale-other.scale)
+	return left.Cmp(right)
 }

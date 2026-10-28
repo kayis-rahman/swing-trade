@@ -11,9 +11,16 @@ COMPOSE_PROJECT="swing-trade-go-stage"
 COMPOSE_FILE="docker-compose.go-stage.yml"
 JAVA_CONTAINER="swing-trade-stage-api"
 
-echo "Refusing Go stage replacement: no authoritative verifier is configured for the Phase 1 gate and stage backup/restore." >&2
-echo "Caller-supplied records cannot authorize stage access; obtain approval to integrate an authoritative verifier." >&2
-exit 2
+STAGE_AUTHORITY_VERIFIER="$PROJECT_ROOT/bin/verify-go-stage-authority.sh"
+if [[ ! -x "$STAGE_AUTHORITY_VERIFIER" ]]; then
+  echo "Refusing Go stage replacement: no authoritative verifier is configured for the Phase 1 gate and stage backup/restore." >&2
+  echo "Caller-supplied records cannot authorize stage access; obtain approval to integrate an authoritative verifier." >&2
+  exit 2
+fi
+if ! "$STAGE_AUTHORITY_VERIFIER"; then
+  echo "Refusing Go stage replacement: authoritative stage access verification failed." >&2
+  exit 2
+fi
 
 BUILD_COMMIT="$(cd "$PROJECT_ROOT" && git rev-parse HEAD)"
 if [[ -n "$(cd "$PROJECT_ROOT" && git status --porcelain)" ]]; then

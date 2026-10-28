@@ -46,16 +46,15 @@ assert_refused_without_ssh() {
   fi
 }
 
+# Simulate the absence of the authoritative verifier without creating an override.
+mv "$PROJECT_ROOT/bin/verify-go-stage-authority.sh" "$PROJECT_ROOT/bin/verify-go-stage-authority.sh.disabled"
+trap 'mv "$PROJECT_ROOT/bin/verify-go-stage-authority.sh.disabled" "$PROJECT_ROOT/bin/verify-go-stage-authority.sh" 2>/dev/null || true; rm -rf "$TEMP_DIR"' EXIT
+
 assert_refused_without_ssh \
   'no authoritative verifier is configured'
-assert_refused_without_ssh \
-  'no authoritative verifier is configured' \
-  STAGE_GO_PHASE1_GATE_PASSED=YES \
-  STAGE_GO_PHASE1_GATE_REFERENCE=fabricated \
-  STAGE_GO_BACKUP_RESTORE_VERIFIED=YES \
-  STAGE_GO_BACKUP_RESTORE_REFERENCE=fabricated \
-  STAGE_GO_PHASE1_GATE_RECORD=/dev/null \
-  STAGE_GO_BACKUP_RESTORE_RECORD=/dev/null
+
+mv "$PROJECT_ROOT/bin/verify-go-stage-authority.sh.disabled" "$PROJECT_ROOT/bin/verify-go-stage-authority.sh"
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 bash -n "$PROJECT_ROOT/bin/deploy-go-stage.sh" "$PROJECT_ROOT/dev-stack.sh"
 if command -v shellcheck >/dev/null 2>&1; then

@@ -8,29 +8,29 @@ import (
 	"github.com/kayis-rahman/swing-trade/go/core/domain"
 )
 
-type IndicatorKey int
+type indicatorKind int
 
 const (
-	IndicatorKeyEMA IndicatorKey = iota
-	IndicatorKeyRSI
-	IndicatorKeyATR
-	IndicatorKeyVolumeMA
-	IndicatorKeyHighestHigh
-	IndicatorKeyLowestLow
-	IndicatorKeyBBMiddle
-	IndicatorKeyBBUpper
-	IndicatorKeyBBLower
-	IndicatorKeyKeltnerMiddle
-	IndicatorKeyKeltnerUpper
+	indicatorKindEMA indicatorKind = iota
+	indicatorKindRSI
+	indicatorKindATR
+	indicatorKindVolumeMA
+	indicatorKindHighestHigh
+	indicatorKindLowestLow
+	indicatorKindBBMiddle
+	indicatorKindBBUpper
+	indicatorKindBBLower
+	indicatorKindKeltnerMiddle
+	indicatorKindKeltnerUpper
 )
 
 type IndicatorCacheKey struct {
-	key    IndicatorKey
+	key    indicatorKind
 	period int
 }
 
 type ScaledIndicatorCacheKey struct {
-	key         IndicatorKey
+	key         indicatorKind
 	period      int
 	multiplier  float64
 }
@@ -221,7 +221,7 @@ func (v View) EMA(period int, indices ...int) coredecimal.Decimal {
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyEMA, period: period}
+	key := IndicatorCacheKey{key: indicatorKindEMA, period: period}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeEMA(v.ctx.seriesClose, period) })
 	return decimalToCore(ser[i])
 }
@@ -230,7 +230,7 @@ func (v View) RSI(period int, indices ...int) coredecimal.Decimal {
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyRSI, period: period}
+	key := IndicatorCacheKey{key: indicatorKindRSI, period: period}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeRSI(v.ctx.seriesClose, period) })
 	return decimalToCore(ser[i])
 }
@@ -239,7 +239,7 @@ func (v View) ATR(period int, indices ...int) coredecimal.Decimal {
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyATR, period: period}
+	key := IndicatorCacheKey{key: indicatorKindATR, period: period}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeATR(v.ctx.seriesHigh, v.ctx.seriesLow, v.ctx.seriesClose, period) })
 	return decimalToCore(ser[i])
 }
@@ -248,7 +248,7 @@ func (v View) VolumeMA(period int, indices ...int) coredecimal.Decimal {
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyVolumeMA, period: period}
+	key := IndicatorCacheKey{key: indicatorKindVolumeMA, period: period}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeSMA(v.ctx.seriesVolume, period) })
 	return decimalToCore(ser[i])
 }
@@ -261,7 +261,7 @@ func (v View) HighestHigh(period int, indices ...int) coredecimal.Decimal {
 	if bounded > len(v.ctx.candles) {
 		bounded = len(v.ctx.candles)
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyHighestHigh, period: bounded}
+	key := IndicatorCacheKey{key: indicatorKindHighestHigh, period: bounded}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeHighest(v.ctx.seriesHigh, bounded) })
 	return decimalToCore(ser[i])
 }
@@ -274,7 +274,7 @@ func (v View) LowestLow(period int, indices ...int) coredecimal.Decimal {
 	if bounded > len(v.ctx.candles) {
 		bounded = len(v.ctx.candles)
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyLowestLow, period: bounded}
+	key := IndicatorCacheKey{key: indicatorKindLowestLow, period: bounded}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeLowest(v.ctx.seriesLow, bounded) })
 	return decimalToCore(ser[i])
 }
@@ -283,7 +283,7 @@ func (v View) BBMiddle(period int, indices ...int) coredecimal.Decimal {
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := IndicatorCacheKey{key: IndicatorKeyBBMiddle, period: period}
+	key := IndicatorCacheKey{key: indicatorKindBBMiddle, period: period}
 	ser := v.ctx.cachedSeriesExternal(key, func() []decimalNum { return computeSMA(v.ctx.seriesClose, period) })
 	return decimalToCore(ser[i])
 }
@@ -295,7 +295,7 @@ func (v View) BBUpper(period int, k coredecimal.Decimal, indices ...int) coredec
 	dk, _ := newDecimalNum(k.String())
 	mult := 0.0 // unused
 	_ = mult
-	key := ScaledIndicatorCacheKey{key: IndicatorKeyBBUpper, period: period, multiplier: kfloat(k)}
+	key := ScaledIndicatorCacheKey{key: indicatorKindBBUpper, period: period, multiplier: kfloat(k)}
 	// compute std dev series once cached implicitly
 	ser := v.ctx.cachedScaledExternal(key, func() []decimalNum {
 		return computeBBUpper(v.ctx.seriesClose, period, dk)
@@ -307,7 +307,7 @@ func (v View) BBLower(period int, k coredecimal.Decimal, indices ...int) coredec
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := ScaledIndicatorCacheKey{key: IndicatorKeyBBLower, period: period, multiplier: kfloat(k)}
+	key := ScaledIndicatorCacheKey{key: indicatorKindBBLower, period: period, multiplier: kfloat(k)}
 	ser := v.ctx.cachedScaledExternal(key, func() []decimalNum { return computeBBLower(v.ctx.seriesClose, period, func() decimalNum { d, _ := newDecimalNum(k.String()); return d }()) })
 	return decimalToCore(ser[i])
 }
@@ -333,7 +333,7 @@ func (v View) KeltnerUpper(period int, atrMult coredecimal.Decimal, indices ...i
 	if len(indices) > 0 {
 		i = v.checkView(indices[0])
 	}
-	key := ScaledIndicatorCacheKey{key: IndicatorKeyKeltnerUpper, period: period, multiplier: kfloat(atrMult)}
+	key := ScaledIndicatorCacheKey{key: indicatorKindKeltnerUpper, period: period, multiplier: kfloat(atrMult)}
 	ser := v.ctx.cachedScaledExternal(key, func() []decimalNum { return computeKeltnerUpper(v.ctx.seriesClose, v.ctx.seriesHigh, v.ctx.seriesLow, period, atrMult) })
 	return decimalToCore(ser[i])
 }

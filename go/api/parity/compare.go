@@ -108,12 +108,13 @@ func equalJSON(path string, java, goBody []byte) bool {
 		return false
 	}
 	if path == "/api/watchlist/all" {
-		javaRecords, javaOK := recordsByID(javaValue)
-		goRecords, goOK := recordsByID(goValue)
-		if !javaOK || !goOK {
+		if _, ok := recordsByID(javaValue); !ok {
 			return false
 		}
-		return equalJSONValue(javaRecords, goRecords)
+		if _, ok := recordsByID(goValue); !ok {
+			return false
+		}
+		return equalJSONValue(javaValue, goValue)
 	}
 	return equalJSONValue(javaValue, goValue)
 }

@@ -897,3 +897,11 @@ Backtest below 45% -> Tune strategy parameters first
 LLM endpoint down -> Still go - NEUTRAL default is safe
 SELL/exit manual verification failing -> Do not start pilot; this path closes real (paper) positions
 CI/stage pipeline is not a gate for this project -> dev-stack + this checklist is the sign-off
+
+## 2026-10-28 Final Phase-8 verification (fm/swing-trade-go-migration-impl-v3)
+
+- Go unit tests: all Go modules pass except `go/data/db` local/readonly pool cases, which require a running local PostgreSQL target (inconclusive in this isolated worktree).
+- Race/vet/govulncheck: not rerun separately here; existing v3 evidence remains authoritative.
+- Dashboard: `yarn typecheck` passes; Vitest 375 tests pass across 61 files.
+- Frontend dev proxy remains pointed at the Go backend on port 8081.
+- No stage deployment performed.

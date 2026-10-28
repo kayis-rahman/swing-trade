@@ -61,6 +61,31 @@ type OhlcvCandle struct {
 	BarTime       pgtype.Time      `json:"bar_time"`
 }
 
+type Signal struct {
+	ID                 int64            `json:"id"`
+	Symbol             string           `json:"symbol"`
+	Date               pgtype.Date      `json:"date"`
+	SignalType         string           `json:"signal_type"`
+	ConfidenceScore    pgtype.Numeric   `json:"confidence_score"`
+	Reasoning          pgtype.Text      `json:"reasoning"`
+	EntryPrice         pgtype.Numeric   `json:"entry_price"`
+	StopLoss           pgtype.Numeric   `json:"stop_loss"`
+	Target             pgtype.Numeric   `json:"target"`
+	RiskReward         pgtype.Numeric   `json:"risk_reward"`
+	Indicators         pgtype.Text      `json:"indicators"`
+	WarningFlag        pgtype.Text      `json:"warning_flag"`
+	GeneratedAt        pgtype.Date      `json:"generated_at"`
+	Processed          pgtype.Bool      `json:"processed"`
+	Strategy           string           `json:"strategy"`
+	SentimentScore     pgtype.Text      `json:"sentiment_score"`
+	SentimentReasoning pgtype.Text      `json:"sentiment_reasoning"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	Version            pgtype.Int4      `json:"version"`
+	StrategyVersion    int32            `json:"strategy_version"`
+	ParamsHash         pgtype.Text      `json:"params_hash"`
+}
+
 type Watchlist struct {
 	ID           int64            `json:"id"`
 	Symbol       string           `json:"symbol"`

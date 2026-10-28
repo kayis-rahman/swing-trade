@@ -66,3 +66,28 @@ CREATE TABLE nse_calendar_coverage (
     source VARCHAR(255),
     verified_at TIMESTAMP
 );
+
+CREATE TABLE signals (
+    id BIGSERIAL PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    date DATE NOT NULL,
+    signal_type VARCHAR(10) NOT NULL,
+    confidence_score NUMERIC(5,2),
+    reasoning TEXT,
+    entry_price NUMERIC(15,4),
+    stop_loss NUMERIC(15,4),
+    target NUMERIC(15,4),
+    risk_reward NUMERIC(5,2),
+    indicators VARCHAR(255),
+    warning_flag VARCHAR(50),
+    generated_at DATE,
+    processed BOOLEAN DEFAULT FALSE,
+    strategy VARCHAR(40) NOT NULL DEFAULT 'DEFAULT',
+    sentiment_score VARCHAR(12),
+    sentiment_reasoning TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER,
+    strategy_version INTEGER NOT NULL DEFAULT 1,
+    params_hash VARCHAR(64)
+);

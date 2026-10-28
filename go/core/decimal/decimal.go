@@ -148,6 +148,11 @@ func scaleUnit(scale int) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(scale)), nil)
 }
 
+// Units returns the underlying scaled integer (scale 4).
+func (d Decimal) Units() *big.Int {
+	return new(big.Int).Set(d.value())
+}
+
 func (d Decimal) value() *big.Int {
 	if d.units == nil {
 		return new(big.Int)

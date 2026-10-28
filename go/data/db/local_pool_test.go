@@ -2,76 +2,89 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 )
 
+const (
+	authorizedProductionURL = "postgresql://dev-user@192.168.0.100:5435/swingtrade_db"
+	validLocalURL           = "postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable"
+)
+
+// An unauthorized/invalid production URL fails validation before any network
+// call, which lets these unit tests exercise the fallback branch without
+// depending on whether the development or local database is running.
+const alwaysFailingProductionURL = "not-a-postgres-url"
+
 func TestNewLocalOrReadOnlyPoolTriesProductionFirst(t *testing.T) {
 	ctx := context.Background()
-	productionURL := "postgresql://dev-user@192.168.0.100:5435/swingtrade_db"
 	t.Setenv(localTestDatabaseEnv, "")
-	if _, err := NewLocalOrReadOnlyPool(ctx, productionURL); err == nil {
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "")
+	_, err := NewLocalOrReadOnlyPool(ctx, alwaysFailingProductionURL)
+	if err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() succeeded without opt-in")
+	}
+	if !strings.Contains(err.Error(), "connect to database") {
+		t.Fatalf("error = %q, want it to wrap the production failure", err)
 	}
 }
 
 func TestNewLocalOrReadOnlyPoolUsesLocalFallbackWhenOptedIn(t *testing.T) {
 	ctx := context.Background()
+	productionURL := alwaysFailingProductionURL
+
 	t.Setenv(localTestDatabaseEnv, "")
 	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "")
-	productionURL := "postgresql://dev-user@192.168.0.100:5435/swingtrade_db"
 	if _, err := NewLocalOrReadOnlyPool(ctx, productionURL); err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() succeeded without opt-in")
+	} else if !strings.Contains(err.Error(), "connect to database") {
+		t.Fatalf("error = %q, want the production failure without opt-in", err)
 	}
 
+	// With opt-in, the production failure hands off to the local URL parser.
 	t.Setenv(localTestDatabaseEnv, "1")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "not-a-postgres-url")
 	if _, err := NewLocalOrReadOnlyPool(ctx, productionURL); err == nil {
-		t.Fatal("NewLocalOrReadOnlyPool() succeeded without local database")
-	}
-
-	if _, err := NewLocalOrReadOnlyPool(ctx, productionURL); err == nil {
-		t.Fatal("NewLocalOrReadOnlyPool() succeeded without local database")
+		t.Fatal("NewLocalOrReadOnlyPool() succeeded with an invalid local fallback URL")
+	} else if !strings.Contains(err.Error(), "parse local fallback database URL") {
+		t.Fatalf("error = %q, want the local fallback parse failure", err)
 	}
 }
 
 func TestNewLocalOrReadOnlyPoolReturnsPoolForValidLocalTarget(t *testing.T) {
-	// This test verifies the local fallback path when a valid local database is running.
-	// The integration tests (TestDevelopmentDatabaseConnectionsAreReadOnly and
-	// TestDevelopmentDatabaseWritesStayInIsolatedSchema) exercise the live local
-	// database path; this unit test only checks parameter validation.
-	localURL := "postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable"
-	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
+	// A valid local URL must pass validation. Whether it then connects depends
+	// on the local database being up, so accept either a pool or a connection
+	// error, but never a validation error.
 	t.Setenv(localTestDatabaseEnv, "1")
-	// Construct an intentionally bad local URL to verify error handling.
-	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "not-a-postgres-url")
-	_, err := NewLocalOrReadOnlyPool(context.Background(), "postgresql://dev-user@192.168.0.100:5435/swingtrade_db")
-	if err == nil {
-		t.Fatal("NewLocalOrReadOnlyPool() succeeded with invalid local fallback URL")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", validLocalURL)
+	pool, err := NewLocalOrReadOnlyPool(context.Background(), alwaysFailingProductionURL)
+	if err != nil {
+		if strings.Contains(err.Error(), "local fallback database URL must target") {
+			t.Fatalf("valid local URL was rejected by validation: %v", err)
+		}
+		return
 	}
-	expectedMsg := "parse local fallback database URL"
-	if !strings.Contains(fmt.Sprintf("%v", err), expectedMsg) {
-		t.Fatalf("error message = %q, want to contain %q", err, expectedMsg)
-	}
+	pool.Close()
+}
 
-	// Verify that a valid local URL is accepted (validation passes, connection still fails).
-	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", localURL)
-	_, err = NewLocalOrReadOnlyPool(context.Background(), "postgresql://dev-user@192.168.0.100:5435/swingtrade_db")
-	if err == nil {
-		t.Fatal("NewLocalOrReadOnlyPool() should still fail when no local database is running")
-	}
-	if strings.Contains(fmt.Sprintf("%v", err), "local fallback database URL must target") {
-		t.Fatal("valid local URL should not be rejected by validation")
-	}
-
-	// Verify that a non-valid local URL is rejected by validation.
-	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL", "postgresql://other@localhost:55433/go_port_test?sslmode=disable")
-	_, err = NewLocalOrReadOnlyPool(context.Background(), "postgresql://dev-user@192.168.0.100:5435/swingtrade_db")
+func TestNewLocalOrReadOnlyPoolRejectsNonValidLocalTarget(t *testing.T) {
+	t.Setenv(localTestDatabaseEnv, "1")
+	t.Setenv("SWINGTRADE_LOCAL_TEST_DATABASE_URL",
+		"postgresql://other@localhost:55433/go_port_test?sslmode=disable")
+	_, err := NewLocalOrReadOnlyPool(context.Background(), alwaysFailingProductionURL)
 	if err == nil {
 		t.Fatal("NewLocalOrReadOnlyPool() accepted non-valid local fallback URL")
 	}
-	expectedMsg = "local fallback database URL must target 127.0.0.1:55433/go_port_test as user go_port_test with no password"
-	if !strings.Contains(fmt.Sprintf("%v", err), expectedMsg) {
+	expectedMsg := "local fallback database URL must target 127.0.0.1:55433/go_port_test as user go_port_test with no password"
+	if !strings.Contains(err.Error(), expectedMsg) {
 		t.Fatalf("error message = %q, want to contain %q", err, expectedMsg)
+	}
+}
+
+// Keeps the authorized production URL in the test surface so a future change
+// to the allow-list is visible here.
+func TestAuthorizedProductionURLStillAcceptedByConfig(t *testing.T) {
+	if _, err := ReadOnlyPoolConfig(authorizedProductionURL); err != nil {
+		t.Fatalf("authorized production URL rejected: %v", err)
 	}
 }

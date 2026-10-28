@@ -49,42 +49,23 @@ func run(ctx context.Context) error {
 	}
 	logger := corelog.New(os.Stdout, slog.LevelInfo, "api")
 
-	var watchlistReader data.WatchlistReadStore
-	var holidayReader data.HolidayReadStore
-	var settingsReader data.SettingsReadStore
-	var ingestionStatus data.IngestionStatusLookup
-	var reconciliation data.ReconciliationPreview
+	var stores apiStores
 	if cfg.DatabaseURL != "" {
 		pool, err := db.NewLocalOrReadOnlyPool(ctx, cfg.DatabaseURL)
 		if err != nil {
 			return fmt.Errorf("connect to database: %w", err)
 		}
 		defer pool.Close()
-		watchlistReader = data.NewWatchlistReader(pool)
-		holidayReader = data.NewHolidayReader(pool)
-		settingsReader = data.NewSettingsReader(pool)
-		status, err := data.NewIngestionStatusService(watchlistReader, data.NewCandleReader(pool), time.Now)
+		stores, err = buildDataStores(pool)
 		if err != nil {
-			return fmt.Errorf("create ingestion status service: %w", err)
+			return err
 		}
-		ingestionStatus = status
-		sourceClient, err := data.NewYahooClient(yahooBaseURL, nil)
-		if err != nil {
-			return fmt.Errorf("create Yahoo market data client: %w", err)
-		}
-		preview, err := data.NewReconciler(
-			data.NewCoverageReader(pool), holidayReader, data.NewCandleReader(pool), sourceClient,
-		)
-		if err != nil {
-			return fmt.Errorf("create reconciliation preview: %w", err)
-		}
-		reconciliation = preview
-		if err := wireIngestionJobs(ctx, logger, cfg, pool, settingsReader, holidayReader, watchlistReader); err != nil {
+		if err := wireIngestionJobs(ctx, logger, cfg, pool, stores.settings, stores.holidays, stores.watchlist); err != nil {
 			return err
 		}
 	}
 
-	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, watchlistReader, holidayReader, settingsReader, ingestionStatus, reconciliation)
+	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, stores.watchlist, stores.holidays, stores.settings, stores.ingestion, stores.reconciliation, stores.signals)
 	if err != nil {
 		return fmt.Errorf("initialize HTTP platform: %w", err)
 	}
@@ -100,6 +81,43 @@ func run(ctx context.Context) error {
 	}
 	logger.Info("API listening", "addr", cfg.HTTPAddr)
 	return serveHTTP(ctx, server, listener)
+}
+
+// apiStores groups the read-only stores the HTTP platform consumes.
+type apiStores struct {
+	watchlist      data.WatchlistReadStore
+	holidays       data.HolidayReadStore
+	settings       data.SettingsReadStore
+	ingestion      data.IngestionStatusLookup
+	reconciliation data.ReconciliationPreview
+	signals        data.SignalReadStore
+}
+
+// buildDataStores wires every read store against the live pool.
+func buildDataStores(pool *pgxpool.Pool) (apiStores, error) {
+	stores := apiStores{
+		watchlist: data.NewWatchlistReader(pool),
+		holidays:  data.NewHolidayReader(pool),
+		settings:  data.NewSettingsReader(pool),
+		signals:   data.NewSignalReader(pool),
+	}
+	status, err := data.NewIngestionStatusService(stores.watchlist, data.NewCandleReader(pool), time.Now)
+	if err != nil {
+		return apiStores{}, fmt.Errorf("create ingestion status service: %w", err)
+	}
+	stores.ingestion = status
+	sourceClient, err := data.NewYahooClient(yahooBaseURL, nil)
+	if err != nil {
+		return apiStores{}, fmt.Errorf("create Yahoo market data client: %w", err)
+	}
+	preview, err := data.NewReconciler(
+		data.NewCoverageReader(pool), stores.holidays, data.NewCandleReader(pool), sourceClient,
+	)
+	if err != nil {
+		return apiStores{}, fmt.Errorf("create reconciliation preview: %w", err)
+	}
+	stores.reconciliation = preview
+	return stores, nil
 }
 
 // wireIngestionJobs starts every explicitly enabled Go data job against the

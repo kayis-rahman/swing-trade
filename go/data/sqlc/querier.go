@@ -28,6 +28,7 @@ type Querier interface {
 	ListFyersSymbolsByExchange(ctx context.Context, upper interface{}) ([]FyersSymbolMaster, error)
 	ListFyersTradingSymbols(ctx context.Context) ([]string, error)
 	ListHolidaysByDateRange(ctx context.Context, arg ListHolidaysByDateRangeParams) ([]ListHolidaysByDateRangeRow, error)
+	ListLatestSignals(ctx context.Context) ([]Signal, error)
 	ListNseCalendarCoverageYears(ctx context.Context, arg ListNseCalendarCoverageYearsParams) ([]ListNseCalendarCoverageYearsRow, error)
 	ListUpcomingHolidays(ctx context.Context, holidayDate pgtype.Date) ([]ListUpcomingHolidaysRow, error)
 	SearchFyersSymbols(ctx context.Context, arg SearchFyersSymbolsParams) ([]FyersSymbolMaster, error)

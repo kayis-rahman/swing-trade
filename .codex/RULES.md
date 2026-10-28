@@ -9,6 +9,9 @@ Use repo skills in `.agents/skills/` for their matching workflows:
 - `backend-dev` — Java/Spring backend, persistence, integrations, and backend tests.
 - `dashboard-dev` — Vue, TypeScript, Pinia, dashboard behavior, and frontend tests.
 - `dev-stack` — local service operation and troubleshooting. Keep local and stage targets distinct.
+- `go-platform-dev` — Go workspace, modules, decimals, SQLC, and parity contracts.
+- `llm-runtime-settings` — live LLM settings resolution; use as a backend-dev companion.
+- `stage-go-cutover` — stage-only Go API replacement artifacts and evidence.
 - `crit-review` — only when the user explicitly asks to use Crit.
 
 Invoke a skill by name when helpful; do not force a skill onto unrelated work. The instructions live in each skill’s `SKILL.md`.
@@ -19,6 +22,7 @@ Invoke a skill by name when helpful; do not force a skill onto unrelated work. T
 - Dependency direction: `api → strategy, llm, broker, gpuhub, data, core`; `broker → strategy, data, core`; `strategy → data, llm, core`; `llm → data, core`; `data → core`; `gpuhub` and `core` are standalone. Do not add reverse dependencies.
 - Keep domain logic out of `api` and `data`; keep persistence and HTTP calls out of `strategy`. Use `BigDecimal` for monetary values.
 - `dashboard/` is Vue 3, TypeScript, Vite, Pinia, Vitest, and Playwright. `infra/` contains deployment and local-stack configuration. `docs/` is the canonical project documentation.
+- `go/` is a Go workspace preserving Java's domain ownership across `core`, `data`, `strategy`, `llm`, `broker`, `gpuhub`, and `api` modules. Dependency direction mirrors Java at the module level (for example `api → core, data, ...`); do not add reverse imports. Use fixed-scale decimals for money/percent/indicator math.
 
 ## Verification
 

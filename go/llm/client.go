@@ -8,11 +8,13 @@ import (
 	"net/http"
 )
 
+// ChatRequest is an OpenAI-compatible chat completion request.
 type ChatRequest struct {
-	Model    string            `json:"model"`
-	Messages []map[string]any  `json:"messages"`
+	Model    string           `json:"model"`
+	Messages []map[string]any `json:"messages"`
 }
 
+// ChatResponse is an OpenAI-compatible chat completion response.
 type ChatResponse struct {
 	Choices []struct {
 		Message struct {
@@ -21,16 +23,19 @@ type ChatResponse struct {
 	} `json:"choices"`
 }
 
+// Client calls an OpenAI-compatible LLM endpoint.
 type Client struct {
 	BaseURL string
 	APIKey  string
 	HTTP    *http.Client
 }
 
+// NewClient constructs an LLM client.
 func NewClient(baseURL, apiKey string) *Client {
 	return &Client{BaseURL: baseURL, APIKey: apiKey, HTTP: http.DefaultClient}
 }
 
+// Chat sends a chat completion request.
 func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
 	b, _ := json.Marshal(req)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/chat/completions", bytes.NewReader(b))
@@ -45,7 +50,7 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, erro
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("llm http %d", resp.StatusCode)
 	}

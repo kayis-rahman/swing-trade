@@ -28,7 +28,14 @@ check_phase_one_gate() {
       return 1
     fi
   else
-    if ! (cd "$PROJECT_ROOT" && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath ./go/api/cmd/swingtrade-api >/dev/null 2>&1); then
+    if ! (
+      cd "$PROJECT_ROOT" &&
+      tmpbin="$(mktemp)" &&
+      build_status=0 &&
+      GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -o "$tmpbin" ./go/api/cmd/swingtrade-api >/dev/null 2>&1 || build_status=$? &&
+      rm -f "$tmpbin" &&
+      test "$build_status" -eq 0
+    ); then
       echo "Phase 1 gate failed: Go API does not build for the stage target." >&2
       return 1
     fi

@@ -1,0 +1,42 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: go-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -mod=mod
+
+jobs:
+  go:
+    name: Go modules and stage artifacts (Mac mini runner)
+    # This repository uses the privately managed self-hosted runner on the Mac mini.
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Go toolchain
+        run: |
+          go version
+          command -v golangci-lint
+          command -v govulncheck
+
+      - name: Verify Go modules
+        run: ./bin/go-verify
+
+      - name: Verify Go stage Compose contract
+        run: |
+          API_KEY=validation-placeholder docker compose \
+            -f infra/docker-compose.go-stage.yml config --quiet
+
+      - name: Static Go stage deployment safety check
+        run: ./bin/verify-go-stage-deployment.sh

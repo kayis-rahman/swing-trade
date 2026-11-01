@@ -116,6 +116,20 @@ ssh "$STAGE_HOST" "
     --project-name '$COMPOSE_PROJECT' -f '$COMPOSE_FILE' up -d api
 "
 
+# Prometheus runs in pi-stack's monitoring network and must be attached to the
+# Go stage network so it can resolve swing-trade-stage-api. Connect it before
+# verification; ignore the "already connected" case.
+ssh "$STAGE_HOST" "
+  net='swing-trade-stage_swingtrade-network'
+  docker network inspect \"\$net\" >/dev/null 2>&1 || exit 0
+  if ! docker network inspect \"\$net\" --format '{{range .Containers}}{{.Name}} {{end}}' | grep -qw pi-prometheus; then
+    docker network connect \"\$net\" pi-prometheus
+  fi
+" || true
+
+# Reload Prometheus (bound to the Tailscale address) so scrape targets refresh.
+ssh "$STAGE_HOST" "curl -fsS -X POST http://100.104.74.58:9090/-/reload >/dev/null 2>&1 || true"
+
 HEALTHY=0
 for _ in $(seq 1 45); do
   if curl -fsS http://piworm.local:8081/actuator/health >/dev/null; then
@@ -147,7 +161,7 @@ echo "Go API stage smoke check passed: admin API key is required."
 
 PROMETHEUS_UP=0
 for _ in $(seq 1 15); do
-  PROMETHEUS_TARGETS="$(curl -fsS http://piworm.local:9090/api/v1/targets 2>/dev/null || true)"
+  PROMETHEUS_TARGETS="$(curl -fsS http://100.104.74.58:9090/api/v1/targets 2>/dev/null || true)"
   if printf '%s' "$PROMETHEUS_TARGETS" | python3 -c 'import json,sys; data=json.load(sys.stdin); targets=data.get("data",{}).get("activeTargets",[]); sys.exit(not any(t.get("labels",{}).get("job")=="swing-trade-stage" and t.get("health")=="up" for t in targets))' 2>/dev/null; then
     PROMETHEUS_UP=1
     break

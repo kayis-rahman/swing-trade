@@ -64,7 +64,8 @@ fi
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
   API_KEY=validation-placeholder docker compose \
     -f "$PROJECT_ROOT/infra/docker-compose.go-stage.yml" config --quiet
-elif command -v ruby >/dev/null 2>&1; then
+fi
+if command -v ruby >/dev/null 2>&1; then
   ruby - "$PROJECT_ROOT/infra/docker-compose.go-stage.yml" <<'RUBY'
 require 'yaml'
 
@@ -76,6 +77,8 @@ raise 'stage API must enforce admin key auth' unless api.fetch('environment').fe
 raise 'stage API must not receive a database URL' if api.fetch('environment').key?('DATABASE_URL')
 raise 'stage API must retain the memory cap' unless api.fetch('mem_limit') == '1g'
 raise 'stage network must remain external' unless compose.fetch('networks').fetch('stage').fetch('external') == true
+raise 'stage network must match the dashboard network' unless compose.fetch('networks').fetch('stage').fetch('name') == 'swing-trade_swingtrade-network'
+raise 'stage API must retain its dashboard alias' unless api.fetch('networks').fetch('stage').fetch('aliases').include?('swing-trade-stage-api')
 RUBY
 else
   echo 'Install Docker Compose or Ruby to validate the Go stage Compose file.' >&2

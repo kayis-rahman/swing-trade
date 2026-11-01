@@ -33,4 +33,4 @@ services:
 networks:
   stage:
     external: true
-    name: swing-trade-stage_swingtrade-network
+    name: swing-trade_swingtrade-network

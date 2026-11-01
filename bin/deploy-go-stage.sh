@@ -87,7 +87,7 @@ scp "$BUILD_DIR/swingtrade-api" \
 
 ssh "$STAGE_HOST" "
   test -s '$JAVA_STAGE_PATH/.env.stage' &&
-  docker network inspect 'swing-trade-stage_swingtrade-network' >/dev/null &&
+  docker network inspect 'swing-trade_swingtrade-network' >/dev/null &&
   docker inspect --format '{{.State.Running}}' '$JAVA_CONTAINER' | grep -qx true &&
   ! docker inspect '$ROLLBACK_CONTAINER' >/dev/null 2>&1 &&
   cd '$STAGE_PATH' &&

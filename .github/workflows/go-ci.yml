@@ -19,10 +19,8 @@ env:
   GOLANGCI_LINT: ${{ github.workspace }}/.gobin/golangci-lint
   GOVULNCHECK: ${{ github.workspace }}/.gobin/govulncheck
 
-# Database integration tests are gated out of CI: they require the captain-authorized
-# development database (or SWINGTRADE_USE_LOCAL_TEST_DATABASE=1 + a local Postgres),
-# which CI never provides. Run locally via ./bin/go-verify with the dev env file or
-# SWINGTRADE_USE_LOCAL_TEST_DATABASE=1. Never use the stage deployment secret for tests.
+# Integration tests use the repository's development-only database secret.
+# Never use the separate stage deployment secret for tests.
 jobs:
   go:
     name: Go modules and stage artifacts (Mac mini runner)
@@ -47,8 +45,15 @@ jobs:
           "${GOLANGCI_LINT}" version
           "${GOVULNCHECK}" -version
 
-      - name: Verify Go modules
-        run: ./bin/go-verify
+      - name: Verify Go modules and development database integration
+        env:
+          SWINGTRADE_DEV_DATABASE_URL: ${{ secrets.SWINGTRADE_DEV_DATABASE_URL }}
+        run: |
+          if [ -z "$SWINGTRADE_DEV_DATABASE_URL" ]; then
+            echo 'Development database secret is required for integration tests.' >&2
+            exit 1
+          fi
+          ./bin/go-verify
 
       - name: Verify Go stage Compose contract
         run: |

@@ -421,3 +421,70 @@ func TestStartIntradayIngestionJobRejectsMissingDependencies(t *testing.T) {
 		t.Fatal("nil holiday store accepted")
 	}
 }
+
+func TestBuildDataStoresCreatesStores(t *testing.T) {
+	stores, err := buildDataStores(nil)
+	if err != nil {
+		t.Fatalf("buildDataStores() error = %v", err)
+	}
+	if stores.watchlist == nil || stores.holidays == nil || stores.settings == nil || stores.signals == nil {
+		t.Fatal("buildDataStores() returned nil read stores")
+	}
+	if stores.ingestion == nil {
+		t.Fatal("buildDataStores() did not create ingestion status service")
+	}
+	if stores.reconciliation == nil {
+		t.Fatal("buildDataStores() did not create reconciliation preview")
+	}
+}
+
+func TestWireIngestionJobsDoesNothingWhenDisabled(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := wireIngestionJobs(ctx, logger, config.Config{}, nil, stubSettings{}, stubHolidayStore{}, stubWatchlist{}); err != nil {
+		t.Fatalf("wireIngestionJobs() error = %v", err)
+	}
+}
+
+func TestWireIngestionJobsStartsEnabledYahooJobs(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	cfg := config.Config{
+		EODEnabled:                      true,
+		BenchmarkBackfillOnStartup:      true,
+		BenchmarkBackfillYears:          10,
+		IntradayIngestionEnabled:        true,
+		IntradayIngestionLookbackDays:   10,
+		FyersSymbolMasterRefreshEnabled: true,
+	}
+	if err := wireIngestionJobs(ctx, logger, cfg, nil, stubSettings{broker: "yahoo"}, stubHolidayStore{}, stubWatchlist{}); err != nil {
+		t.Fatalf("wireIngestionJobs() error = %v", err)
+	}
+}
+
+func TestWireIngestionJobsRefusesFyersEODSelection(t *testing.T) {
+	var buffer bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buffer, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	cfg := config.Config{EODEnabled: true, BenchmarkBackfillYears: 10}
+	if err := wireIngestionJobs(ctx, logger, cfg, nil, stubSettings{broker: "fyers"}, stubHolidayStore{}, stubWatchlist{}); err != nil {
+		t.Fatalf("wireIngestionJobs() error = %v", err)
+	}
+	if !strings.Contains(buffer.String(), "no Go token source") {
+		t.Fatalf("missing fyers refusal log: %s", buffer.String())
+	}
+}
+
+func TestWireIngestionJobsPropagatesSettingsErrors(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	cfg := config.Config{EODEnabled: true, BenchmarkBackfillYears: 10}
+	err := wireIngestionJobs(ctx, logger, cfg, nil, stubSettings{err: errors.New("settings down")}, stubHolidayStore{}, stubWatchlist{})
+	if err == nil || !strings.Contains(err.Error(), "selected market data broker") {
+		t.Fatalf("wireIngestionJobs() error = %v", err)
+	}
+}

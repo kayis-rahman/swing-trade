@@ -121,9 +121,9 @@ ssh "$STAGE_HOST" "
 # verification; ignore the "already connected" case.
 ssh "$STAGE_HOST" "
   net='swing-trade-stage_swingtrade-network'
-  docker network inspect \"$net\" >/dev/null 2>&1 || exit 0
-  if ! docker network inspect \"$net\" --format '{{range .Containers}}{{.Name}} {{end}}' | grep -qw pi-prometheus; then
-    docker network connect \"$net\" pi-prometheus
+  docker network inspect \"\$net\" >/dev/null 2>&1 || exit 0
+  if ! docker network inspect \"\$net\" --format '{{range .Containers}}{{.Name}} {{end}}' | grep -qw pi-prometheus; then
+    docker network connect \"\$net\" pi-prometheus
   fi
 " || true
 

@@ -22,8 +22,7 @@ env:
 # Database integration tests are gated out of CI: they require the captain-authorized
 # development database (or SWINGTRADE_USE_LOCAL_TEST_DATABASE=1 + a local Postgres),
 # which CI never provides. Run locally via ./bin/go-verify with the dev env file or
-# SWINGTRADE_USE_LOCAL_TEST_DATABASE=1. The stage deploy and Playwright flows set the
-# required environment and run them via the integration build tag.
+# SWINGTRADE_USE_LOCAL_TEST_DATABASE=1. Never use the stage deployment secret for tests.
 jobs:
   go:
     name: Go modules and stage artifacts (Mac mini runner)
@@ -53,7 +52,7 @@ jobs:
 
       - name: Verify Go stage Compose contract
         run: |
-          API_KEY=validation-placeholder docker compose \
+          API_KEY=validation-placeholder DATABASE_URL=postgres://stage@stage/swingtrade_stage docker compose \
             -f infra/docker-compose.go-stage.yml config --quiet
 
       - name: Static Go stage deployment safety check

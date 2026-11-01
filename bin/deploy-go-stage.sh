@@ -152,6 +152,24 @@ for path in /api/health /actuator/health/liveness /actuator/health/readiness /ac
   printf 'Go API stage smoke check passed: %s\n' "$path"
 done
 
+for path in /api/health /actuator/health /actuator/health/liveness /actuator/health/readiness; do
+  if ! curl -fsS "http://piworm.local:8082$path" >/dev/null; then
+    echo "Dashboard proxy health check failed for $path." >&2
+    exit 1
+  fi
+  printf 'Dashboard proxy health check passed: %s\n' "$path"
+done
+
+if ! curl -fsS http://piworm.local:8082/api/strategy-configs | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("success") is True and isinstance(d.get("data"),list) and len(d["data"]) > 0'; then
+  echo "Dashboard strategy configuration read check failed." >&2
+  exit 1
+fi
+if ! curl -fsS http://piworm.local:8082/api/signals/latest | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d,list) and len(d) > 0'; then
+  echo "Dashboard latest signals read check failed." >&2
+  exit 1
+fi
+echo "Dashboard strategy and signal read checks passed."
+
 ADMIN_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' http://piworm.local:8081/api/admin/health)"
 if [[ "$ADMIN_STATUS" != "401" ]]; then
   echo "Go API admin-key boundary check failed (expected HTTP 401 without a key)." >&2

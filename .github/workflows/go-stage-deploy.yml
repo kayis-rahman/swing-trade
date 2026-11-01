@@ -31,11 +31,25 @@ jobs:
         run: ./bin/verify-go-stage-deployment.sh
 
       - name: Cross-check stage authority verifier
+        if: ${{ !inputs.dry_run }}
         run: ./bin/verify-go-stage-authority.sh
 
       - name: Dry run complete
         if: ${{ inputs.dry_run }}
         run: echo "Static Go stage checks passed; deployment intentionally skipped."
+
+      - name: Configure stage secrets
+        if: ${{ !inputs.dry_run }}
+        env:
+          STAGE_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          STAGE_API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          if [ -z "$STAGE_DATABASE_URL" ] || [ -z "$STAGE_API_KEY" ]; then
+            echo 'Stage DATABASE_URL and API_KEY environment secrets must both be set.' >&2
+            exit 1
+          fi
+          python3 -c 'import json,os,sys,urllib.parse; u=urllib.parse.urlsplit(os.environ["STAGE_DATABASE_URL"]); assert u.scheme in ("postgres", "postgresql") and u.hostname == "swing_trade_stage_postgres" and u.port in (None,5432) and u.path == "/swingtrade_stage", "DATABASE_URL must target the stage database"; json.dump([os.environ["STAGE_DATABASE_URL"],os.environ["STAGE_API_KEY"]],sys.stdout)' | \
+            ssh -o BatchMode=yes dietpi@piworm.local 'umask 077; mkdir -p /home/dietpi/swing-trade; python3 -c '\''import json,os,sys; values=json.load(sys.stdin); assert all("\n" not in v and "\r" not in v for v in values); p="/home/dietpi/swing-trade/.env.stage"; fd=os.open(p,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600); os.fchmod(fd,0o600); f=os.fdopen(fd,"w"); f.writelines(k+"=\047"+v.replace("\\", "\\\\").replace("\047", "\\\047")+"\047\n" for k,v in zip(("DATABASE_URL","API_KEY"),values)); f.close()'\'''
 
       - name: Replace stage API with Go container
         if: ${{ !inputs.dry_run }}

@@ -38,11 +38,11 @@ func NewHandlerWithLogger(cfg config.Config, logger *slog.Logger, clock corecloc
 
 // NewHandlerWithWatchlist builds the HTTP handler with an optional read-only watchlist store.
 func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore) (http.Handler, error) {
-	return NewHandlerWithStores(cfg, logger, clock, watchlist, nil, nil, nil, nil, nil)
+	return NewHandlerWithStores(cfg, logger, clock, watchlist, nil, nil, nil, nil, nil, nil)
 }
 
 // NewHandlerWithStores builds the HTTP handler with optional read-only data stores.
-func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore, ingestionStatus data.IngestionStatusLookup, reconciliation data.ReconciliationPreview, signals data.SignalReadStore) (http.Handler, error) {
+func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore, ingestionStatus data.IngestionStatusLookup, reconciliation data.ReconciliationPreview, signals data.SignalReadStore, strategyConfigs data.StrategyConfigReadStore) (http.Handler, error) {
 	if clock == nil {
 		clock = coreclock.System{}
 	}
@@ -79,6 +79,7 @@ func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock corecloc
 	controller.RegisterHolidayRoutes(mux, holidays, logger, clock)
 	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
 	controller.RegisterSignalRoutes(mux, signals, logger, clock)
+	controller.RegisterStrategyConfigRoutes(mux, strategyConfigs, logger, clock)
 	controller.RegisterIngestionRoutes(mux, ingestionStatus, logger, clock)
 	controller.RegisterIngestionReconcileRoute(mux, watchlist, reconciliation, logger, clock)
 	controller.RegisterSettingsRoutes(mux, settings, logger, clock, cfg.GPUHubAPIKeyConfigured)

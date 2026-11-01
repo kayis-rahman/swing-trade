@@ -12,6 +12,16 @@ func TestReadOnlyPoolConfigEnablesReadOnlyTransactions(t *testing.T) {
 	}
 }
 
+func TestStagePoolConfigIsReadOnly(t *testing.T) {
+	config, err := ReadOnlyPoolConfig("postgres://stage-user@swing_trade_stage_postgres:5432/swingtrade_stage")
+	if err != nil || config.ConnConfig.RuntimeParams["default_transaction_read_only"] != "on" {
+		t.Fatalf("stage config = %v, error = %v", config, err)
+	}
+	if _, err := ReadOnlyPoolConfig("postgres://stage-user@swing_trade_stage_postgres:5432/swingtrade_db"); err == nil {
+		t.Fatal("accepted non-stage database")
+	}
+}
+
 func TestNewReadOnlyPoolRejectsInvalidURLBeforeConnecting(t *testing.T) {
 	if _, err := NewReadOnlyPool(t.Context(), "not-a-postgres-url"); err == nil {
 		t.Fatal("NewReadOnlyPool() succeeded with an invalid URL")

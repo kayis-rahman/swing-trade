@@ -29,7 +29,7 @@ if [[ -n "$(cd "$PROJECT_ROOT" && git status --porcelain)" ]]; then
 fi
 
 BUILD_ID="${BUILD_COMMIT:0:12}"
-ROLLBACK_CONTAINER="swing-trade-stage-api-java-rollback-${BUILD_ID}"
+ROLLBACK_CONTAINER="swing-trade-stage-api-rollback-${BUILD_ID}"
 BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/go-stage.XXXXXX")"
 ROLLBACK_REQUIRED=0
 DEPLOY_SUCCEEDED=0
@@ -38,14 +38,14 @@ cleanup() {
   local status=$?
   trap - EXIT
   if [[ "$ROLLBACK_REQUIRED" == "1" && "$DEPLOY_SUCCEEDED" != "1" ]]; then
-    echo "Go stage health verification failed; restoring the stopped Java API container." >&2
+    echo "Go stage health verification failed; restoring the previous stage API container." >&2
     ssh "$STAGE_HOST" "
       if docker inspect '$ROLLBACK_CONTAINER' >/dev/null 2>&1; then
         docker rm -f '$JAVA_CONTAINER' >/dev/null 2>&1 || true
         docker rename '$ROLLBACK_CONTAINER' '$JAVA_CONTAINER'
       fi
       docker start '$JAVA_CONTAINER' >/dev/null
-    " || echo "Java rollback did not complete; inspect the stage API container before retrying." >&2
+    " || echo "Stage rollback did not complete; inspect the stage API container before retrying." >&2
   fi
   rm -rf "$BUILD_DIR"
   exit "$status"
@@ -78,7 +78,7 @@ echo "Building Go API for Linux/$GOARCH at $BUILD_ID."
       -o "$BUILD_DIR/swingtrade-api" ./go/api/cmd/swingtrade-api
 )
 
-echo "Preparing the Go image on the stage host; the running Java service is unchanged so far."
+echo "Preparing the Go image on the stage host; the running API is unchanged so far."
 ssh "$STAGE_HOST" "mkdir -p '$STAGE_PATH'"
 scp "$BUILD_DIR/swingtrade-api" \
   "$PROJECT_ROOT/infra/Dockerfile.go-stage" \
@@ -100,13 +100,13 @@ ssh "$STAGE_HOST" "
 
 JAVA_IMAGE="$(ssh "$STAGE_HOST" "docker inspect --format '{{.Config.Image}}' '$JAVA_CONTAINER'")"
 JAVA_ID="$(ssh "$STAGE_HOST" "docker inspect --format '{{.Id}}' '$JAVA_CONTAINER'")"
-printf 'Existing Java container image: %s\n' "$JAVA_IMAGE"
-printf 'Existing Java container ID: %s\n' "$JAVA_ID"
-echo "The Java API will be preserved as $ROLLBACK_CONTAINER for rollback."
+printf 'Existing API container image: %s\n' "$JAVA_IMAGE"
+printf 'Existing API container ID: %s\n' "$JAVA_ID"
+echo "The existing API will be preserved as $ROLLBACK_CONTAINER for rollback."
 
 ROLLBACK_REQUIRED=1
 if ! ssh "$STAGE_HOST" "docker stop '$JAVA_CONTAINER' >/dev/null && docker rename '$JAVA_CONTAINER' '$ROLLBACK_CONTAINER'"; then
-  echo "Could not safely stop and preserve the Java container; deployment aborted." >&2
+  echo "Could not safely stop and preserve the existing API container; deployment aborted." >&2
   exit 1
 fi
 
@@ -176,4 +176,4 @@ echo "Prometheus scrape target is up."
 
 DEPLOY_SUCCEEDED=1
 ROLLBACK_REQUIRED=0
-echo "Go API is healthy on stage. Java remains stopped in $ROLLBACK_CONTAINER for rollback."
+echo "Go API is healthy on stage. The previous API remains stopped in $ROLLBACK_CONTAINER for rollback."

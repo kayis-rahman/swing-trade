@@ -86,6 +86,21 @@ type Signal struct {
 	ParamsHash         pgtype.Text      `json:"params_hash"`
 }
 
+type StrategyConfig struct {
+	ID           int64            `json:"id"`
+	VariantID    string           `json:"variant_id"`
+	Version      int32            `json:"version"`
+	StrategyType string           `json:"strategy_type"`
+	Params       []byte           `json:"params"`
+	Overlays     []byte           `json:"overlays"`
+	ParamsHash   string           `json:"params_hash"`
+	Mode         string           `json:"mode"`
+	PaperCapital pgtype.Numeric   `json:"paper_capital"`
+	IsCurrent    bool             `json:"is_current"`
+	Notes        pgtype.Text      `json:"notes"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+}
+
 type Watchlist struct {
 	ID           int64            `json:"id"`
 	Symbol       string           `json:"symbol"`

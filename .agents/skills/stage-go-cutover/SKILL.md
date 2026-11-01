@@ -15,7 +15,7 @@ Out of scope (do not generalise): local development stack operations (`dev-stack
 
 ## Invariants
 
-- Go stage service is API-only: the stage environment's `DATABASE_URL` GitHub secret supplies the stage-only database connection for reads; keep background ingestion disabled until G8.
+- Go stage service is API-only: the stage environment's `DATABASE_URL` GitHub secret supplies the explicitly authorized development database connection for reads; keep background ingestion disabled until G8.
 - Keep the stopped Java API container for rollback. If it is unavailable, use a previous Go container only with explicit authorization.
 - Preserve external network naming and the `8081:8080` mapping.
 - Keep container cap at 1.5 CPU and 1 GB memory (compose lines 25-32).

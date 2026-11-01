@@ -171,11 +171,11 @@ fi
 echo "Dashboard strategy and signal read checks passed."
 
 ADMIN_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' http://piworm.local:8081/api/admin/health)"
-if [[ "$ADMIN_STATUS" != "401" ]]; then
-  echo "Go API admin-key boundary check failed (expected HTTP 401 without a key)." >&2
+if [[ "$ADMIN_STATUS" != "404" ]]; then
+  echo "Go API admin boundary check failed (expected HTTP 404 with admin disabled)." >&2
   exit 1
 fi
-echo "Go API stage smoke check passed: admin API key is required."
+echo "Go API stage smoke check passed: admin routes are disabled."
 
 PROMETHEUS_UP=0
 for _ in $(seq 1 15); do

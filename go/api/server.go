@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -104,6 +105,16 @@ func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock corecloc
 	mux.Handle("GET /actuator/prometheus", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 
 	var handler http.Handler = mux
+	if cfg.AdminDisabled {
+		next := handler
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/admin" || strings.HasPrefix(r.URL.Path, "/api/admin/") {
+				http.NotFound(w, r)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 	handler = middleware.AdminAPIKey(cfg.APIKeyEnabled, cfg.APIKey)(handler)
 	handler = middleware.NewRateLimiterWithCounter(cfg.PublicRateLimitPerMinute, clock, rateLimitHits).Middleware(handler)
 	handler = middleware.Recover(logger)(handler)

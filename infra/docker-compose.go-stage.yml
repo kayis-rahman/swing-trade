@@ -14,8 +14,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must point to the authorized database}
       SERVER_PORT: "8080"
       HTTP_HOST: "0.0.0.0"
-      API_KEY_AUTH_ENABLED: "true"
-      API_KEY: ${API_KEY:?API_KEY must be set for the Go stage API}
+      API_ADMIN_DISABLED: "true"
+      API_KEY_AUTH_ENABLED: "false"
       API_PUBLIC_RATE_LIMIT_PER_MINUTE: ${API_PUBLIC_RATE_LIMIT_PER_MINUTE:-100}
       CORS_ALLOWED_ORIGINS: ${GO_STAGE_CORS_ALLOWED_ORIGINS:-http://piworm.local:8082}
       TZ: Asia/Kolkata

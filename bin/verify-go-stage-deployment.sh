@@ -73,7 +73,7 @@ compose = YAML.load_file(ARGV.fetch(0))
 api = compose.fetch('services').fetch('api')
 raise 'stage API container identity changed' unless api.fetch('container_name') == 'swing-trade-stage-api'
 raise 'stage API port mapping changed' unless api.fetch('ports') == ['8081:8080']
-raise 'stage API must enforce admin key auth' unless api.fetch('environment').fetch('API_KEY_AUTH_ENABLED') == 'true'
+raise 'stage API must disable admin routes' unless api.fetch('environment').fetch('API_ADMIN_DISABLED') == 'true'
 raise 'stage API must require a database URL' unless api.fetch('environment').fetch('DATABASE_URL').include?('${DATABASE_URL:?')
 raise 'stage API must retain the memory cap' unless api.fetch('mem_limit') == '1g'
 raise 'stage network must remain external' unless compose.fetch('networks').fetch('stage').fetch('external') == true

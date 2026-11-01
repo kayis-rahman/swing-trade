@@ -19,6 +19,11 @@ env:
   GOLANGCI_LINT: ${{ github.workspace }}/.gobin/golangci-lint
   GOVULNCHECK: ${{ github.workspace }}/.gobin/govulncheck
 
+# Database integration tests are gated out of CI: they require the captain-authorized
+# development database (or SWINGTRADE_USE_LOCAL_TEST_DATABASE=1 + a local Postgres),
+# which CI never provides. Run locally via ./bin/go-verify with the dev env file or
+# SWINGTRADE_USE_LOCAL_TEST_DATABASE=1. The stage deploy and Playwright flows set the
+# required environment and run them via the integration build tag.
 jobs:
   go:
     name: Go modules and stage artifacts (Mac mini runner)

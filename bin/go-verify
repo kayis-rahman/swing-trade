@@ -16,7 +16,24 @@ if [[ "$LOCAL_TEST_DATABASE" == "1" ]]; then
   echo "Using the fixed loopback-only throwaway test database at 127.0.0.1:55433."
 elif [[ -z "$LOCAL_TEST_DATABASE" ]]; then
   use_local_test_database=false
-  if [[ ! -f "$DEV_ENV_FILE" ]]; then
+  if [[ -n "${SWINGTRADE_DEV_DATABASE_URL:-}" ]]; then
+    python3 - <<'PY'
+import os
+import urllib.parse
+
+try:
+    parsed = urllib.parse.urlsplit(os.environ['SWINGTRADE_DEV_DATABASE_URL'])
+    target = (parsed.hostname, parsed.port, parsed.path)
+    options = urllib.parse.parse_qs(parsed.query)
+except ValueError:
+    raise SystemExit('Malformed development database URL.')
+if (parsed.scheme not in {'postgres', 'postgresql'}
+        or target != ('192.168.0.100', 5435, '/swingtrade_db')
+        or any(key in options for key in ('host', 'port', 'dbname', 'service'))):
+    raise SystemExit('Refusing a database target outside the captain-authorized development database.')
+PY
+    dev_db_url="$SWINGTRADE_DEV_DATABASE_URL"
+  elif [[ ! -f "$DEV_ENV_FILE" ]]; then
     echo "Authorized development env file is unavailable; skipping database integration tests."
     db_tests_enabled=false
   else

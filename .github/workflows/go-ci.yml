@@ -1,0 +1,60 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: go-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOFLAGS: -modcacherw
+  GOBIN: ${{ github.workspace }}/.gobin
+  GOCACHE: ${{ github.workspace }}/.gocache
+  GOMODCACHE: ${{ github.workspace }}/.gomodcache
+  GOLANGCI_LINT: ${{ github.workspace }}/.gobin/golangci-lint
+  GOVULNCHECK: ${{ github.workspace }}/.gobin/govulncheck
+
+# Database integration tests are gated out of CI: they require the captain-authorized
+# development database (or SWINGTRADE_USE_LOCAL_TEST_DATABASE=1 + a local Postgres),
+# which CI never provides. Run locally via ./bin/go-verify with the dev env file or
+# SWINGTRADE_USE_LOCAL_TEST_DATABASE=1. The stage deploy and Playwright flows set the
+# required environment and run them via the integration build tag.
+jobs:
+  go:
+    name: Go modules and stage artifacts (Mac mini runner)
+    # This repository uses the privately managed self-hosted runner on the Mac mini.
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pinned Go tools
+        run: |
+          mkdir -p "${GOBIN}" "${GOCACHE}" "${GOMODCACHE}"
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+
+      - name: Verify Go toolchain
+        run: |
+          go version
+          command -v golangci-lint || test -x "${GOLANGCI_LINT}"
+          command -v govulncheck || test -x "${GOVULNCHECK}"
+          "${GOLANGCI_LINT}" version
+          "${GOVULNCHECK}" -version
+
+      - name: Verify Go modules
+        run: ./bin/go-verify
+
+      - name: Verify Go stage Compose contract
+        run: |
+          API_KEY=validation-placeholder docker compose \
+            -f infra/docker-compose.go-stage.yml config --quiet
+
+      - name: Static Go stage deployment safety check
+        run: ./bin/verify-go-stage-deployment.sh

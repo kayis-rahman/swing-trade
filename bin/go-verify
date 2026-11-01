@@ -9,6 +9,7 @@ VULN_CHECK="${GOVULNCHECK:-$GOPATH/bin/govulncheck}"
 DEV_ENV_FILE="$REPO_ROOT/infra/env/.env"
 LOCAL_TEST_DATABASE="${SWINGTRADE_USE_LOCAL_TEST_DATABASE:-}"
 unset SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE
+db_tests_enabled=true
 if [[ "$LOCAL_TEST_DATABASE" == "1" ]]; then
   dev_db_url="postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable&application_name=go-port-test"
   use_local_test_database=true
@@ -16,9 +17,10 @@ if [[ "$LOCAL_TEST_DATABASE" == "1" ]]; then
 elif [[ -z "$LOCAL_TEST_DATABASE" ]]; then
   use_local_test_database=false
   if [[ ! -f "$DEV_ENV_FILE" ]]; then
-    echo "Authorized development env file is unavailable; refusing database integration tests."
-    exit 1
-  fi
+    echo "Authorized development env file is unavailable; skipping database integration tests."
+    db_tests_enabled=false
+  else
+    db_tests_enabled=true
 
   # Read only the datasource URL and credentials in memory. The derived URL is never logged or written to disk.
   dev_db_url="$(python3 - "$DEV_ENV_FILE" <<'PY'
@@ -72,6 +74,7 @@ print(
 )
 PY
 )"
+  fi
 else
   echo "SWINGTRADE_USE_LOCAL_TEST_DATABASE must be unset or exactly 1." >&2
   exit 1
@@ -88,10 +91,10 @@ for module in "${modules[@]}"; do
       exit 1
     fi
     test_status=0
-    if [[ "$module" == "data" || ( "$module" == "api" && "$use_local_test_database" == "false" ) ]]; then
+    if [[ "$db_tests_enabled" == "true" && ( "$module" == "data" || ( "$module" == "api" && "$use_local_test_database" == "false" ) ) ]]; then
       if [[ "$module" == "data" && "$use_local_test_database" == "true" ]]; then
-        if test_output="$(SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1 SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
-      elif test_output="$(SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
+        if test_output="$(SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1 SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -tags integration -race -cover ./...)"; then :; else test_status=$?; fi
+      elif test_output="$(SWINGTRADE_TEST_DATABASE_URL="$dev_db_url" "$GO_BIN" test -tags integration -race -cover ./...)"; then :; else test_status=$?; fi
     else
       if test_output="$("$GO_BIN" test -race -cover ./...)"; then :; else test_status=$?; fi
     fi

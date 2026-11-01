@@ -5,8 +5,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// advisoryLockConn is the minimal connection surface needed by WithAdvisoryLock.
+type advisoryLockConn interface {
+	Release()
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// advisoryLockAcquirer obtains one advisory lock connection.
+type advisoryLockAcquirer func(context.Context) (advisoryLockConn, error)
 
 // WithAdvisoryLock runs fn only after acquiring a session-scoped PostgreSQL lock.
 // A false acquired result means another worker already owns the lock.
@@ -17,7 +27,21 @@ func WithAdvisoryLock(ctx context.Context, pool *pgxpool.Pool, key int64, fn fun
 	if fn == nil {
 		return false, fmt.Errorf("advisory-lock callback is required")
 	}
-	connection, err := pool.Acquire(ctx)
+	acquire := func(ctx context.Context) (advisoryLockConn, error) {
+		conn, err := pool.Acquire(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+	return withAdvisoryLock(ctx, acquire, key, fn)
+}
+
+func withAdvisoryLock(ctx context.Context, acquire advisoryLockAcquirer, key int64, fn func(context.Context) error) (acquired bool, err error) {
+	if fn == nil {
+		return false, fmt.Errorf("advisory-lock callback is required")
+	}
+	connection, err := acquire(ctx)
 	if err != nil {
 		return false, fmt.Errorf("acquire advisory-lock connection: %w", err)
 	}

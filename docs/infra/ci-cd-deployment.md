@@ -55,9 +55,9 @@ curl -sf http://piworm.local:9090/api/v1/targets
 curl -sfI http://piworm.local:8082/
 ```
 
-The former self-hosted GitHub Actions definitions are retained for historical
-reference under `docs/infra/legacy/` and are not active workflows. Do not use
-their queued check status as a deployment signal.
+The legacy self-hosted definitions remain under `docs/infra/legacy/` for
+historical reference. Active Go CI and stage deployment workflows now live under
+`.github/workflows/` and target the self-hosted Mac mini runner.
 
 ### Go stage API replacement (separately gated)
 
@@ -197,4 +197,6 @@ Switch context: `docker context use pi-node` / `docker context use desktop-linux
 4. **Type mismatch** — `findUnprocessedBuySignalsSince` took `LocalDateTime` but `SignalEntity.date` is `LocalDate` (fixed in SignalRepository.java:168)
 5. **Docker bind mounts on Mac** — Docker Desktop Mac can't access bind-mounted paths from its VM. Local Grafana provisioning volumes fail. Use pi-grafana instead.
 6. **Container names with underscores** — Tomcat rejects Host headers with underscores. Use hyphenated names (e.g., `swing-trade-stage-api`).
-7. **GitHub Actions runners** — historical self-hosted definitions are archived; stage deployment is performed and verified through `dev-stack.sh stage`.
+7. **GitHub Actions runners** — Go CI and the manually dispatched Go stage
+deployment run on the self-hosted Mac mini runner. Legacy definitions remain
+archived under `docs/infra/legacy/`.

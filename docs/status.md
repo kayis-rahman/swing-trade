@@ -919,3 +919,16 @@ CI/stage pipeline is not a gate for this project -> dev-stack + this checklist i
 - [x] Phase 6 slice F: Discord notification services (Telegram intentionally not ported per captain decision 2026-11-02), RunSummaryNotifier, weekly strategy/sector digest schedulers, and monthly report scheduler ported in Go with deterministic clocks (`go/broker`, `go/data/scheduler`). `./bin/go-verify` passes Go checks for changed modules. Telegram notifications are deliberately excluded from the Go port per captain decision 2026-11-02; parity gap is explicit.
 
 - [x] Added Go candidate scan manager (pause/resume/cancel/state transitions) and signal pipeline adapter feeding strategy arbiter; ./bin/go-verify passes except pre-existing cmd coverage. Branch committed.
+
+Last checked: 2026-11-02 (Go port gate paperwork G4-G7, docs only)
+
+- Docs-only pass on `fm/swing-trade-go-gate-evidence-v1`: mapped every exit criterion in
+  phases 4-7 to repository evidence or marked it open with the missing item in
+  `docs/plans/go-migration/gate-readiness.md`. No gate is claimed to pass; all four gates
+  are NOT READY on current evidence. Added
+  `docs/plans/go-migration/evidence/test-traceability-matrix.md` recording that method-level
+  Java test mapping remains incomplete repository-wide. Marked no ledger row closed because
+  no row's gate evidence is complete. Refreshed this status file from its 2026-10-28 state.
+  In-flight slices remain: none beyond merged candidate scan manager/signal pipeline (#166);
+  Telegram intentionally not ported per slice F. Phase 8 (cutover and Java retirement) remains
+  out of scope and needs the captain's written approval.

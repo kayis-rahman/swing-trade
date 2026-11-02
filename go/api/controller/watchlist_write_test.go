@@ -16,7 +16,6 @@ import (
 
 type fakeWatchlistWriter struct {
 	addRows   data.WatchlistEntry
-	err       error
 	removed   string
 	toggled   data.WatchlistEntry
 	toggleErr error

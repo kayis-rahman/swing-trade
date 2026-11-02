@@ -6,6 +6,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/kayis-rahman/swing-trade/go/core v0.0.0
 	github.com/kayis-rahman/swing-trade/go/data v0.0.0
+	github.com/kayis-rahman/swing-trade/go/strategy v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.22.0
 )
 

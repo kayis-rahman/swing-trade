@@ -187,7 +187,8 @@ func better(c, w Candidate, rule ArbitrationRule, evidence map[string]float64) b
 	if c.Confidence.Cmp(w.Confidence) != 0 {
 		return c.Confidence.Cmp(w.Confidence) > 0
 	}
-	// variant id reverse? Java max comparator thenComparing variantId reverseOrder. We handle via sorted ascending and only replace if strictly better? Need tie variant reverse: larger variantId? Java max with thenComparing variantId reverse. So among equal confidence, larger variantId wins. Let's implement: if confidence equal, choose larger variant id.
+	// Tie-break: smaller variant id wins (matches the ascending sort + strict-replace
+	// behavior and the parity tests); confidence already tied here.
 	return c.VariantID < w.VariantID
 }
 

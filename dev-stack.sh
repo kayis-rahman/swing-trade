@@ -10,7 +10,8 @@
 #
 # Ports on pi-node:
 #   5435 - dev PostgreSQL
-#   5436 - stage PostgreSQL
+#   5433 - shared pg-dev (swingtrade, swingtrade_stage)
+#   5434 - shared pg-prod
 #   8080 - dev API (no monitoring)
 #   8081 - stage API (scraped by pi-prometheus)
 #   9090 - pi-prometheus

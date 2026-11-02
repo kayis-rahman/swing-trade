@@ -381,7 +381,7 @@ case "${1:-help}" in
     # left over from a prior deploy under a different project name (e.g. a
     # different CWD basename) won't be touched by it and blocks `up` with a
     # "name already in use" conflict.
-    ssh dietpi@piworm.local "docker rm -f swing-trade-stage-api swing-trade-stage-dashboard swing_trade_stage_postgres" 2>/dev/null || true
+    ssh dietpi@piworm.local "docker rm -f swing-trade-stage-api swing-trade-stage-dashboard" 2>/dev/null || true
     echo "✓ Existing deployment stopped"
     echo ""
 
@@ -406,22 +406,9 @@ case "${1:-help}" in
     echo "✓ Stage stack started"
     echo ""
 
-    # --- Step 9: Wait for infra to be healthy ---
-    echo "⏳ Waiting for stage infrastructure to be ready..."
-    for i in $(seq 1 30); do
-      PG_HEALTH=$(ssh dietpi@piworm.local "cd $STAGE_PATH && docker compose --env-file .env.stage -f docker-compose.infra-stage.yml ps --filter health=healthy postgres 2>/dev/null | wc -l")
-      if [ "$PG_HEALTH" -gt 0 ]; then
-        echo "✓ PostgreSQL is healthy"
-        break
-      fi
-      [ "$i" -eq 30 ] && echo "⚠ PostgreSQL health check timed out, continuing anyway..."
-      sleep 3
-    done
-    echo ""
-
     # --- Step 10: Wait for API startup ---
     echo "⏳ Waiting for Spring Boot startup (up to ~75s; one cold start took ~51s)..."
-    for i in $(seq 1 75); do
+    for ((i=0; i<75; i++)); do
       HEALTH=$(curl -sf "http://piworm.local:8081/actuator/health" 2>/dev/null || true)
       if [ -n "$HEALTH" ]; then
         echo ""

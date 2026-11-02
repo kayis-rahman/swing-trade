@@ -5,7 +5,7 @@ import (
 )
 
 func TestWritablePoolConfigEnablesWrites(t *testing.T) {
-	config, err := WritablePoolConfig("postgres://dev-user@192.168.0.100:5435/swingtrade_db")
+	config, err := WritablePoolConfig("postgres://dev-user@192.168.0.100:5433/swingtrade?sslmode=require")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -15,11 +15,11 @@ func TestWritablePoolConfigEnablesWrites(t *testing.T) {
 }
 
 func TestStageWritablePoolConfigIsWritable(t *testing.T) {
-	config, err := WritablePoolConfig("postgres://stage-user@swing_trade_stage_postgres:5432/swingtrade_stage")
+	config, err := WritablePoolConfig("postgres://stage-user@192.168.0.100:5433/swingtrade_stage?sslmode=require")
 	if err != nil || config.ConnConfig.RuntimeParams["default_transaction_read_only"] != "off" {
 		t.Fatalf("stage config = %v, error = %v", config, err)
 	}
-	if _, err := WritablePoolConfig("postgres://stage-user@swing_trade_stage_postgres:5432/swingtrade_db"); err == nil {
+	if _, err := WritablePoolConfig("postgres://stage-user@192.168.0.100:5433/other?sslmode=require"); err == nil {
 		t.Fatal("accepted non-stage database")
 	}
 }

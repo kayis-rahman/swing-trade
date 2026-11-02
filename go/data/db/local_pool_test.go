@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	authorizedProductionURL = "postgresql://dev-user@192.168.0.100:5435/swingtrade_db"
+	authorizedProductionURL = "postgresql://dev-user@192.168.0.100:5433/swingtrade?sslmode=require"
 	validLocalURL           = "postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable"
 )
 

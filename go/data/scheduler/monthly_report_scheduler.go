@@ -122,8 +122,8 @@ func BuildMonthlyReport(reportDate time.Time, positions []MonthlyPosition, signa
 		}
 		winRate = float64(profitable) * 100.0 / float64(len(closed))
 	}
-	avgWin := averageOfMonthly(positions, true)
-	avgLoss := averageOfMonthly(positions, false)
+	avgWin := averageOfMonthly(closed, true)
+	avgLoss := averageOfMonthly(closed, false)
 	totalPnL := 0.0
 	for _, p := range closed {
 		if p.RealizedPnL != nil {

@@ -29,19 +29,3 @@ func TestDiscordService(t *testing.T) {
 		t.Fatal("bad status should false")
 	}
 }
-
-func TestTelegramService(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
-	defer server.Close()
-	tg := NewTelegramServiceWithClient("token", "chat", true, server.Client(), server.URL)
-	if !tg.SendMessage("hi") {
-		t.Fatal("telegram send false")
-	}
-	disabled := NewTelegramService("token", "chat", false)
-	if disabled.SendMessage("x") {
-		t.Fatal("disabled telegram should false")
-	}
-	if NewTelegramService("", "chat", true).IsEnabled() {
-		t.Fatal("empty token enabled")
-	}
-}

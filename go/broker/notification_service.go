@@ -3,7 +3,6 @@ package broker
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -120,56 +119,3 @@ const (
 	ColorRed     = 15158332
 	ColorBlurple = 0x5865F2
 )
-
-// TelegramConfig is part of the broker notification port.
-type TelegramConfig struct {
-	BotToken string
-	ChatID   string
-	Enabled  bool
-}
-
-// TelegramService is part of the broker notification port.
-type TelegramService struct {
-	botToken string
-	chatID   string
-	enabled  bool
-	client   HTTPClient
-	baseURL  string
-}
-
-// NewTelegramService is part of the broker notification port.
-func NewTelegramService(botToken, chatID string, enabled bool) *TelegramService {
-	return NewTelegramServiceWithClient(botToken, chatID, enabled, newHTTPClient(10*time.Second), "https://api.telegram.org")
-}
-
-// NewTelegramServiceWithClient is part of the broker notification port.
-func NewTelegramServiceWithClient(botToken, chatID string, enabled bool, client HTTPClient, baseURL string) *TelegramService {
-	if baseURL == "" {
-		baseURL = "https://api.telegram.org"
-	}
-	return &TelegramService{botToken: botToken, chatID: chatID, enabled: enabled, client: client, baseURL: baseURL}
-}
-
-// IsEnabled is part of the broker notification port.
-func (t *TelegramService) IsEnabled() bool { return t.enabled && t.botToken != "" && t.chatID != "" }
-
-// SendMessage is part of the broker notification port.
-func (t *TelegramService) SendMessage(content string) bool {
-	if !t.IsEnabled() {
-		return false
-	}
-	payload := map[string]any{"chat_id": t.chatID, "text": content}
-	body, _ := json.Marshal(payload)
-	url := fmt.Sprintf("%s/bot%s/sendMessage", t.baseURL, t.botToken)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := t.client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer func() { _ = resp.Body.Close() }()
-	return resp.StatusCode >= 200 && resp.StatusCode < 300
-}

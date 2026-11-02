@@ -77,6 +77,13 @@ func (s *WeeklyStrategyDigestScheduler) SendWeeklyStrategyDigest(ctx context.Con
 }
 
 func (s *WeeklyStrategyDigestScheduler) sendWeeklyStrategyDigest(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			if s.logger != nil {
+				s.logger.Error("weekly strategy digest failed", "error", r)
+			}
+		}
+	}()
 	if !s.enabled {
 		if s.logger != nil {
 			s.logger.Debug("Weekly strategy digest disabled")

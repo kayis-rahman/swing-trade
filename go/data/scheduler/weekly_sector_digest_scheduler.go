@@ -44,6 +44,13 @@ func (s *WeeklySectorDigestScheduler) SendWeeklySectorDigest(ctx context.Context
 }
 
 func (s *WeeklySectorDigestScheduler) sendWeeklySectorDigest() {
+	defer func() {
+		if r := recover(); r != nil {
+			if s.logger != nil {
+				s.logger.Error("weekly sector digest failed", "error", r)
+			}
+		}
+	}()
 	if !s.enabled {
 		if s.logger != nil {
 			s.logger.Debug("weekly sector digest disabled")

@@ -61,6 +61,13 @@ func (s *MonthlyReportScheduler) GenerateMonthlyReport() {
 
 // GenerateMonthlyReportWithContext is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) GenerateMonthlyReportWithContext(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			if s.logger != nil {
+				s.logger.Error("monthly report failed", "error", r)
+			}
+		}
+	}()
 	if !s.enabled {
 		if s.logger != nil {
 			s.logger.Debug("monthly report disabled")

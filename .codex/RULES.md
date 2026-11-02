@@ -49,5 +49,5 @@ Integration tests may need Docker and a test database; do not confuse these with
 
 - Never commit credentials, tokens, `.env` files, generated logs, build output, or runtime data. Use `infra/env/.env.example` as the template. The local `.env` is sourced by stack scripts, not auto-loaded by Spring Boot.
 - Treat database cleanup, stage deployment, and live-broker actions as destructive. Confirm the exact target and requested scope before acting.
-- The local development database is PostgreSQL at `192.168.0.100:5435`, database `swingtrade_db`. Stage is separate, with API on `:8081` and database `swingtrade_stage`; use stage commands only when explicitly working on stage.
+- Go integration tests use pg-dev at `192.168.0.100:5433`, database `swingtrade`. Stage uses the separate `swingtrade_stage` database on pg-dev and API port `:8081`; use stage commands only when explicitly working on stage.
 - Integration and read-only subagents are configured in `.codex/agents/`. Delegate only bounded, independent work; the parent agent owns integration, edits, and final verification.

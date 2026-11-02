@@ -1,25 +1,4 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: swing_trade_stage_postgres
-    restart: always
-    environment:
-      POSTGRES_DB: swingtrade_stage
-      POSTGRES_USER: swingtrade_user
-      POSTGRES_PASSWORD: swingtrade_password
-    ports:
-      - "5436:5432"
-    volumes:
-      - postgres_stage_data:/var/lib/postgresql/data
-    networks:
-      - swingtrade-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U swingtrade_user -d swingtrade_stage"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   api:
     image: swing-trade-api:stage
     container_name: swing-trade-stage-api
@@ -34,11 +13,9 @@ services:
       - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=stage
-      - DB_HOST=swing_trade_stage_postgres
-      - DB_PORT=5432
+      - DB_HOST=192.168.0.100
+      - DB_PORT=5433
       - DB_NAME=swingtrade_stage
-      - DB_USER=swingtrade_user
-      - DB_PASSWORD=swingtrade_password
       - LANGCHAIN4J_OPEN_AI_API_KEY=${LANGCHAIN4J_OPEN_AI_API_KEY:-}
       - API_KEY_AUTH_ENABLED=true
       - API_KEY=${API_KEY:?API_KEY must be set for the stage API}
@@ -50,9 +27,6 @@ services:
       - stage_logs:/var/log/swing-trade
       # Read-only key for PiLlamaServerManager's SSH calls to the Pi host.
       - /home/dietpi/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - swingtrade-network
     deploy:
@@ -84,5 +58,4 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_stage_data:
   stage_logs:

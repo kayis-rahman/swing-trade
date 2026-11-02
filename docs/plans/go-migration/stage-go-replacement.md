@@ -5,7 +5,7 @@
 The Go stage deployment set packages the existing no-traffic Go API as the
 `swing-trade-stage-api` container on the existing stage network and port. It
 does not connect to the stage database, run migrations, restart the Pi host, or
-touch production. The dashboard and stage database containers are not replaced.
+touch production. The dashboard is not replaced. The intended stage target is the separate `swingtrade_stage` database on pg-dev (`192.168.0.100:5433`, TLS required); the old standalone database is not migrated by this change.
 
 Replacing Java with the current Go skeleton makes Java-backed API endpoints
 unavailable. Only Go health, admin-health, liveness, readiness, and Prometheus

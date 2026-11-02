@@ -3,7 +3,7 @@ package db
 import "testing"
 
 func TestReadOnlyPoolConfigEnablesReadOnlyTransactions(t *testing.T) {
-	config, err := ReadOnlyPoolConfig("postgres://dev-user@192.168.0.100:5435/swingtrade_db")
+	config, err := ReadOnlyPoolConfig("postgres://dev-user@192.168.0.100:5433/swingtrade?sslmode=require")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -13,11 +13,11 @@ func TestReadOnlyPoolConfigEnablesReadOnlyTransactions(t *testing.T) {
 }
 
 func TestStagePoolConfigIsReadOnly(t *testing.T) {
-	config, err := ReadOnlyPoolConfig("postgres://stage-user@swing_trade_stage_postgres:5432/swingtrade_stage")
+	config, err := ReadOnlyPoolConfig("postgres://stage-user@192.168.0.100:5433/swingtrade_stage?sslmode=require")
 	if err != nil || config.ConnConfig.RuntimeParams["default_transaction_read_only"] != "on" {
 		t.Fatalf("stage config = %v, error = %v", config, err)
 	}
-	if _, err := ReadOnlyPoolConfig("postgres://stage-user@swing_trade_stage_postgres:5432/swingtrade_db"); err == nil {
+	if _, err := ReadOnlyPoolConfig("postgres://stage-user@192.168.0.100:5433/other?sslmode=require"); err == nil {
 		t.Fatal("accepted non-stage database")
 	}
 }
@@ -31,6 +31,23 @@ func TestNewReadOnlyPoolRejectsInvalidURLBeforeConnecting(t *testing.T) {
 func TestReadOnlyPoolConfigRejectsUnauthorizedTarget(t *testing.T) {
 	if _, err := ReadOnlyPoolConfig("postgres://dev-user@localhost:5435/swingtrade_db"); err == nil {
 		t.Fatal("ReadOnlyPoolConfig() accepted a non-development target")
+	}
+}
+
+func TestPoolConfigsRejectInsecureOrOverriddenTargets(t *testing.T) {
+	for _, u := range []string{
+		"postgres://u@192.168.0.100:5433/swingtrade",
+		"postgres://u@192.168.0.100:5433/swingtrade?sslmode=disable",
+		"postgres://u@192.168.0.100:5433/swingtrade?sslmode=prefer",
+		"postgres://u@192.168.0.100:5433/swingtrade?sslmode=require&host=elsewhere",
+		"postgres://u@192.168.0.100:5434/swingtrade?sslmode=require",
+	} {
+		if _, err := ReadOnlyPoolConfig(u); err == nil {
+			t.Errorf("read-only accepted %s", u)
+		}
+		if _, err := WritablePoolConfig(u); err == nil {
+			t.Errorf("writable accepted %s", u)
+		}
 	}
 }
 

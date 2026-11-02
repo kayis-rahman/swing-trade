@@ -7,7 +7,7 @@ Stage runs entirely in Docker containers on pi-node. Monitoring is built in — 
 
 | Component | Container | Port (pi-node) | Network |
 |-----------|-----------|----------------|---------|
-| PostgreSQL | `swing_trade_stage_postgres` | 5436 | swing-trade-stage_swingtrade-network |
+| PostgreSQL | `pg-dev`, database `swingtrade_stage` | 5433 | shared pg-dev |
 | Redis | `swing_trade_stage_redis` | 6380 | swing-trade-stage_swingtrade-network |
 | Spring Boot API | `swing-trade-stage-api` | 8081 | swing-trade-stage_swingtrade-network |
 | Vue dashboard | `swing-trade-stage-dashboard` | 8082 | swing-trade-stage_swingtrade-network |
@@ -19,10 +19,30 @@ Dev runs PostgreSQL on pi-node and the Spring Boot API plus Vue dashboard locall
 
 | Component | Location | Port (pi-node) |
 |-----------|----------|----------------|
-| PostgreSQL | pi-node container | 5435 |
+| PostgreSQL (Go integration) | pg-dev, database `swingtrade` | 5433 |
 | Redis | pi-node container | 6379 |
 | Spring Boot API | Local machine (`dev-stack.sh`) | 8080 |
 | Vue dashboard | Local machine (`dev-stack.sh`) | 3003 |
+
+## Database secrets and provisioning
+
+An owner must set repository Actions secret `SWINGTRADE_DEV_DATABASE_URL` to
+`postgresql://swingtrade_migration:<URL-encoded password>@192.168.0.100:5433/swingtrade?sslmode=require`.
+Go CI uses only this development database, creates an isolated schema from the
+sqlc schema for each run, and removes that schema afterward. It needs `psql` on
+the runner and the migration role's database CREATE privilege. Repeated and
+concurrent runs use distinct schemas; no public schema migrations are performed.
+An interrupted run may leave a `go_port_ci_` schema for an operator to inspect.
+
+Set the GitHub `stage` environment secret `DATABASE_URL` to
+`postgresql://swingtrade_app:<URL-encoded password>@192.168.0.100:5433/swingtrade_stage?sslmode=require`.
+It is only for stage deployment, never CI. For Java stage, set `DB_USER` to
+`swingtrade_app`, `DB_PASSWORD`, `DB_MIGRATION_USER` to `swingtrade_migration`,
+and `DB_MIGRATION_PASSWORD` in the protected stage env file. Do not commit or
+log passwords. Database creation and role grants are managed separately by
+`infra/shared-postgres/bootstrap`; this change neither migrates existing data
+nor authorizes a stage deployment. The old stage backup verifier is disabled
+until a shared-pg-dev-specific drill is separately approved.
 
 ## Stage Deployment
 
@@ -33,7 +53,7 @@ Dev runs PostgreSQL on pi-node and the Spring Boot API plus Vue dashboard locall
 
 Flow:
 1. **Build Docker image** — `docker build -f backend/Dockerfile --target runtime-jar ..`
-2. **Start infra** — `docker compose -f docker-compose.infra-stage.yml up -d` (PostgreSQL + Redis)
+2. **Start services** - stage API and dashboard use the existing shared pg-dev database; the old standalone stage database is not managed or removed.
 3. **Start API container** — runs on `swing-trade-stage_swingtrade-network` with all stage env vars
 4. **Apply the API memory cap** — requests 1 GiB with `docker update` and verifies the live container limit when the host kernel supports Docker memory limits; otherwise warns that the cap is not enforced and continues
 5. **Health check** — polls `http://piworm.local:8081/actuator/health` for up to 75 seconds
@@ -82,13 +102,16 @@ the backup/restore prerequisite or authorize stage replacement.
 --network swing-trade-stage_swingtrade-network
 -p 8081:8080
 -e SPRING_PROFILES_ACTIVE=stage
--e DB_HOST=swing_trade_stage_postgres
+-e DB_HOST=192.168.0.100
+-e DB_PORT=5433
 -e DB_NAME=swingtrade_stage
 -e REDIS_HOST=swing_trade_stage_redis
 ```
 
 Key env vars (all configurable via `-e`):
-- `DB_HOST`, `DB_PORT`, `DB_NAME` — PostgreSQL connection (resolves to container name on Docker network)
+- `DB_HOST`, `DB_PORT`, `DB_NAME` - PostgreSQL target; stage defaults to pg-dev and requires TLS
+- `DB_USER`, `DB_PASSWORD` - stage application role credentials
+- `DB_MIGRATION_USER`, `DB_MIGRATION_PASSWORD` - separate Flyway migration role credentials
 - `REDIS_HOST`, `REDIS_PORT` — Redis connection
 - `LLM_BACKEND`, `LLM_PI_SSH_BASE_URL`, `LLAMACPP_MODEL`, `LLM_TIMEOUT` — LLM backend (defaults in `backend/api/src/main/resources/application.properties`)
 - `TRADING_ENABLED`, `PAPER_TRADING_ENABLED`, `REAL_TRADING_ENABLED` — trading mode
@@ -129,7 +152,7 @@ Validation for this change is static only: the Compose values and shell syntax
 are checked, but stage is not deployed or cold-started during validation.
 
 ### Docker Compose Files
-- **`docker-compose.infra-stage.yml`** — PostgreSQL + Redis + API service definition
+- **`docker-compose.infra-stage.yml`** - stage API and dashboard service definitions; PostgreSQL is external
 - **`docker-compose.monitoring-stage.yml`** — Local Grafana (optional, bind-mount issue on Docker Desktop Mac)
 - **`backend/Dockerfile`** — Multi-stage: Maven build → `runtime-jar` (JRE 21 Alpine)
 
@@ -168,8 +191,8 @@ are checked, but stage is not deployed or cold-started during validation.
 ### Volumes
 | Volume | Database |
 |--------|----------|
-| `postgres_data` | dev (swingtrade_db) |
-| `postgres_data_stage` | stage (swingtrade_stage) |
+| shared pg-dev volume | `swingtrade` and `swingtrade_stage` |
+| legacy standalone PostgreSQL volumes | retained, not migrated or removed |
 | `redis_data` | dev |
 | `redis_data_stage` | stage |
 

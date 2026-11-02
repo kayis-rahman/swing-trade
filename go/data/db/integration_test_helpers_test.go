@@ -20,7 +20,7 @@ const (
 // An explicit test-only opt-in can additionally select one fixed loopback test DB.
 func integrationTestPoolConfig(databaseURL string) (*pgxpool.Config, error) {
 	config, err := ReadOnlyPoolConfig(databaseURL)
-	if err == nil {
+	if err == nil && config.ConnConfig.Database == "swingtrade" {
 		return config, nil
 	}
 	if os.Getenv(allowLocalTestDatabaseEnv) != "1" {
@@ -38,6 +38,13 @@ func integrationTestPoolConfig(databaseURL string) (*pgxpool.Config, error) {
 	}
 	conn.RuntimeParams["default_transaction_read_only"] = "on"
 	return config, nil
+}
+
+func TestIntegrationTestPoolConfigRejectsStage(t *testing.T) {
+	t.Setenv(allowLocalTestDatabaseEnv, "")
+	if _, err := integrationTestPoolConfig("postgres://stage@192.168.0.100:5433/swingtrade_stage?sslmode=require"); err == nil {
+		t.Fatal("integration tests must never target stage")
+	}
 }
 
 func TestIntegrationTestPoolConfigRequiresExplicitFixedLocalTarget(t *testing.T) {

@@ -19,7 +19,7 @@ env:
   GOLANGCI_LINT: ${{ github.workspace }}/.gobin/golangci-lint
   GOVULNCHECK: ${{ github.workspace }}/.gobin/govulncheck
 
-# Integration tests use the repository's development-only database secret.
+# Integration tests use pg-dev only; the secret uses the migration role to create isolated schemas.
 # Never use the separate stage deployment secret for tests.
 jobs:
   go:
@@ -45,7 +45,7 @@ jobs:
           "${GOLANGCI_LINT}" version
           "${GOVULNCHECK}" -version
 
-      - name: Verify Go modules and development database integration
+      - name: Verify Go modules and pg-dev integration
         env:
           SWINGTRADE_DEV_DATABASE_URL: ${{ secrets.SWINGTRADE_DEV_DATABASE_URL }}
         run: |

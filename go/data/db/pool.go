@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,13 +20,32 @@ func ReadOnlyPoolConfig(databaseURL string) (*pgxpool.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse DATABASE_URL: invalid connection string")
 	}
-	development := config.ConnConfig.Host == "192.168.0.100" && config.ConnConfig.Port == 5435 && config.ConnConfig.Database == "swingtrade_db"
-	stage := config.ConnConfig.Host == "swing_trade_stage_postgres" && config.ConnConfig.Port == 5432 && config.ConnConfig.Database == "swingtrade_stage"
-	if !development && !stage {
-		return nil, fmt.Errorf("DATABASE_URL must target the authorized development or stage database")
+	if !authorizedDatabaseURL(databaseURL, config) {
+		return nil, fmt.Errorf("DATABASE_URL must target the authorized development or stage database with sslmode=require")
 	}
 	config.ConnConfig.RuntimeParams["default_transaction_read_only"] = "on"
 	return config, nil
+}
+
+func authorizedDatabaseURL(databaseURL string, config *pgxpool.Config) bool {
+	u, err := url.Parse(databaseURL)
+	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") {
+		return false
+	}
+	q := u.Query()
+	if modes := q["sslmode"]; len(modes) != 1 ||
+		(modes[0] != "require" && modes[0] != "verify-ca" && modes[0] != "verify-full") {
+		return false
+	}
+	for _, key := range []string{"host", "port", "dbname", "service", "options"} {
+		if _, ok := q[key]; ok {
+			return false
+		}
+	}
+	conn := config.ConnConfig
+	return conn.Host == "192.168.0.100" && conn.Port == 5433 &&
+		(conn.Database == "swingtrade" || conn.Database == "swingtrade_stage") &&
+		conn.TLSConfig != nil && len(conn.Fallbacks) == 0
 }
 
 // NewReadOnlyPool creates a read-only pool. The caller owns and must close it.
@@ -91,10 +111,8 @@ func WritablePoolConfig(databaseURL string) (*pgxpool.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse DATABASE_URL: invalid connection string")
 	}
-	development := config.ConnConfig.Host == "192.168.0.100" && config.ConnConfig.Port == 5435 && config.ConnConfig.Database == "swingtrade_db"
-	stage := config.ConnConfig.Host == "swing_trade_stage_postgres" && config.ConnConfig.Port == 5432 && config.ConnConfig.Database == "swingtrade_stage"
-	if !development && !stage {
-		return nil, fmt.Errorf("DATABASE_URL must target the authorized development or stage database")
+	if !authorizedDatabaseURL(databaseURL, config) {
+		return nil, fmt.Errorf("DATABASE_URL must target the authorized development or stage database with sslmode=require")
 	}
 	config.ConnConfig.RuntimeParams["default_transaction_read_only"] = "off"
 	return config, nil

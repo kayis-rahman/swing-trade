@@ -172,3 +172,16 @@ func roundHalfUp(numerator, denominator *big.Int) *big.Int {
 	}
 	return quotient
 }
+
+// MulInt multiplies a money-scale decimal by an integer quantity.
+func (d Decimal) MulInt(n int) Decimal {
+	if n == 0 {
+		return Decimal{}
+	}
+	return Decimal{units: new(big.Int).Mul(d.value(), big.NewInt(int64(n)))}
+}
+
+// FromUnits constructs a MoneyScale decimal from scaled integer units.
+func FromUnits(units *big.Int) Decimal {
+	return Decimal{units: new(big.Int).Set(units)}
+}

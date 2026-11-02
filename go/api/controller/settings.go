@@ -162,7 +162,7 @@ func RegisterSettingsWriteRoutes(mux *http.ServeMux, writer data.SettingsWriteSt
 			})
 			return
 		}
-		if raw := body["trading.initial_capital"]; raw != "" {
+		if raw, ok := body["trading.initial_capital"]; ok {
 			if !validPositiveDecimal(raw) {
 				writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
 					Data: nil, Error: stringValuePtr("Initial capital must be greater than zero"), Timestamp: javaLocalDateTime(clk.Now()),
@@ -251,7 +251,7 @@ func decodeStringMap(r *http.Request) (map[string]string, error) {
 
 func validPositiveDecimal(raw string) bool {
 	if strings.TrimSpace(raw) == "" {
-		return true
+		return false
 	}
 	n, err := strconv.ParseFloat(raw, 64)
 	if err != nil {

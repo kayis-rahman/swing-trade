@@ -124,7 +124,7 @@ func TestDecodeStringMapNilValueSkipped(t *testing.T) {
 }
 
 func TestValidPositiveDecimalAndParseIntHelpers(t *testing.T) {
-	if !validPositiveDecimal("") || !validPositiveDecimal("1.5") || validPositiveDecimal("abc") || validPositiveDecimal("-1") {
+	if validPositiveDecimal("") || !validPositiveDecimal("1.5") || validPositiveDecimal("abc") || validPositiveDecimal("-1") {
 		t.Fatal("validPositiveDecimal mismatch")
 	}
 	if v, err := parsePositiveInt(" 3 "); err != nil || v != 3 {

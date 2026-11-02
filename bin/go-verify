@@ -28,8 +28,8 @@ except ValueError:
     raise SystemExit('Malformed development database URL.')
 if (parsed.scheme not in {'postgres', 'postgresql'}
         or target != ('192.168.0.100', 5433, '/swingtrade')
-        or options.get('sslmode') != ['require']
-        or set(options) - {'sslmode', 'application_name'}
+        or options.get('sslmode') not in (['require'], ['verify-ca'], ['verify-full'])
+        or set(options) - {'sslmode', 'application_name', 'sslrootcert'}
         or not parsed.username):
     raise SystemExit('Refusing a database target outside the captain-authorized development database.')
 PY
@@ -44,9 +44,13 @@ u = urllib.parse.urlsplit(os.environ['SWINGTRADE_DEV_DATABASE_URL'])
 env = os.environ.copy()
 for key in ('PGSERVICE', 'PGSERVICEFILE'):
     env.pop(key, None)
+sslmode = urllib.parse.parse_qs(u.query, keep_blank_values=True).get('sslmode', ['require'])[0]
+sslrootcert = urllib.parse.parse_qs(u.query, keep_blank_values=True).get('sslrootcert', [None])[0]
 env.update(PGHOST=u.hostname, PGPORT=str(u.port), PGDATABASE=u.path[1:],
            PGUSER=urllib.parse.unquote(u.username),
-           PGPASSWORD=urllib.parse.unquote(u.password or ''), PGSSLMODE='require')
+           PGPASSWORD=urllib.parse.unquote(u.password or ''), PGSSLMODE=sslmode)
+if sslrootcert:
+    env['PGSSLROOTCERT'] = sslrootcert
 sys.exit(subprocess.call(['psql', '-X', '-q', '-v', 'ON_ERROR_STOP=1', *sys.argv[1:]], env=env))
 PY
     }

@@ -33,10 +33,11 @@ func authorizedDatabaseURL(databaseURL string, config *pgxpool.Config) bool {
 		return false
 	}
 	q := u.Query()
-	if modes := q["sslmode"]; len(modes) != 1 || modes[0] != "require" {
+	if modes := q["sslmode"]; len(modes) != 1 ||
+		(modes[0] != "require" && modes[0] != "verify-ca" && modes[0] != "verify-full") {
 		return false
 	}
-	for _, key := range []string{"host", "port", "dbname", "service"} {
+	for _, key := range []string{"host", "port", "dbname", "service", "options"} {
 		if _, ok := q[key]; ok {
 			return false
 		}

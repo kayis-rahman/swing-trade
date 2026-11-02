@@ -7,11 +7,11 @@
 #      SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1.
 #   3. Dashboard Vite dev server on 127.0.0.1:3003 (yarn dev --host 127.0.0.1).
 set -euo pipefail
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../.." && pwd)"
 cd "${REPO_ROOT}/dashboard"
 
 export STAGE_DASHBOARD_URL="${STAGE_DASHBOARD_URL:-http://127.0.0.1:3003}"
 export STAGE_API_URL="${STAGE_API_URL:-http://127.0.0.1:8081}"
 export GO_SERVICE_URL="${GO_SERVICE_URL:-http://127.0.0.1:8081}"
 
-npx playwright test --reporter=list,json 2>&1 | tee "${TMPDIR:-/tmp}/playwright-go-run.json"
+npx playwright test --reporter=list,json 2>&1 | tee "${TMPDIR:-/tmp}/playwright-go-run.log"

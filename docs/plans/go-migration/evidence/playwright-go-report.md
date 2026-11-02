@@ -9,25 +9,25 @@ Stats from Playwright: expected=116, unexpected=20, skipped=7, total=143.
 | Spec | Test | Status | Category | Error (truncated) |
 |---|---|---|---|---|
 | api-openapi-audit.spec.ts | all safe OpenAPI GET routes return no server or rate-limit errors | fail | missing slice: Go does not serve /api-docs (OpenAPI) endpoint | SyntaxError: Unexpected non-whitespace character after JSON at position 4 (line  |
-| views/multi-strategy.live.spec.ts | orchestrator shows the signal tournament panel | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/multi-strategy.live.spec.ts | signals can be grouped by symbol | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/multi-strategy.live.spec.ts | positions has a portfolio switcher with shadow books | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32me |
-| views/multi-strategy.live.spec.ts | symbol detail shows the strategy matrix | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/multi-strategy.live.spec.ts | strategy report renders leaderboard and arbitration rules | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/multi-strategy.live.spec.ts | home shows the strategy board | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/multi-strategy.live.spec.ts | backtest exposes run and saved-report controls | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpect |
-| views/multi-strategy.live.spec.ts | strategies page still loads | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/orchestrator-debug.spec.ts | orchestrator page — full feature check | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/stage-sanity.spec.ts | positions page loads | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/stage-sanity.spec.ts | sentiment page loads | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
-| views/stage-sanity.spec.ts | health endpoint returns UP | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | metrics endpoint returns Prometheus format | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | positions stats API returns valid JSON | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | signals API returns array | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | positions API returns a paginated response | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | positions performance API returns trade stats | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | watchlist API returns data | fail | other | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
-| views/stage-sanity.spec.ts | sidebar navigation works | fail | other | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/multi-strategy.live.spec.ts | orchestrator shows the signal tournament panel | fail | missing slice: signal pipeline/scans (multi-strategy tournament needs signal/strategy report data) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/multi-strategy.live.spec.ts | signals can be grouped by symbol | fail | missing slice: signal pipeline/scans (symbol-grouped variants not returned by Go) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/multi-strategy.live.spec.ts | positions has a portfolio switcher with shadow books | fail | missing slice: strategy configs and shadow books | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32me |
+| views/multi-strategy.live.spec.ts | symbol detail shows the strategy matrix | fail | missing slice: symbol strategy matrix (not stored/served by Go) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/multi-strategy.live.spec.ts | strategy report renders leaderboard and arbitration rules | fail | missing slice: strategy report slice | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/multi-strategy.live.spec.ts | home shows the strategy board | fail | missing slice: strategy board (strategy configs not seeded/served) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/multi-strategy.live.spec.ts | backtest exposes run and saved-report controls | fail | missing slice: backtest saved reports | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpect |
+| views/multi-strategy.live.spec.ts | strategies page still loads | fail | missing slice: strategy configs (no seeded strategy rows) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/orchestrator-debug.spec.ts | orchestrator page — full feature check | fail | missing slice: job orchestrator run history (no seeded runs on scratch stack) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/stage-sanity.spec.ts | positions page loads | fail | environment: depends on positions seed data and API responses below | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/stage-sanity.spec.ts | sentiment page loads | fail | missing slice: sentiment analysis backend | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
+| views/stage-sanity.spec.ts | health endpoint returns UP | fail | Go parity bug: /api/health component shape (F-API-HEALTH-01; not fixed; Go returns api component but environment/data shape differs) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | metrics endpoint returns Prometheus format | fail | Go parity bug: /actuator/prometheus lacks JVM/application metric names expected by test (F-OBS) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | positions stats API returns valid JSON | fail | Go parity bug: /api/positions/stats response (F-API-POSITIONS) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | signals API returns array | fail | Go parity bug: /api/signals/latest response envelope (F-API-SIGNALS) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | positions API returns a paginated response | fail | Go parity bug: /api/positions pagination envelope (F-API-POSITIONS) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | positions performance API returns trade stats | fail | Go parity bug: /api/positions/performance response (F-API-POSITIONS) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | watchlist API returns data | fail | Go parity bug: /api/watchlist response envelope (F-API-WATCH) | Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected |
+| views/stage-sanity.spec.ts | sidebar navigation works | fail | environment: downstream of the API/page-level failures above | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
 
 ## Per-test results
 

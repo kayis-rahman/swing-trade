@@ -18,7 +18,7 @@ unmapped tests are visible to the gate checks.
 ## Gate-blocking unmapped areas
 
 | Area | Java test surface | Mapping status | Missing |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Core domain model and ports | 81 types in `backend/core/src/main/java/com/swingtrade/domain` | not started | F-DATA-ENTITIES expansion (§11) |
 | Indicators, strategies, gates | `backend/strategy` test tree | partial rows (F-STRAT-IND-01..21), method mapping partial | method-level matrix and golden vectors |
 | Backtest engines, walk-forward, DSR, cost models | `backend/strategy` backtest tests | not expanded | §11 F-STRAT-BT |

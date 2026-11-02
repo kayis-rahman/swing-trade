@@ -13,7 +13,7 @@ Phase 8 (cutover and Java retirement) remains out of scope and requires written 
 Reference: `phase-4-strategy-backtest.md` -> `## Gate G4 exit criteria`.
 
 | Exit criterion | Status | Evidence in repo | Missing |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Zero diff on decimal paths | OPEN | `go/strategy/decimal_num.go`, `decimal_math.go`, `market_context.go`, `market_context_indicators.go`; `F-STRAT-IND-01..11` rows are `parity-pending` | Golden-signal comparison over the full watchlist history; parallel-run output; Java golden vectors beyond the committed red tests |
 | Trade lists identical | OPEN | No backtest/portfolio/intraday backtest engine present in `go/strategy` | Backtest engines and their translated Java tests; trade-list comparison report |
 | Documented tolerances only on float paths that are float in Java too | PARTIAL | Porting notes in `phase-4-strategy-backtest.md`; float-path rationale documented | Final tolerance table with measured diffs; floats remain parity-pending |
@@ -28,7 +28,7 @@ Gate G4 verdict: NOT READY. Signature: ______________ Date: ______________
 Reference: `phase-5-llm-news-sentiment.md` -> `## Gate G5 exit criteria`.
 
 | Exit criterion | Status | Evidence in repo | Missing |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | All recorded-response suites green | PARTIAL | `go/llm/client_test.go`, `sentiment_analyzer_test.go`, `synthesis_output_test.go`, `validator_test.go`, `pdf_extraction_test.go` and others | Full provider recorded-response corpus (all backends/sources) and green recorded suite across modules |
 | Degraded and fallback behavior match | PARTIAL | `news_circuit_breaker.go`, fallback sentiment path in `sentiment_analyzer.go` | Drill evidence for provider-down, malformed JSON, timeouts, SSH failure; stage_degraded parity report |
 | Metrics match | OPEN | Meter usage present; full metrics inventory still tracks Go parity | Metric golden comparison for LLM/sentiment counters |
@@ -43,7 +43,7 @@ Gate G5 verdict: NOT READY. Signature: ______________ Date: ______________
 Reference: `phase-6-orchestration-writes.md` -> `## Gate G6 exit criteria`.
 
 | Exit criterion | Status | Evidence in repo | Missing |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Run outputs equal | PARTIAL | `go` job orchestrator package, signal arbiter, candidate scans and writes | Full E2E comparison on a scratch database; Java-versus-Go run summaries and persisted signals |
 | SSE streams equal | OPEN | `WriteSSE` helper exists in `go/api/sse.go` and is exercised by `go/api/helpers_test.go`, but no stream endpoint or consumer uses it | SSE stream endpoints/consumers, heartbeat and ordering implementation, and parity tests |
 | Playwright green | OPEN | existing Playwright suite only | Unchanged Playwright run against Go on scratch stack |
@@ -60,7 +60,7 @@ Gate G6 verdict: NOT READY. Signature: ______________ Date: ______________
 Reference: `phase-7-paper-trading-risk.md` -> `## Gate G7 exit criteria`.
 
 | Exit criterion | Status | Evidence in repo | Missing |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Zero divergence across the shadow window including drills | OPEN | `go/broker/paper_engine.go`, `position.go`, risk controls, `kill_switch.go` | Shadow run with Go computing decisions while Java remains writer; orders/fills/costs/positions/P&L equality |
 | Kill switch honored within 1 s | PARTIAL | `kill_switch.go` | Timed drill evidence under 1 s |
 | Live-path absence verified | PARTIAL | `go/broker/live_broker.go` behind `//go:build live`, refusing stub | CI build/symbol check evidence against the released binary |

@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"fmt"
+	"strconv"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
 	"github.com/kayis-rahman/swing-trade/go/core/domain"
@@ -107,7 +108,7 @@ func (s RelativeStrengthMomentumStrategy) IsEntryEligible(indicators *Indicators
 	if relativeStrength == nil {
 		return false
 	}
-	excess, err := coredecimal.Parse(fmt.Sprintf("%.4f", relativeStrength.ExcessReturnPct))
+	excess, err := coredecimal.Parse(strconv.FormatFloat(relativeStrength.ExcessReturnPct, 'g', -1, 64))
 	if err != nil {
 		return false
 	}

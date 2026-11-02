@@ -64,14 +64,17 @@ services:
       com.firstmate.component: postgres
       com.firstmate.environment: prod
     logging: *default-logging
-    networks: [pg_prod]
+    networks:
+      pg_prod:
+        aliases:
+          - pg-prod
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e
     container_name: pg-prod-exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:${PG_PROD_SUPERUSER_PASSWORD}@postgres:5432/postgres?sslmode=verify-full"
+      DATA_SOURCE_NAME: "postgresql://postgres:${PG_PROD_SUPERUSER_PASSWORD}@pg-prod:5432/postgres?sslmode=verify-full"
       PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
     depends_on:
       postgres:
@@ -116,7 +119,7 @@ services:
         while :; do
           stamp=$$(date -u +%Y%m%dT%H%M%SZ)
           ok=1
-          for db in $${PG_PROD_DATABASES}; do
+          for db in $$(printf "%s" "$${PG_PROD_DATABASES}" | tr "," " "); do
             daily="/backups/pg-prod-$${db}-daily-$${stamp}.dump"
             if PGPASSWORD="$${PGPASSWORD}" pg_dump --host="$${PGHOST}" --port="$${PGPORT}" --username="$${PGUSER}" --format=custom --file="$${daily}" "$${db}"; then
               chmod 600 "$${daily}"
@@ -134,7 +137,7 @@ services:
           done
           if [ "$$ok" = "1" ]; then
             cd /backups
-            for db in $${PG_PROD_DATABASES}; do
+            for db in $$(printf "%s" "$${PG_PROD_DATABASES}" | tr "," " "); do
               ls -1 "pg-prod-$${db}-daily-"*.dump 2>/dev/null | sort -r | tail -n +8 | xargs -r rm -f --
               ls -1 "pg-prod-$${db}-weekly-"*.dump 2>/dev/null | sort -r | tail -n +5 | xargs -r rm -f --
             done

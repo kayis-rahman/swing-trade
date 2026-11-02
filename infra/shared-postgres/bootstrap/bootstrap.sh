@@ -71,7 +71,7 @@ create_role() {
   if [[ "${exists}" != "1" ]]; then
     sql="CREATE ROLE ${rolename} LOGIN PASSWORD '${password}' ${attrs} NOCREATEROLE NOSUPERUSER;"
   else
-    sql="ALTER ROLE ${rolename} PASSWORD '${password}';"
+    sql="ALTER ROLE ${rolename} ${attrs} NOCREATEROLE NOSUPERUSER PASSWORD '${password}';"
   fi
   $DOCKER exec -e "PGPASSWORD=${PG_SUPER_PASSWORD}" "$CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "${sql}"
 }
@@ -85,13 +85,13 @@ else
   IRONVEIL_MIG="${IRONVEIL_MIGRATION_PASSWORD:?missing}"
 fi
 
-create_role swingtrade_app "${SWINGTRADE_APP_PASSWORD:?missing}" ""
+create_role swingtrade_app "${SWINGTRADE_APP_PASSWORD:?missing}" "NOCREATEDB"
 create_role swingtrade_migration "${SWINGTRADE_MIGRATION_PASSWORD:?missing}" "CREATEDB"
-create_role finapp_app "${FINAPP_APP_PASSWORD:?missing}" ""
+create_role finapp_app "${FINAPP_APP_PASSWORD:?missing}" "NOCREATEDB"
 create_role finapp_migration "${FINAPP_MIGRATION_PASSWORD:?missing}" "CREATEDB"
-create_role ironveil_app "${IRONVEIL_APP:?missing}" ""
+create_role ironveil_app "${IRONVEIL_APP:?missing}" "NOCREATEDB"
 create_role ironveil_migration "${IRONVEIL_MIG:?missing}" "CREATEDB"
-create_role grafana_ro "${GRAFANA_PASSWORD}" ""
+create_role grafana_ro "${GRAFANA_PASSWORD}" "NOCREATEDB"
 
 # Revoke PUBLIC connect on every database (must be managed from postgres DB).
 for db in $DATABASES; do
@@ -128,7 +128,10 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${app};
 GRANT ALL PRIVILEGES ON SCHEMA public TO ${migration};
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${migration};
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${migration};
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO grafana_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE ${migration} IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${app};
+ALTER DEFAULT PRIVILEGES FOR ROLE ${migration} IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${app};
+ALTER DEFAULT PRIVILEGES FOR ROLE ${migration} IN SCHEMA public GRANT SELECT ON TABLES TO grafana_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE ${migration} IN SCHEMA public GRANT SELECT, USAGE ON SEQUENCES TO grafana_ro;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO grafana_ro;
 SQL
   # Make app/migration roles owners of future? migration created objects owned by migration due CREATEDB? Owner defaults to creating role at runtime anyway.

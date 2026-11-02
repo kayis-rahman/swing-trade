@@ -4,8 +4,8 @@ Prepared 2026-11-02 on branch `fm/swing-trade-go-gate-evidence-v1`. Docs only.
 No code changed. No gate is claimed to pass without evidence. Captain signature line at the
 end of each gate.
 
-Current baseline: merged PRs through Phase 7 plus in-flight Phase 6 signal pipeline/scans and
-Discord-only scheduler slices (PR #165 intake). Telegram is intentionally not ported.
+Current baseline: merged PRs through Phase 7 plus Phase 6 slice F (PR #165; Discord notification
+services and schedulers ported; Telegram intentionally not ported). Signal pipeline/scans slices remain in flight.
 Phase 8 (cutover and Java retirement) remains out of scope and requires written captain approval.
 
 ## Gate G4 - Strategy, indicators, backtest engine
@@ -49,7 +49,7 @@ Reference: `phase-6-orchestration-writes.md` -> `## Gate G6 exit criteria`.
 | Playwright green | OPEN | existing Playwright suite only | Unchanged Playwright run against Go on scratch stack |
 | Two weekly cycles without duplicate or missed jobs | OPEN | scheduler-off gates remain default false | Two-cycle scheduler soak report (digests included) |
 
-In-flight at baseline: signal pipeline/scans slices and Discord-only schedulers (PR #165). Telegram is intentionally not ported.
+In-flight at baseline: signal pipeline/scans slices (PR #165 intake). Telegram is intentionally not ported (Discord schedulers landed in slice F).
 
 Ledger: no Phase 6 row moved to `closed`; several touched rows remain `parity-pending` or `not-started`.
 

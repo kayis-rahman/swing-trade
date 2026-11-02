@@ -905,3 +905,8 @@ CI/stage pipeline is not a gate for this project -> dev-stack + this checklist i
 - Dashboard: `yarn typecheck` passes; Vitest 375 tests pass across 61 files.
 - Frontend dev proxy remains pointed at the Go backend on port 8081.
 - No stage deployment performed.
+
+## 2026-11-01 Go Phase 6 slice C (fm/swing-trade-go-p6-orchestrator-v1)
+
+- New Go package `go/api/orchestrator` added: run/stage domain types and enums, run and stage state machines, persistence ports, in-memory stores, cancellation/interrupt bookkeeping, progress/summary assembly, orphan reaper, and run-summary notifier hook. Sibling slices can program against these interfaces.
+- Verified with `go test ./orchestrator/...` and `go build`.

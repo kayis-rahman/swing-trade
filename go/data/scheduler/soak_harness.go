@@ -45,10 +45,17 @@ func (h *SoakHarness) CycleTimes() []time.Time {
 	if h.Clock == nil {
 		return nil
 	}
+	cycles := h.Cycles
+	if cycles <= 0 {
+		cycles = 2
+	}
 	base := h.Clock()
-	times := make([]time.Time, h.Cycles)
-	for i := 0; i < h.Cycles; i++ {
+	times := make([]time.Time, cycles)
+	for i := 0; i < cycles; i++ {
 		fire := base.AddDate(0, 0, i*7)
+		for fire.Weekday() != h.Weekday {
+			fire = fire.AddDate(0, 0, 1)
+		}
 		times[i] = time.Date(fire.Year(), fire.Month(), fire.Day(), h.Hour, h.Minute, 0, 0, fire.Location())
 	}
 	return times
@@ -64,9 +71,15 @@ func (h *SoakHarness) Run(ctx context.Context, schedulers []SoakScheduler) error
 			continue
 		}
 		for _, fire := range h.CycleTimes() {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			_ = fire
 			scheduler.Run(ctx)
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	return nil
 }

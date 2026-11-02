@@ -32,7 +32,7 @@ A small internal CA and server certificate are generated on the Pi under `/home/
 
 Clients get the CA certificate with:
 
-```
+```bash
 scp dietpi@piworm.local:/home/dietpi/shared-postgres/tls/ca.crt ./pg-shared-ca.crt
 ```
 

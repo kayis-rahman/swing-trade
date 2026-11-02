@@ -16,6 +16,7 @@ fi
 
 # Source only variable assignments; never print them.
 set -a
+# shellcheck source=/dev/null
 . "$ENV_FILE"
 set +a
 
@@ -33,7 +34,6 @@ case "$ENVIRONMENT" in
 esac
 
 PG_SUPER_PASSWORD="${!PG_SUPER_PASSWORD_VAR:?missing $PG_SUPER_PASSWORD_VAR}"
-PGPORT_BIND=$([[ "$ENVIRONMENT" == "dev" ]] && echo 5433 || echo 5434)
 
 psql_super() {
   # Reads SQL from stdin. Password is passed via PGPASSWORD (not logged).
@@ -114,7 +114,6 @@ grant_db() {
   local db="$1"
   local app="$2"
   local migration="$3"
-  local ironveil=0
   # Database-level ACL must be changed while connected to a different database.
   $DOCKER exec -i -e "PGPASSWORD=${PG_SUPER_PASSWORD}" "$CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<SQL
 GRANT CONNECT ON DATABASE ${db} TO ${app}, ${migration}, grafana_ro;

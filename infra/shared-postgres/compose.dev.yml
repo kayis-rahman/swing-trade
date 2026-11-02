@@ -74,11 +74,16 @@ services:
     container_name: pg-dev-exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://postgres:${PG_DEV_SUPERUSER_PASSWORD}@pg-dev:5432/postgres?sslmode=verify-full"
+      DATA_SOURCE_NAME: "postgresql://postgres:${PG_DEV_SUPERUSER_PASSWORD}@pg-dev:5432/postgres?sslmode=verify-full&sslrootcert=/etc/postgresql/tls/ca.crt"
       PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - type: bind
+        source: /home/dietpi/shared-postgres/tls
+        target: /etc/postgresql/tls
+        read_only: true
     ports:
       - "192.168.0.100:9187:9187"
     deploy:

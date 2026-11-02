@@ -5,7 +5,10 @@ ENVIRONMENT=${1:?usage: test-isolation.sh <dev|prod> <env-file>}
 ENV_FILE=${2:?}
 DOCKER=${DOCKER:-docker}
 
-set -a; . "$ENV_FILE"; set +a
+set -a
+# shellcheck source=/dev/null
+. "$ENV_FILE"
+set +a
 
 allowed() {
   # returns 0 if role may connect to db

@@ -17,6 +17,7 @@ type Candidate = strategy.Candidate
 // ArbiterRule selects an arbitration rule.
 type ArbiterRule = strategy.ArbitrationRule
 
+// Exported arbitration rule aliases.
 const (
 	RuleHighestConfidence = strategy.ArbitrationRuleHighestConfidence
 	RuleEvidenceRanked    = strategy.ArbitrationRuleEvidenceRanked
@@ -49,6 +50,7 @@ type Pipeline struct {
 	Persister SignalPersister
 }
 
+// New creates a Pipeline.
 func New(persister SignalPersister) *Pipeline {
 	return &Pipeline{Persister: persister}
 }

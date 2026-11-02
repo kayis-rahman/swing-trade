@@ -18,6 +18,7 @@ func NewMemoryRunStore() *MemoryRunStore {
 	return &MemoryRunStore{runs: map[RunID]Run{}}
 }
 
+// Create stores a new run.
 func (s *MemoryRunStore) Create(_ context.Context, run Run) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -26,6 +27,7 @@ func (s *MemoryRunStore) Create(_ context.Context, run Run) error {
 	return nil
 }
 
+// Get returns a run by id.
 func (s *MemoryRunStore) Get(_ context.Context, id RunID) (Run, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -33,6 +35,7 @@ func (s *MemoryRunStore) Get(_ context.Context, id RunID) (Run, bool, error) {
 	return r, ok, nil
 }
 
+// List returns all runs in insertion order.
 func (s *MemoryRunStore) List(_ context.Context) ([]Run, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -43,6 +46,7 @@ func (s *MemoryRunStore) List(_ context.Context) ([]Run, error) {
 	return out, nil
 }
 
+// FindActive returns the first running or paused run.
 func (s *MemoryRunStore) FindActive(_ context.Context) (Run, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -55,6 +59,7 @@ func (s *MemoryRunStore) FindActive(_ context.Context) (Run, bool, error) {
 	return Run{}, false, nil
 }
 
+// UpdateStatus updates a run status.
 func (s *MemoryRunStore) UpdateStatus(_ context.Context, id RunID, status Status, completedAt *time.Time, errorMessage string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -72,6 +77,7 @@ func (s *MemoryRunStore) UpdateStatus(_ context.Context, id RunID, status Status
 	return nil
 }
 
+// UpdateProgress updates completed/failed counts.
 func (s *MemoryRunStore) UpdateProgress(_ context.Context, id RunID, completed, failed int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

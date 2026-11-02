@@ -16,6 +16,7 @@ type RunID string
 // Status mirrors candidate scan lifecycle.
 type Status string
 
+// Status values for candidate scans.
 const (
 	StatusRunning   Status = "RUNNING"
 	StatusPaused    Status = "PAUSED"
@@ -26,13 +27,13 @@ const (
 
 // Run is the Go mirror of CandidateScanRunEntity.
 type Run struct {
-	RunID          RunID     `json:"runId"`
-	Status         Status    `json:"status"`
-	TotalSymbols   int       `json:"totalSymbols"`
-	CompletedCount  int       `json:"completedCount"`
-	FailedCount    int       `json:"failedCount"`
-	ErrorMessage   string    `json:"errorMessage,omitempty"`
-	StartedAt      time.Time `json:"startedAt"`
+	RunID          RunID      `json:"runId"`
+	Status         Status     `json:"status"`
+	TotalSymbols   int        `json:"totalSymbols"`
+	CompletedCount int        `json:"completedCount"`
+	FailedCount    int        `json:"failedCount"`
+	ErrorMessage   string     `json:"errorMessage,omitempty"`
+	StartedAt      time.Time  `json:"startedAt"`
 	CompletedAt    *time.Time `json:"completedAt,omitempty"`
 }
 
@@ -76,15 +77,16 @@ func Transition(from, to Status) (Status, error) {
 
 // Manager coordinates pause/resume/cancel for candidate scans.
 type Manager struct {
-	Repo   RunRepository
-	Clock  clock.Clock
+	Repo  RunRepository
+	Clock clock.Clock
 
-	mu       sync.Mutex
-	active   *RunID
-	paused   map[RunID]*bool
+	mu        sync.Mutex
+	active    *RunID
+	paused    map[RunID]*bool
 	cancelled map[RunID]*bool
 }
 
+// NewManager constructs a Manager.
 func NewManager(repo RunRepository, clk clock.Clock) *Manager {
 	if clk == nil {
 		clk = clock.System{}
@@ -144,7 +146,7 @@ func (m *Manager) Start(ctx context.Context, totalSymbols int) (Run, error) {
 func (m *Manager) Pause(ctx context.Context, id RunID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	run, ok, err := m.GetLocked(ctx, id)
+	run, ok, err := m.getLocked(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -174,7 +176,7 @@ func (m *Manager) Pause(ctx context.Context, id RunID) error {
 	return nil
 }
 
-func (m *Manager) GetLocked(ctx context.Context, id RunID) (Run, bool, error) {
+func (m *Manager) getLocked(ctx context.Context, id RunID) (Run, bool, error) {
 	if m.Repo != nil {
 		return m.Repo.Get(ctx, id)
 	}
@@ -185,7 +187,7 @@ func (m *Manager) GetLocked(ctx context.Context, id RunID) (Run, bool, error) {
 func (m *Manager) Resume(ctx context.Context, id RunID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	run, ok, err := m.GetLocked(ctx, id)
+	run, ok, err := m.getLocked(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -217,7 +219,7 @@ func (m *Manager) Resume(ctx context.Context, id RunID) error {
 func (m *Manager) Cancel(ctx context.Context, id RunID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	run, ok, err := m.GetLocked(ctx, id)
+	run, ok, err := m.getLocked(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -259,7 +261,7 @@ func (m *Manager) Cancel(ctx context.Context, id RunID) error {
 func (m *Manager) Complete(ctx context.Context, id RunID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	run, ok, err := m.GetLocked(ctx, id)
+	run, ok, err := m.getLocked(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -292,7 +294,7 @@ func (m *Manager) Complete(ctx context.Context, id RunID) error {
 func (m *Manager) Fail(ctx context.Context, id RunID, msg string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	run, ok, err := m.GetLocked(ctx, id)
+	run, ok, err := m.getLocked(ctx, id)
 	if err != nil {
 		return err
 	}

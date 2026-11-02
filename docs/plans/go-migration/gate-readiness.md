@@ -45,7 +45,7 @@ Reference: `phase-6-orchestration-writes.md` -> `## Gate G6 exit criteria`.
 | Exit criterion | Status | Evidence in repo | Missing |
 |---|---|---|---|
 | Run outputs equal | PARTIAL | `go` job orchestrator package, signal arbiter, candidate scans and writes | Full E2E comparison on a scratch database; Java-versus-Go run summaries and persisted signals |
-| SSE streams equal | OPEN | no SSE implementation found in Go (`go/api`) | SSE streams, heartbeat and ordering implementation and parity tests |
+| SSE streams equal | OPEN | `WriteSSE` helper exists in `go/api/sse.go` and is exercised by `go/api/helpers_test.go`, but no stream endpoint or consumer uses it | SSE stream endpoints/consumers, heartbeat and ordering implementation, and parity tests |
 | Playwright green | OPEN | existing Playwright suite only | Unchanged Playwright run against Go on scratch stack |
 | Two weekly cycles without duplicate or missed jobs | OPEN | scheduler-off gates remain default false | Two-cycle scheduler soak report (digests included) |
 

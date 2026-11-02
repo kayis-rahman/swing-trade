@@ -31,7 +31,7 @@ func TestSoakHarnessRunsTwoCycles(t *testing.T) {
 }
 
 func TestSoakHarnessDefaultsToTwoCycles(t *testing.T) {
-	h := NewSoakHarness(func() time.Time { return time.Now() }, 0)
+	h := NewSoakHarness(time.Now, 0)
 	if h.Cycles != 2 {
 		t.Fatalf("cycles=%d", h.Cycles)
 	}

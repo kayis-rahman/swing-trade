@@ -1,8 +1,11 @@
 package controller
 
 import (
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/kayis-rahman/swing-trade/go/core/clock"
@@ -118,4 +121,149 @@ func writeSettingsReadError(w http.ResponseWriter, r *http.Request, logger *slog
 	writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
 		Data: nil, Error: stringValuePtr("Unable to read settings"), Timestamp: javaLocalDateTime(clk.Now()),
 	})
+}
+
+// RegisterSettingsWriteRoutes registers settings write endpoints behind a configured writer.
+func RegisterSettingsWriteRoutes(mux *http.ServeMux, writer data.SettingsWriteStore, logger *slog.Logger, clk clock.Clock) {
+	if writer == nil {
+		return
+	}
+	mux.HandleFunc("POST /api/settings/broker", func(w http.ResponseWriter, r *http.Request) {
+		body, err := decodeStringMap(r)
+		if err != nil {
+			writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+				Data: nil, Error: stringValuePtr("invalid request body"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		broker := body["broker"]
+		if strings.TrimSpace(broker) == "" {
+			writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+				Data: nil, Error: stringValuePtr("broker is required"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		if err := writer.SetSetting(r.Context(), "selectedBroker", broker); err != nil {
+			logger.ErrorContext(r.Context(), "settings write failed", "module", "api", "key", "selectedBroker", "error", err)
+			writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
+				Data: nil, Error: stringValuePtr("Unable to write settings"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		writeResponseJSON(w, http.StatusOK, apiEnvelope{
+			Data: map[string]string{"selectedBroker": broker}, Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
+		})
+	})
+	mux.HandleFunc("PUT /api/settings/trading", func(w http.ResponseWriter, r *http.Request) {
+		body, err := decodeStringMap(r)
+		if err != nil {
+			writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+				Data: nil, Error: stringValuePtr("invalid request body"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		if raw := body["trading.initial_capital"]; raw != "" {
+			if !validPositiveDecimal(raw) {
+				writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+					Data: nil, Error: stringValuePtr("Initial capital must be greater than zero"), Timestamp: javaLocalDateTime(clk.Now()),
+				})
+				return
+			}
+		}
+		for key, value := range body {
+			if err := writer.SetSetting(r.Context(), key, value); err != nil {
+				logger.ErrorContext(r.Context(), "settings write failed", "module", "api", "key", key, "error", err)
+				writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
+					Data: nil, Error: stringValuePtr("Unable to write settings"), Timestamp: javaLocalDateTime(clk.Now()),
+				})
+				return
+			}
+		}
+		writeResponseJSON(w, http.StatusOK, apiEnvelope{
+			Data: body, Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
+		})
+	})
+	mux.HandleFunc("PUT /api/settings/scanning", func(w http.ResponseWriter, r *http.Request) {
+		body, err := decodeStringMap(r)
+		if err != nil {
+			writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+				Data: nil, Error: stringValuePtr("invalid request body"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		raw := body["candidate-scan.max-concurrent"]
+		workers, parseErr := parsePositiveInt(raw)
+		if parseErr != nil || workers < 1 || workers > 12 {
+			writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+				Data: nil, Error: stringValuePtr("Candidate scan workers must be between 1 and 12"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		if err := writer.SetSetting(r.Context(), "candidate-scan.max-concurrent", raw); err != nil {
+			logger.ErrorContext(r.Context(), "settings write failed", "module", "api", "key", "candidate-scan.max-concurrent", "error", err)
+			writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
+				Data: nil, Error: stringValuePtr("Unable to write settings"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		writeResponseJSON(w, http.StatusOK, apiEnvelope{
+			Data: map[string]string{"candidate-scan.max-concurrent": raw}, Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
+		})
+	})
+	mux.HandleFunc("PUT /api/settings/discord", func(w http.ResponseWriter, r *http.Request) {
+		body, err := decodeStringMap(r)
+		if err != nil {
+			writeResponseJSON(w, http.StatusBadRequest, apiEnvelope{
+				Data: nil, Error: stringValuePtr("invalid request body"), Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		for key, value := range body {
+			if err := writer.SetSetting(r.Context(), key, value); err != nil {
+				logger.ErrorContext(r.Context(), "settings write failed", "module", "api", "key", key, "error", err)
+				writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
+					Data: nil, Error: stringValuePtr("Unable to write settings"), Timestamp: javaLocalDateTime(clk.Now()),
+				})
+				return
+			}
+		}
+		writeResponseJSON(w, http.StatusOK, apiEnvelope{
+			Data: body, Error: nil, Success: true, Timestamp: javaLocalDateTime(clk.Now()),
+		})
+	})
+}
+
+func decodeStringMap(r *http.Request) (map[string]string, error) {
+	decoder := json.NewDecoder(r.Body)
+	var raw map[string]any
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, err
+	}
+	result := make(map[string]string, len(raw))
+	for key, value := range raw {
+		if value == nil {
+			continue
+		}
+		result[key] = fmt.Sprint(value)
+	}
+	return result, nil
+}
+
+func validPositiveDecimal(raw string) bool {
+	if strings.TrimSpace(raw) == "" {
+		return true
+	}
+	n, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return false
+	}
+	return n > 0
+}
+
+func parsePositiveInt(raw string) (int, error) {
+	i, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, err
+	}
+	return i, nil
 }

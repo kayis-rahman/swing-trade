@@ -43,7 +43,7 @@ func NewHandlerWithWatchlist(cfg config.Config, logger *slog.Logger, clock corec
 }
 
 // NewHandlerWithStores builds the HTTP handler with optional read-only data stores.
-func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore, ingestionStatus data.IngestionStatusLookup, reconciliation data.ReconciliationPreview, signals data.SignalReadStore, strategyConfigs data.StrategyConfigReadStore) (http.Handler, error) {
+func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock coreclock.Clock, watchlist data.WatchlistReadStore, holidays data.HolidayReadStore, settings data.SettingsReadStore, ingestionStatus data.IngestionStatusLookup, reconciliation data.ReconciliationPreview, signals data.SignalReadStore, strategyConfigs data.StrategyConfigReadStore, settingsWriters ...data.SettingsWriteStore) (http.Handler, error) { //nolint:funlen
 	if clock == nil {
 		clock = coreclock.System{}
 	}
@@ -84,6 +84,7 @@ func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock corecloc
 	controller.RegisterIngestionRoutes(mux, ingestionStatus, logger, clock)
 	controller.RegisterIngestionReconcileRoute(mux, watchlist, reconciliation, logger, clock)
 	controller.RegisterSettingsRoutes(mux, settings, logger, clock, cfg.GPUHubAPIKeyConfigured)
+	controller.RegisterSettingsWriteRoutes(mux, firstSettingsWriter(settingsWriters), logger, clock)
 	mux.HandleFunc("GET /api/admin/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "UP"})
 	})
@@ -128,4 +129,11 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+func firstSettingsWriter(writers []data.SettingsWriteStore) data.SettingsWriteStore {
+	if len(writers) == 0 {
+		return nil
+	}
+	return writers[0]
 }

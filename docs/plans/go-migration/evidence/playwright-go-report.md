@@ -7,8 +7,8 @@ Stats from Playwright: expected=116, unexpected=20, skipped=7, total=143.
 ## Failure categorisation
 
 | Spec | Test | Status | Category | Error (truncated) |
-|---|---|---|---|---|
-| api-openapi-audit.spec.ts | all safe OpenAPI GET routes return no server or rate-limit errors | fail | missing slice: Go does not serve /api-docs (OpenAPI) endpoint | SyntaxError: Unexpected non-whitespace character after JSON at position 4 (line  |
+| --- | --- | --- | --- | --- |
+| api-openapi-audit.spec.ts | all safe OpenAPI GET routes return no server or rate-limit errors | fail | missing slice: Go does not serve /api-docs (OpenAPI) endpoint | SyntaxError: Unexpected non-whitespace character after JSON at position 4 (line |
 | views/multi-strategy.live.spec.ts | orchestrator shows the signal tournament panel | fail | missing slice: signal pipeline/scans (multi-strategy tournament needs signal/strategy report data) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
 | views/multi-strategy.live.spec.ts | signals can be grouped by symbol | fail | missing slice: signal pipeline/scans (symbol-grouped variants not returned by Go) | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[2 |
 | views/multi-strategy.live.spec.ts | positions has a portfolio switcher with shadow books | fail | missing slice: strategy configs and shadow books | Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32me |
@@ -32,7 +32,7 @@ Stats from Playwright: expected=116, unexpected=20, skipped=7, total=143.
 ## Per-test results
 
 | Spec | Test | Result |
-|---|---|---|
+| --- | --- | --- |
 | api-isolated-audit.spec.ts | empty isolated signal workflows complete without provider or model calls | skipped |
 | api-isolated-audit.spec.ts | isolated CRUD and state transitions complete without unexpected errors | skipped |
 | api-isolated-audit.spec.ts | isolated validation and safe no-op branches return client responses | skipped |

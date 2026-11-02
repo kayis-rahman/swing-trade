@@ -1,0 +1,174 @@
+name: pg-prod-shared
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    container_name: pg-prod
+    restart: unless-stopped
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
+      - "-c"
+      - "shared_buffers=768MB"
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      - "-c"
+      - "effective_cache_size=2GB"
+      - "-c"
+      - "max_connections=100"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${PG_PROD_SUPERUSER_PASSWORD:?set in the operator secrets file}"
+      POSTGRES_DB: postgres
+      TZ: UTC
+    volumes:
+      - type: volume
+        source: pg_prod_data
+        target: /var/lib/postgresql/data
+      - type: bind
+        source: /home/dietpi/shared-postgres/config/postgresql.conf
+        target: /etc/postgresql/postgresql.conf
+        read_only: true
+      - type: bind
+        source: /home/dietpi/shared-postgres/config/pg_hba.conf
+        target: /etc/postgresql/pg_hba.conf
+        read_only: true
+      - type: bind
+        source: /home/dietpi/shared-postgres/tls
+        target: /etc/postgresql/tls
+        read_only: true
+    ports:
+      - "192.168.0.100:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "3G"
+    labels:
+      com.firstmate.stack: shared-postgres
+      com.firstmate.component: postgres
+      com.firstmate.environment: prod
+    logging: *default-logging
+    networks:
+      pg_prod:
+        aliases:
+          - pg-prod
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e
+    container_name: pg-prod-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:${PG_PROD_SUPERUSER_PASSWORD}@pg-prod:5432/postgres?sslmode=verify-full&sslrootcert=/etc/postgresql/tls/ca.crt"
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: /home/dietpi/shared-postgres/tls
+        target: /etc/postgresql/tls
+        read_only: true
+    ports:
+      - "192.168.0.100:9188:9187"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    labels:
+      com.firstmate.stack: shared-postgres
+      com.firstmate.component: postgres-exporter
+      com.firstmate.environment: prod
+    logging: *default-logging
+    networks: [pg_prod]
+
+  backup:
+    image: postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    container_name: pg-prod-backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: "${PG_PROD_SUPERUSER_PASSWORD:?set in the operator secrets file}"
+      PGSSLMODE: require
+      PG_PROD_DATABASES: "${PG_PROD_DATABASES:?comma-or-space separated list}"
+    volumes:
+      - type: bind
+        source: /home/dietpi/shared-postgres/backups/pg-prod
+        target: /backups
+        bind:
+          create_host_path: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |-
+        while :; do
+          stamp=$$(date -u +%Y%m%dT%H%M%SZ)
+          ok=1
+          for db in $$(printf "%s" "$${PG_PROD_DATABASES}" | tr "," " "); do
+            daily="/backups/pg-prod-$${db}-daily-$${stamp}.dump"
+            if PGPASSWORD="$${PGPASSWORD}" pg_dump --host="$${PGHOST}" --port="$${PGPORT}" --username="$${PGUSER}" --format=custom --file="$${daily}" "$${db}"; then
+              chmod 600 "$${daily}"
+              if [ "$$(date -u +%u)" = "7" ]; then
+                weekly="/backups/pg-prod-$${db}-weekly-$${stamp}.dump"
+                cp "$${daily}" "$${weekly}"
+                chmod 600 "$${weekly}"
+              fi
+            else
+              rm -f "$${daily}"
+              ok=0
+              echo "pg-prod backup failed for $${db}; retrying in 300 seconds" >&2
+              break
+            fi
+          done
+          if [ "$$ok" = "1" ]; then
+            cd /backups
+            for db in $$(printf "%s" "$${PG_PROD_DATABASES}" | tr "," " "); do
+              ls -1 "pg-prod-$${db}-daily-"*.dump 2>/dev/null | sort -r | tail -n +8 | xargs -r rm -f --
+              ls -1 "pg-prod-$${db}-weekly-"*.dump 2>/dev/null | sort -r | tail -n +5 | xargs -r rm -f --
+            done
+            echo "pg-prod backup complete: $${stamp}"
+            sleep 86400
+          else
+            sleep 300
+          fi
+        done
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    labels:
+      com.firstmate.stack: shared-postgres
+      com.firstmate.component: backup
+      com.firstmate.environment: prod
+    logging: *default-logging
+    networks: [pg_prod]
+
+volumes:
+  pg_prod_data:
+    name: pg_prod_data
+
+networks:
+  pg_prod:
+    name: pg_prod_net
+    driver: bridge

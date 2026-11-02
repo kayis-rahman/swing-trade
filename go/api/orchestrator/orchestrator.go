@@ -13,11 +13,12 @@ import (
 // It does not execute stages itself; sibling slices drive StageRunner values and report
 // stage transitions through the repository ports.
 type Orchestrator struct {
-	Runs          RunRepository
-	Stages        StageRepository
-	Clock         clock.Clock
-	MaxConcurrent int
-	Notifier      RunSummaryNotifier
+	Runs           RunRepository
+	Stages         StageRepository
+	Clock          clock.Clock
+	MaxConcurrent  int
+	StaleThreshold time.Duration
+	Notifier       RunSummaryNotifier
 
 	mu            sync.Mutex
 	startLock     sync.Mutex
@@ -52,7 +53,11 @@ func (o *Orchestrator) StartRun(ctx context.Context, trigger TriggerType, req Ru
 	o.startLock.Lock()
 	defer o.startLock.Unlock()
 	if o.Runs != nil {
-		if active, ok, err := o.Runs.FindActive(ctx); err == nil && ok {
+		active, ok, err := o.Runs.FindActive(ctx)
+		if err != nil {
+			return Run{}, nil, nil, err
+		}
+		if ok {
 			return Run{}, nil, nil, &ConcurrentRunError{ActiveRun: active}
 		}
 	}
@@ -72,9 +77,7 @@ func (o *Orchestrator) StartRun(ctx context.Context, trigger TriggerType, req Ru
 		var stages []Stage
 		for _, sym := range symbols {
 			for _, name := range AllStageNames() {
-				pending := StageStatusPending
 				st := Stage{RunID: run.RunID, Symbol: sym, StageName: name, Status: StageStatusPending}
-				_ = pending
 				stages = append(stages, st)
 			}
 		}
@@ -91,17 +94,37 @@ func (o *Orchestrator) StartRun(ctx context.Context, trigger TriggerType, req Ru
 
 // CancelRun interrupts an active run.
 func (o *Orchestrator) CancelRun(ctx context.Context, runID RunID) error {
+	if o.Runs != nil {
+		run, ok, err := o.Runs.Get(ctx, runID)
+		if err != nil {
+			return err
+		}
+		if !ok || run.Status != RunStatusRunning {
+			return nil
+		}
+	}
 	o.mu.Lock()
 	cancel, ok := o.cancelFuncs[runID]
-	if ok {
-		o.cancelledRuns[runID] = struct{}{}
-	}
+	o.cancelledRuns[runID] = struct{}{}
 	o.mu.Unlock()
 	if ok {
 		cancel()
 	}
+	now := o.now()
+	// mark running stages cancelled
+	if o.Stages != nil {
+		stages, _ := o.Stages.ListByRun(ctx, runID)
+		for _, st := range stages {
+			if st.Status != StageStatusRunning {
+				continue
+			}
+			st.Status = StageStatusCancelled
+			st.CompletedAt = &now
+			st.ErrorMessage = "Cancelled by user request"
+			_ = o.Stages.Update(ctx, st)
+		}
+	}
 	if o.Runs != nil {
-		now := o.now()
 		if err := o.Runs.UpdateStatus(ctx, runID, RunStatusCancelled, &now, "cancelled by request"); err != nil {
 			return err
 		}
@@ -144,7 +167,7 @@ func (o *Orchestrator) GetProgress(ctx context.Context, runID RunID) (Progress, 
 	return AssembleProgress(run, stages), nil
 }
 
-// GetSummary delegates to repository + AssembleSummary and notifies if terminal.
+// GetSummary delegates to repository + AssembleSummary.
 func (o *Orchestrator) GetSummary(ctx context.Context, runID RunID) (RunSummary, error) {
 	if o.Runs == nil {
 		return RunSummary{}, ErrRunNotFound
@@ -171,47 +194,22 @@ func (o *Orchestrator) ListRuns(ctx context.Context) ([]Run, error) {
 	return o.Runs.List(ctx)
 }
 
-// ReapOrphanedRuns delegates to Reaper.
+// ReapOrphanedRuns scans for stale RUNNING runs and marks them failed.
 func (o *Orchestrator) ReapOrphanedRuns(ctx context.Context) (int, error) {
-	reaper := &Reaper{Runs: o.Runs, Stages: o.Stages, Clock: o.Clock, StaleThreshold: 0}
-	// zero threshold defaults inside? Reaper.Reap defaults hour; for startup reaper use all. Force all running:
-	runs, err := o.Runs.List(ctx)
-	if err != nil {
-		return 0, err
+	if o.Runs == nil {
+		return 0, nil
 	}
-	now := o.now()
-	reaped := 0
-	for _, run := range runs {
-		if run.Status != RunStatusRunning {
-			continue
-		}
-		completed := now
-		if uerr := o.Runs.UpdateStatus(ctx, run.RunID, RunStatusFailed, &completed, "reaped as orphaned (stale run)"); uerr == nil {
-			reaped++
-		}
-	}
-	_ = reaper
-	return reaped, nil
+	reaper := &Reaper{Runs: o.Runs, Stages: o.Stages, Clock: o.Clock, StaleThreshold: o.StaleThreshold}
+	return reaper.Reap(ctx)
 }
 
-// ReapAllRunningRunsOnStartup marks all RUNNING runs failed.
+// ReapAllRunningRunsOnStartup marks all RUNNING runs failed (startup reaper).
 func (o *Orchestrator) ReapAllRunningRunsOnStartup(ctx context.Context) error {
 	if o.Runs == nil {
 		return nil
 	}
-	runs, err := o.Runs.List(ctx)
-	if err != nil {
-		return err
-	}
-	now := o.now()
-	for _, run := range runs {
-		if run.Status != RunStatusRunning {
-			continue
-		}
-		completed := now
-		_ = o.Runs.UpdateStatus(ctx, run.RunID, RunStatusFailed, &completed, "reaped on startup (orphaned run)")
-	}
-	return nil
+	reaper := &Reaper{Runs: o.Runs, Stages: o.Stages, Clock: o.Clock, StaleThreshold: o.StaleThreshold}
+	return reaper.ReapAllOnStartup(ctx)
 }
 
 // Notify delegates to notifier if configured.

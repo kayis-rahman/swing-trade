@@ -14,6 +14,7 @@ type RunID string
 // TriggerType mirrors Java JobRun.TriggerType.
 type TriggerType string
 
+// Trigger types.
 const (
 	TriggerManual    TriggerType = "MANUAL"
 	TriggerScheduled TriggerType = "SCHEDULED"
@@ -22,6 +23,7 @@ const (
 // RunStatus mirrors Java JobRun.Status.
 type RunStatus string
 
+// Run lifecycle statuses.
 const (
 	RunStatusRunning           RunStatus = "RUNNING"
 	RunStatusCompleted         RunStatus = "COMPLETED"
@@ -34,6 +36,7 @@ const (
 // PENDING rows created up front and must stay in sync with execution order.
 type StageName string
 
+// Job stage names in execution order.
 const (
 	StageDataFetch   StageName = "DATA_FETCH"
 	StageSignal      StageName = "SIGNAL"
@@ -55,6 +58,7 @@ func AllStageNames() []StageName {
 // StageStatus mirrors Java JobRunStage.Status.
 type StageStatus string
 
+// Job stage statuses.
 const (
 	StageStatusPending   StageStatus = "PENDING"
 	StageStatusRunning   StageStatus = "RUNNING"

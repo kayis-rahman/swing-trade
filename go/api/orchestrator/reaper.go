@@ -2,7 +2,6 @@ package orchestrator
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -45,8 +44,7 @@ func (r *Reaper) Reap(ctx context.Context) (int, error) {
 			continue
 		}
 		msg := "reaped as orphaned (stale run)"
-		completed := now
-		if err := r.Runs.UpdateStatus(ctx, run.RunID, RunStatusFailed, &completed, msg); err != nil {
+		if err := r.reapRun(ctx, run, now, msg); err != nil {
 			return reaped, err
 		}
 		reaped++
@@ -59,6 +57,9 @@ func (r *Reaper) Reap(ctx context.Context) (int, error) {
 
 // ReapAllOnStartup reaps every currently RUNNING run (used at application ready).
 func (r *Reaper) ReapAllOnStartup(ctx context.Context) error {
+	if r.Runs == nil {
+		return nil
+	}
 	runs, err := r.Runs.List(ctx)
 	if err != nil {
 		return err
@@ -72,9 +73,31 @@ func (r *Reaper) ReapAllOnStartup(ctx context.Context) error {
 			continue
 		}
 		msg := "reaped on startup (orphaned run)"
-		completed := now
-		if err := r.Runs.UpdateStatus(ctx, run.RunID, RunStatusFailed, &completed, msg); err != nil {
+		if err := r.reapRun(ctx, run, now, msg); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// reapRun marks a single run and its RUNNING stages as failed.
+func (r *Reaper) reapRun(ctx context.Context, run Run, now time.Time, msg string) error {
+	completed := now
+	if err := r.Runs.UpdateStatus(ctx, run.RunID, RunStatusFailed, &completed, msg); err != nil {
+		return err
+	}
+	if r.Stages != nil {
+		stages, err := r.Stages.ListByRun(ctx, run.RunID)
+		if err == nil {
+			for _, st := range stages {
+				if st.Status != StageStatusRunning {
+					continue
+				}
+				st.Status = StageStatusError
+				st.CompletedAt = &completed
+				st.ErrorMessage = "Reaped as orphaned - run was force-failed while this stage was RUNNING"
+				_ = r.Stages.Update(ctx, st)
+			}
 		}
 	}
 	return nil
@@ -85,6 +108,3 @@ func StaleThresholdForSeconds(stageSumSeconds int64) time.Duration {
 	mult := int64(6)
 	return time.Duration(stageSumSeconds*mult) * time.Second
 }
-
-// Sentinel used by callers; fmt import guard.
-var _ = fmt.Sprintf

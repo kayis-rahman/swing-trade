@@ -22,7 +22,7 @@ func CanTransitionRun(from, to RunStatus) bool {
 // TransitionRun validates and returns the target run status, erroring on illegal moves.
 func TransitionRun(from, to RunStatus) (RunStatus, error) {
 	if !CanTransitionRun(from, to) {
-		return from, fmt.Errorf("illegal job run transition %s -> %s", from, to)
+		return from, fmt.Errorf("%w: illegal job run transition %s -> %s", ErrIllegalTransition, from, to)
 	}
 	return to, nil
 }
@@ -49,7 +49,7 @@ func CanTransitionStage(from, to StageStatus) bool {
 // TransitionStage validates and returns target stage status.
 func TransitionStage(from, to StageStatus) (StageStatus, error) {
 	if !CanTransitionStage(from, to) {
-		return from, fmt.Errorf("illegal job stage transition %s -> %s", from, to)
+		return from, fmt.Errorf("%w: illegal job stage transition %s -> %s", ErrIllegalTransition, from, to)
 	}
 	return to, nil
 }

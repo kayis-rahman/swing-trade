@@ -14,8 +14,10 @@ type MemoryRunStore struct {
 	order []RunID
 }
 
+// NewMemoryRunStore returns an in-memory RunRepository for tests and prototypes.
 func NewMemoryRunStore() *MemoryRunStore { return &MemoryRunStore{runs: map[RunID]Run{}} }
 
+// Create stores a new run.
 func (s *MemoryRunStore) Create(_ context.Context, run Run) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -23,12 +25,16 @@ func (s *MemoryRunStore) Create(_ context.Context, run Run) error {
 	s.order = append(s.order, run.RunID)
 	return nil
 }
+
+// Get returns the run for id.
 func (s *MemoryRunStore) Get(_ context.Context, id RunID) (Run, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	r, ok := s.runs[id]
 	return r, ok, nil
 }
+
+// List returns all runs in creation order.
 func (s *MemoryRunStore) List(_ context.Context) ([]Run, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -38,6 +44,8 @@ func (s *MemoryRunStore) List(_ context.Context) ([]Run, error) {
 	}
 	return out, nil
 }
+
+// FindActive returns the first running run, if any.
 func (s *MemoryRunStore) FindActive(_ context.Context) (Run, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -49,6 +57,8 @@ func (s *MemoryRunStore) FindActive(_ context.Context) (Run, bool, error) {
 	}
 	return Run{}, false, nil
 }
+
+// UpdateStatus updates status, completion time, and error message.
 func (s *MemoryRunStore) UpdateStatus(_ context.Context, id RunID, status RunStatus, completedAt *time.Time, errorMessage string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -65,6 +75,8 @@ func (s *MemoryRunStore) UpdateStatus(_ context.Context, id RunID, status RunSta
 	s.runs[id] = r
 	return nil
 }
+
+// IncrementCompleted increments the completed symbol count.
 func (s *MemoryRunStore) IncrementCompleted(_ context.Context, id RunID) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -83,14 +95,18 @@ type MemoryStageStore struct {
 	stages []Stage
 }
 
+// NewMemoryStageStore returns an in-memory StageRepository.
 func NewMemoryStageStore() *MemoryStageStore { return &MemoryStageStore{} }
 
+// CreateBatch appends a batch of stages.
 func (s *MemoryStageStore) CreateBatch(_ context.Context, stages []Stage) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.stages = append(s.stages, stages...)
 	return nil
 }
+
+// ListByRun returns stages for a run.
 func (s *MemoryStageStore) ListByRun(_ context.Context, id RunID) ([]Stage, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -102,6 +118,8 @@ func (s *MemoryStageStore) ListByRun(_ context.Context, id RunID) ([]Stage, erro
 	}
 	return out, nil
 }
+
+// Update replaces the matching stored stage.
 func (s *MemoryStageStore) Update(_ context.Context, stage Stage) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

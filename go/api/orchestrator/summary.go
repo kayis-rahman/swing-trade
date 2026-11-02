@@ -145,19 +145,6 @@ func AssembleSummary(run Run, stages []Stage) RunSummary {
 			Stages:         sts,
 		})
 	}
-	ProgressStages := func() (int, int, int) {
-		total, completed, errs := 0, 0, 0
-		for _, ss := range summary.CountsByStage {
-			total += ss.Total
-			completed += ss.Completed
-			errs += ss.Errors
-		}
-		return total, completed, errs
-	}
-	ts, cs, es := ProgressStages()
-	_ = ts
-	_ = cs
-	_ = es
 	return summary
 }
 

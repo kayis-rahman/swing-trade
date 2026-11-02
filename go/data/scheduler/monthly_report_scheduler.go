@@ -7,23 +7,28 @@ import (
 	"time"
 )
 
+// MonthlyPosition is part of the Go port of the swing-trade schedulers.
 type MonthlyPosition struct {
 	Status      string
 	RealizedPnL *float64
 }
 
+// MonthlySignal is part of the Go port of the swing-trade schedulers.
 type MonthlySignal struct {
 	Type string
 }
 
+// MonthlyPositionStore is part of the Go port of the swing-trade schedulers.
 type MonthlyPositionStore interface {
 	ListPositions(ctx context.Context) ([]MonthlyPosition, error)
 }
 
+// MonthlySignalStore is part of the Go port of the swing-trade schedulers.
 type MonthlySignalStore interface {
 	ListSignals(ctx context.Context) ([]MonthlySignal, error)
 }
 
+// MonthlyReportScheduler is part of the Go port of the swing-trade schedulers.
 type MonthlyReportScheduler struct {
 	positions MonthlyPositionStore
 	signals   MonthlySignalStore
@@ -32,6 +37,7 @@ type MonthlyReportScheduler struct {
 	logger    *slog.Logger
 }
 
+// NewMonthlyReportScheduler is part of the Go port of the swing-trade schedulers.
 func NewMonthlyReportScheduler(
 	positions MonthlyPositionStore,
 	signals MonthlySignalStore,
@@ -45,12 +51,15 @@ func NewMonthlyReportScheduler(
 	return &MonthlyReportScheduler{positions: positions, signals: signals, enabled: enabled, logger: logger, now: now}, nil
 }
 
+// Enabled is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) Enabled() bool { return s.enabled }
 
+// GenerateMonthlyReport is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) GenerateMonthlyReport() {
 	s.GenerateMonthlyReportWithContext(context.Background())
 }
 
+// GenerateMonthlyReportWithContext is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) GenerateMonthlyReportWithContext(ctx context.Context) {
 	if !s.enabled {
 		if s.logger != nil {
@@ -93,13 +102,16 @@ func (s *MonthlyReportScheduler) GenerateMonthlyReportWithContext(ctx context.Co
 	}
 }
 
+// Generate is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) Generate(ctx context.Context) {
 	s.GenerateMonthlyReportWithContext(ctx)
 }
 
+// Run is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) Run(ctx context.Context) { s.GenerateMonthlyReportWithContext(ctx) }
 
-func BuildMonthlyReport(reportDate time.Time, positions []MonthlyPosition, signals []MonthlySignal) map[string]any {
+// BuildMonthlyReport is part of the Go port of the swing-trade schedulers.
+func BuildMonthlyReport(reportDate time.Time, positions []MonthlyPosition, signals []MonthlySignal) map[string]any { //nolint:funlen
 	report := map[string]any{}
 	report["reportDate"] = reportDate.Format("2006-01-02")
 
@@ -216,6 +228,7 @@ func averageOfMonthly(positions []MonthlyPosition, positive bool) float64 {
 	return sum / float64(count)
 }
 
+// FormatMonthlyReport is part of the Go port of the swing-trade schedulers.
 func FormatMonthlyReport(report map[string]any) string {
 	sb := "📊 <b>MONTHLY STRATEGY REVIEW</b>\n\n"
 	sb += "📅 <b>Period:</b> " + fmt.Sprint(report["reportDate"]) + "\n\n"
@@ -249,10 +262,12 @@ func FormatMonthlyReport(report map[string]any) string {
 	return sb
 }
 
+// StartLoop is part of the Go port of the swing-trade schedulers.
 func (s *MonthlyReportScheduler) StartLoop(ctx context.Context) {
 	runOnSchedule(ctx, waitForDeadline, s.now, NextMonthlyReportRun, func(ctx context.Context) { s.GenerateMonthlyReportWithContext(ctx) })
 }
 
+// NextMonthlyReportRun is part of the Go port of the swing-trade schedulers.
 func NextMonthlyReportRun(now time.Time) time.Time {
 	local := now.In(ist)
 	for day := 1; day <= 7; day++ {

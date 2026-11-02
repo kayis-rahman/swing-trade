@@ -7,10 +7,12 @@ import (
 	"time"
 )
 
+// SectorDigestProvider is part of the Go port of the swing-trade schedulers.
 type SectorDigestProvider interface {
 	GenerateSectorDigestForLastWeek() string
 }
 
+// WeeklySectorDigestScheduler is part of the Go port of the swing-trade schedulers.
 type WeeklySectorDigestScheduler struct {
 	sentiment SectorDigestProvider
 	discord   EmbedSender
@@ -19,6 +21,7 @@ type WeeklySectorDigestScheduler struct {
 	logger    *slog.Logger
 }
 
+// NewWeeklySectorDigestScheduler is part of the Go port of the swing-trade schedulers.
 func NewWeeklySectorDigestScheduler(
 	sentiment SectorDigestProvider,
 	discord EmbedSender,
@@ -32,8 +35,10 @@ func NewWeeklySectorDigestScheduler(
 	return &WeeklySectorDigestScheduler{sentiment: sentiment, discord: discord, enabled: enabled, logger: logger, now: now}, nil
 }
 
+// Enabled is part of the Go port of the swing-trade schedulers.
 func (s *WeeklySectorDigestScheduler) Enabled() bool { return s.enabled }
 
+// SendWeeklySectorDigest is part of the Go port of the swing-trade schedulers.
 func (s *WeeklySectorDigestScheduler) SendWeeklySectorDigest(ctx context.Context) {
 	s.sendWeeklySectorDigest()
 }
@@ -59,12 +64,15 @@ func (s *WeeklySectorDigestScheduler) sendWeeklySectorDigest() {
 	}
 }
 
+// Send is part of the Go port of the swing-trade schedulers.
 func (s *WeeklySectorDigestScheduler) Send(ctx context.Context) { s.SendWeeklySectorDigest(ctx) }
 
+// StartLoop is part of the Go port of the swing-trade schedulers.
 func (s *WeeklySectorDigestScheduler) StartLoop(ctx context.Context) {
 	runOnSchedule(ctx, waitForDeadline, s.now, NextWeeklySectorDigestRun, func(ctx context.Context) { s.SendWeeklySectorDigest(ctx) })
 }
 
+// NextWeeklySectorDigestRun is part of the Go port of the swing-trade schedulers.
 func NextWeeklySectorDigestRun(now time.Time) time.Time {
 	return nextSundayFire(now, 18, 0)
 }

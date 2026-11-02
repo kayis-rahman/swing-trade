@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// StrategyReportTotals is part of the Go port of the swing-trade schedulers.
 type StrategyReportTotals struct {
 	Tournaments int
 	Executed    int
@@ -15,6 +16,7 @@ type StrategyReportTotals struct {
 	SelectedPnL string
 }
 
+// StrategyReportVariant is part of the Go port of the swing-trade schedulers.
 type StrategyReportVariant struct {
 	VariantID     string
 	StrategyType  string
@@ -25,6 +27,7 @@ type StrategyReportVariant struct {
 	ShadowPnL     string
 }
 
+// StrategyReport is part of the Go port of the swing-trade schedulers.
 type StrategyReport struct {
 	From     time.Time
 	To       time.Time
@@ -32,14 +35,17 @@ type StrategyReport struct {
 	Variants []StrategyReportVariant
 }
 
+// StrategyAttribution is part of the Go port of the swing-trade schedulers.
 type StrategyAttribution interface {
 	Report(ctx context.Context, from, to time.Time) (StrategyReport, error)
 }
 
+// EmbedSender is part of the Go port of the swing-trade schedulers.
 type EmbedSender interface {
 	SendEmbed(title, description string, color int) bool
 }
 
+// WeeklyStrategyDigestScheduler is part of the Go port of the swing-trade schedulers.
 type WeeklyStrategyDigestScheduler struct {
 	attribution StrategyAttribution
 	discord     EmbedSender
@@ -48,6 +54,7 @@ type WeeklyStrategyDigestScheduler struct {
 	logger      *slog.Logger
 }
 
+// NewWeeklyStrategyDigestScheduler is part of the Go port of the swing-trade schedulers.
 func NewWeeklyStrategyDigestScheduler(
 	attribution StrategyAttribution,
 	discord EmbedSender,
@@ -61,8 +68,10 @@ func NewWeeklyStrategyDigestScheduler(
 	return &WeeklyStrategyDigestScheduler{attribution: attribution, discord: discord, enabled: enabled, logger: logger, now: now}, nil
 }
 
+// Enabled is part of the Go port of the swing-trade schedulers.
 func (s *WeeklyStrategyDigestScheduler) Enabled() bool { return s.enabled }
 
+// SendWeeklyStrategyDigest is part of the Go port of the swing-trade schedulers.
 func (s *WeeklyStrategyDigestScheduler) SendWeeklyStrategyDigest(ctx context.Context) {
 	s.sendWeeklyStrategyDigest(ctx)
 }
@@ -89,8 +98,10 @@ func (s *WeeklyStrategyDigestScheduler) sendWeeklyStrategyDigest(ctx context.Con
 	}
 }
 
+// Send is part of the Go port of the swing-trade schedulers.
 func (s *WeeklyStrategyDigestScheduler) Send(ctx context.Context) { s.SendWeeklyStrategyDigest(ctx) }
 
+// FormatStrategyDigest is part of the Go port of the swing-trade schedulers.
 func FormatStrategyDigest(report StrategyReport) string {
 	sb := report.From.Format("2006-01-02") + " to " + report.To.Format("2006-01-02") + "\n"
 	sb += strconv.Itoa(report.Totals.Tournaments) + " tournaments, " + strconv.Itoa(report.Totals.Executed) + " executed, " + strconv.Itoa(report.Totals.Blocked) + " blocked, selected-book P&L " + report.Totals.SelectedPnL + "\n"
@@ -108,10 +119,12 @@ func FormatStrategyDigest(report StrategyReport) string {
 	return sb
 }
 
+// StartLoop is part of the Go port of the swing-trade schedulers.
 func (s *WeeklyStrategyDigestScheduler) StartLoop(ctx context.Context) {
 	runOnSchedule(ctx, waitForDeadline, s.now, NextWeeklyStrategyDigestRun, func(ctx context.Context) { s.SendWeeklyStrategyDigest(ctx) })
 }
 
+// NextWeeklyStrategyDigestRun is part of the Go port of the swing-trade schedulers.
 func NextWeeklyStrategyDigestRun(now time.Time) time.Time {
 	return nextSundayFire(now, 18, 30)
 }

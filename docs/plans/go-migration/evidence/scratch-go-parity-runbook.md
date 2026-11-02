@@ -17,7 +17,7 @@ Do not use Docker, shared pg-dev, stage or prod.
 ```
 export SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1
 export SWINGTRADE_LOCAL_TEST_DATABASE_URL="postgresql://go_port_test@127.0.0.1:55433/go_port_test?sslmode=disable"
-DATABASE_URL="postgresql://go_port_test@192.168.0.100:5433/swingtrade?sslmode=require" \
+DATABASE_URL="not-a-postgres-url" \
 SERVER_PORT=8090 ./go/api/cmd/swingtrade-api (or the built binary)
 ```
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Scratch Postgres end-to-end parity probe for the Go API.
 # Prerequisites: local Postgres 16 on 127.0.0.1:55433 with database/user go_port_test,
-# Go binary started with SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1 and a DATABASE_URL
-# pointing at the authorised production shape. See scratch-go-parity-runbook.md.
+# Go binary started with SWINGTRADE_TEST_ALLOW_LOCAL_DATABASE=1 and DATABASE_URL set to
+# the guaranteed-failing placeholder (not-a-postgres-url). See scratch-go-parity-runbook.md.
 set -euo pipefail
 BASE="${1:-http://127.0.0.1:8090}"
 out="${2:-/tmp/scratch-parity}"

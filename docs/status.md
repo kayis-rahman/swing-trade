@@ -917,3 +917,5 @@ CI/stage pipeline is not a gate for this project -> dev-stack + this checklist i
 - Verified with `go test ./orchestrator/...` and `go build`.
 
 - [x] Phase 6 slice F: Discord notification services (Telegram intentionally not ported per captain decision 2026-11-02), RunSummaryNotifier, weekly strategy/sector digest schedulers, and monthly report scheduler ported in Go with deterministic clocks (`go/broker`, `go/data/scheduler`). `./bin/go-verify` passes Go checks for changed modules. Telegram notifications are deliberately excluded from the Go port per captain decision 2026-11-02; parity gap is explicit.
+
+- [x] Added Go candidate scan manager (pause/resume/cancel/state transitions) and signal pipeline adapter feeding strategy arbiter; ./bin/go-verify passes except pre-existing cmd coverage. Branch committed.

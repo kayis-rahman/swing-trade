@@ -242,14 +242,14 @@ func (s *EodIngestionScheduler) EnsureNiftyBenchmarkHistory(ctx context.Context)
 	}
 }
 
-// StartLoop sleeps until the next weekday 16:30 IST fire time and runs the job
-// until ctx is cancelled.
 // Name identifies this scheduler in soak reports.
 func (s *EodIngestionScheduler) Name() string { return "eod-ingestion" }
 
 // Run executes the scheduler's primary job once; it satisfies SoakScheduler.
 func (s *EodIngestionScheduler) Run(ctx context.Context) { s.IngestLatestForAll(ctx) }
 
+// StartLoop sleeps until the next weekday 16:30 IST fire time and runs the job
+// until ctx is cancelled.
 func (s *EodIngestionScheduler) StartLoop(ctx context.Context) {
 	runOnSchedule(ctx, s.waitFor, s.now, NextEodRun, s.IngestLatestForAll)
 }

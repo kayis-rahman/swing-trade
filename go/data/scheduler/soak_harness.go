@@ -70,3 +70,10 @@ func (h *SoakHarness) Run(ctx context.Context, schedulers []SoakScheduler) error
 	}
 	return nil
 }
+
+// Compile-time proof that the three Go schedulers satisfy SoakScheduler.
+var (
+	_ SoakScheduler = (*EodIngestionScheduler)(nil)
+	_ SoakScheduler = (*IntradayIngestionScheduler)(nil)
+	_ SoakScheduler = (*FyersSymbolMasterScheduler)(nil)
+)

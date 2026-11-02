@@ -120,6 +120,12 @@ func (s *FyersSymbolMasterScheduler) RefreshIfEmpty(ctx context.Context) {
 
 // StartLoop sleeps until the next weekday 08:45 IST fire time until ctx is
 // cancelled.
+// Name identifies this scheduler in soak reports.
+func (s *FyersSymbolMasterScheduler) Name() string { return "fyers-symbol-master" }
+
+// Run executes the scheduler's primary job once; it satisfies SoakScheduler.
+func (s *FyersSymbolMasterScheduler) Run(ctx context.Context) { s.ScheduledRefresh(ctx) }
+
 func (s *FyersSymbolMasterScheduler) StartLoop(ctx context.Context) {
 	runOnSchedule(ctx, s.waitFor, s.now, NextFyersSymbolMasterRun, s.ScheduledRefresh)
 }

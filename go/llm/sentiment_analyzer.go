@@ -238,17 +238,18 @@ func parsePlainText(text string) SentimentOutput {
 
 	var sentiment domain.SentimentScore
 	conf := 0.0
-	if positive != negative {
+	switch {
+	case positive != negative:
 		if positive {
 			sentiment = domain.SentimentScorePositive
 		} else {
 			sentiment = domain.SentimentScoreNegative
 		}
 		conf = 0.4
-	} else if containsAnyPhrase(lower, "mixed", "balanced", "unchanged", "no material impact", "limited impact") {
+	case containsAnyPhrase(lower, "mixed", "balanced", "unchanged", "no material impact", "limited impact"):
 		sentiment = domain.SentimentScoreNeutral
 		conf = 0.2
-	} else {
+	default:
 		sentiment = domain.SentimentScoreUnknown
 		conf = 0.0
 	}
@@ -286,12 +287,13 @@ func containsUnqualifiedKeyword(lowerText, keyword string) bool {
 		wholeWord := (index == 0 || !isAlnumByte(lowerText[index-1])) &&
 			(index+len(keyword) == len(lowerText) || !isAlnumByte(lowerText[index+len(keyword)]))
 		if wholeWord {
-			before := lowerText
-			if index-40 > 0 {
+			var before string
+			switch {
+			case index-40 > 0:
 				before = lowerText[index-40 : index]
-			} else if index > 0 {
+			case index > 0:
 				before = lowerText[:index]
-			} else {
+			default:
 				before = ""
 			}
 			afterEnd := index + len(keyword) + 45
@@ -300,7 +302,7 @@ func containsUnqualifiedKeyword(lowerText, keyword string) bool {
 			}
 			after := ""
 			if index+len(keyword) < len(lowerText) {
-				after = lowerText[index+len(keyword):afterEnd]
+				after = lowerText[index+len(keyword) : afterEnd]
 			}
 			negBefore := reNegBeforeUnqualified.MatchString(before)
 			peerAfter := rePeerAfter.MatchString(after)

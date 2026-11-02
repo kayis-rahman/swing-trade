@@ -65,7 +65,7 @@ Reference: `phase-7-paper-trading-risk.md` -> `## Gate G7 exit criteria`.
 | Kill switch honored within 1 s | PARTIAL | `kill_switch.go` | Timed drill evidence under 1 s |
 | Live-path absence verified | PARTIAL | `go/broker/live_broker.go` behind `//go:build live`, refusing stub | CI build/symbol check evidence against the released binary |
 
-Related acceptance fixture replay (25 bars, 2 orders, 1 trade, costs 47.57, net -27.6802601): OPEN, no committed replay evidence found.
+Related acceptance fixture replay (25 bars, 2 orders, 1 trade, costs 47.57, net -27.6802601): OPEN, Java intraday acceptance report exists; no Go-side replay/parity evidence found.
 
 Ledger: Phase 7 rows (broker paper engine, risk) remain `not-started`/`parity-pending` as marked.
 

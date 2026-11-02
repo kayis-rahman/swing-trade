@@ -915,3 +915,5 @@ CI/stage pipeline is not a gate for this project -> dev-stack + this checklist i
 
 - New Go package `go/api/orchestrator` added: run/stage domain types and enums, run and stage state machines, persistence ports, in-memory stores, cancellation/interrupt bookkeeping, progress/summary assembly, orphan reaper, and run-summary notifier hook. Sibling slices can program against these interfaces.
 - Verified with `go test ./orchestrator/...` and `go build`.
+
+- [x] Phase 6 slice F: Discord and Telegram notification services, RunSummaryNotifier, weekly strategy/sector digest schedulers, and monthly report scheduler ported in Go with deterministic clocks (`go/broker`, `go/data/scheduler`). `./bin/go-verify` passes Go checks for changed modules.

@@ -7,6 +7,7 @@ set -euo pipefail
 BASE="${1:-http://127.0.0.1:8090}"
 out="${2:-/tmp/scratch-parity}"
 mkdir -p "$out"
+: > "$out/summary.txt"
 for path in /api/health /api/watchlist /api/strategy-configs /api/signals/latest /api/settings; do
   code=$(curl -s -o "$out/$(echo "$path" | tr '/' '_').json" -w "%{http_code}" "$BASE$path")
   printf '%s %s\n' "$code" "$path" >>"$out/summary.txt"

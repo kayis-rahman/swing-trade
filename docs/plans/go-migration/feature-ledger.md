@@ -731,3 +731,9 @@ No ledger row is closed by this pass. Current gate readiness summaries live in
 [gate-readiness.md](gate-readiness.md); the status of every exit criterion is mapped there
 as READY/PARTIAL/OPEN with the missing evidence. Traceability gaps are recorded in
 [evidence/test-traceability-matrix.md](evidence/test-traceability-matrix.md).
+
+## 12. Scheduler soak (Phase 6 step 6)
+
+| ID | Kind | Java module | Java classes | Scheduler / table | Java tests | Go module and file | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| F-SCHED-SOAK-01 | soak | api/data/broker | All `@Scheduled` jobs under F-SCHED-01..15 | All Go schedulers | none | data/scheduler/soak_harness.go | parity-pending |

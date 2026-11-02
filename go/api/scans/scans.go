@@ -110,6 +110,14 @@ func (m *Manager) Start(ctx context.Context, totalSymbols int) (Run, error) {
 		if active, ok, err := m.Repo.FindActive(ctx); err == nil && ok {
 			id := active.RunID
 			m.active = &id
+			if _, ok := m.paused[id]; !ok {
+				paused := active.Status == StatusPaused
+				m.paused[id] = &paused
+			}
+			if _, ok := m.cancelled[id]; !ok {
+				cancelled := false
+				m.cancelled[id] = &cancelled
+			}
 			return Run{}, ErrAlreadyActive
 		}
 	}
@@ -158,6 +166,9 @@ func (m *Manager) Pause(ctx context.Context, id RunID) error {
 	run.Status = StatusPaused
 	if fl, ok := m.paused[id]; ok {
 		*fl = true
+	} else {
+		tr := true
+		m.paused[id] = &tr
 	}
 	_ = now
 	return nil
@@ -195,6 +206,9 @@ func (m *Manager) Resume(ctx context.Context, id RunID) error {
 	run.Status = StatusRunning
 	if fl, ok := m.paused[id]; ok {
 		*fl = false
+	} else {
+		fl := false
+		m.paused[id] = &fl
 	}
 	return nil
 }
@@ -225,6 +239,15 @@ func (m *Manager) Cancel(ctx context.Context, id RunID) error {
 	run.Status = StatusCancelled
 	if fl, ok := m.cancelled[id]; ok {
 		*fl = true
+	} else {
+		tr := true
+		m.cancelled[id] = &tr
+	}
+	if fl, ok := m.paused[id]; ok {
+		*fl = false
+	} else {
+		fl := false
+		m.paused[id] = &fl
 	}
 	if m.active != nil && *m.active == id {
 		m.active = nil
@@ -253,6 +276,12 @@ func (m *Manager) Complete(ctx context.Context, id RunID) error {
 		}
 	}
 	run.Status = StatusCompleted
+	if fl, ok := m.paused[id]; ok {
+		*fl = false
+	} else {
+		fl := false
+		m.paused[id] = &fl
+	}
 	if m.active != nil && *m.active == id {
 		m.active = nil
 	}
@@ -280,6 +309,12 @@ func (m *Manager) Fail(ctx context.Context, id RunID, msg string) error {
 		}
 	}
 	run.Status = StatusFailed
+	if fl, ok := m.paused[id]; ok {
+		*fl = false
+	} else {
+		fl := false
+		m.paused[id] = &fl
+	}
 	if m.active != nil && *m.active == id {
 		m.active = nil
 	}

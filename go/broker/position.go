@@ -16,8 +16,5 @@ type Position struct {
 // PositionValue returns quantity * entryPrice.
 // PositionValue implements the corresponding risk operation.
 func (p Position) PositionValue() coredecimal.Decimal {
-	if p.Quantity <= 0 {
-		return coredecimal.Decimal{}
-	}
 	return p.EntryPrice.MulInt(p.Quantity)
 }

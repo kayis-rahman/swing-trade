@@ -2,6 +2,7 @@ package broker
 
 import (
 	"math/big"
+	"sync"
 	"time"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
@@ -17,6 +18,7 @@ var marketLocation = func() *time.Location {
 
 // DailyLossCircuitBreaker halts trading if daily losses exceed threshold.
 type DailyLossCircuitBreaker struct {
+	mu               sync.Mutex
 	ThresholdPercent coredecimal.Decimal
 	InitialCapital   coredecimal.Decimal
 
@@ -47,8 +49,17 @@ func (c *DailyLossCircuitBreaker) resetTracker() {
 	c.dailyPnL[c.today()] = coredecimal.Decimal{}
 }
 
+func (c *DailyLossCircuitBreaker) currentDailyPnL() coredecimal.Decimal {
+	if v, ok := c.dailyPnL[c.today()]; ok {
+		return v
+	}
+	return coredecimal.Decimal{}
+}
+
 // IsTradingAllowed implements the corresponding risk operation.
 func (c *DailyLossCircuitBreaker) IsTradingAllowed() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	today := c.today()
 	if _, ok := c.dailyPnL[today]; !ok {
 		c.resetTracker()
@@ -58,7 +69,9 @@ func (c *DailyLossCircuitBreaker) IsTradingAllowed() bool {
 
 // GetCurrentDailyPnL implements the corresponding risk operation.
 func (c *DailyLossCircuitBreaker) GetCurrentDailyPnL() coredecimal.Decimal {
-	return c.dailyPnL[c.today()]
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.currentDailyPnL()
 }
 
 func (c *DailyLossCircuitBreaker) calculateLossPercentFromPnL(pnl coredecimal.Decimal) coredecimal.Decimal {
@@ -70,6 +83,8 @@ func (c *DailyLossCircuitBreaker) calculateLossPercentFromPnL(pnl coredecimal.De
 
 // CanPlaceTrade implements the corresponding risk operation.
 func (c *DailyLossCircuitBreaker) CanPlaceTrade(estimatedTradeValue, estimatedRisk coredecimal.Decimal) *RiskCheckResult {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	result := NewRiskCheckResult(true)
 	result.CheckType = "DAILY_LOSS_CIRCUIT_BREAKER"
 	if c.isCircuitOpen {
@@ -77,7 +92,7 @@ func (c *DailyLossCircuitBreaker) CanPlaceTrade(estimatedTradeValue, estimatedRi
 		result.AddInfo("Circuit opened at: %v, Loss: %s (%s%%)", c.circuitOpenTime, c.lossAtOpen, c.calculateLossPercentFromPnL(c.lossAtOpen))
 		return result
 	}
-	current := c.GetCurrentDailyPnL()
+	current := c.currentDailyPnL()
 	projected := current.Sub(estimatedRisk)
 	thresholdAmount := percentDecimal(c.InitialCapital, c.ThresholdPercent)
 	// compare projected < -thresholdAmount
@@ -92,6 +107,8 @@ func (c *DailyLossCircuitBreaker) CanPlaceTrade(estimatedTradeValue, estimatedRi
 
 // UpdateWithCurrentPositions implements the corresponding risk operation.
 func (c *DailyLossCircuitBreaker) UpdateWithCurrentPositions(totalUnrealized, totalRealized coredecimal.Decimal) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	daily := totalUnrealized.Add(totalRealized)
 	c.dailyPnL[c.today()] = daily
 	thresholdAmount := percentDecimal(c.InitialCapital, c.ThresholdPercent)
@@ -109,25 +126,49 @@ func (c *DailyLossCircuitBreaker) openCircuit(loss coredecimal.Decimal) {
 }
 
 // OpenCircuit implements the corresponding risk operation.
-func (c *DailyLossCircuitBreaker) OpenCircuit() { c.openCircuit(c.GetCurrentDailyPnL()) }
+func (c *DailyLossCircuitBreaker) OpenCircuit() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.openCircuit(c.currentDailyPnL())
+}
 
 // CloseCircuit implements the corresponding risk operation.
 func (c *DailyLossCircuitBreaker) CloseCircuit() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.isCircuitOpen = false
 	c.circuitOpenTime = nil
 	c.lossAtOpen = coredecimal.Decimal{}
 }
 
 // IsCircuitOpen implements the corresponding risk operation.
-func (c *DailyLossCircuitBreaker) IsCircuitOpen() bool { return c.isCircuitOpen }
+func (c *DailyLossCircuitBreaker) IsCircuitOpen() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.isCircuitOpen
+}
 
 // GetCircuitOpenTime implements the corresponding risk operation.
-func (c *DailyLossCircuitBreaker) GetCircuitOpenTime() *time.Time { return c.circuitOpenTime }
+func (c *DailyLossCircuitBreaker) GetCircuitOpenTime() *time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.circuitOpenTime == nil {
+		return nil
+	}
+	t := *c.circuitOpenTime
+	return &t
+}
 
 // GetLossAtCircuitOpen implements the corresponding risk operation.
-func (c *DailyLossCircuitBreaker) GetLossAtCircuitOpen() coredecimal.Decimal { return c.lossAtOpen }
+func (c *DailyLossCircuitBreaker) GetLossAtCircuitOpen() coredecimal.Decimal {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.lossAtOpen
+}
 
 // GetLossPercent implements the corresponding risk operation.
 func (c *DailyLossCircuitBreaker) GetLossPercent() coredecimal.Decimal {
-	return c.calculateLossPercentFromPnL(c.GetCurrentDailyPnL())
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.calculateLossPercentFromPnL(c.currentDailyPnL())
 }

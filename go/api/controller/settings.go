@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -250,14 +251,16 @@ func decodeStringMap(r *http.Request) (map[string]string, error) {
 }
 
 func validPositiveDecimal(raw string) bool {
-	if strings.TrimSpace(raw) == "" {
+	for _, r := range raw {
+		if !(r >= '0' && r <= '9' || r == '.' || r == '+' || r == '-' || r == 'e' || r == 'E') {
+			return false
+		}
+	}
+	n, ok := new(big.Float).SetString(raw)
+	if !ok || n.IsInf() {
 		return false
 	}
-	n, err := strconv.ParseFloat(raw, 64)
-	if err != nil {
-		return false
-	}
-	return n > 0
+	return n.Sign() > 0
 }
 
 func parsePositiveInt(raw string) (int, error) {

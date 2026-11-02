@@ -50,10 +50,14 @@ func (h *SoakHarness) CycleTimes() []time.Time {
 		cycles = 2
 	}
 	base := h.Clock()
+	weekday := h.Weekday
+	if weekday < 0 || weekday > 6 {
+		weekday = time.Sunday
+	}
 	times := make([]time.Time, cycles)
 	for i := 0; i < cycles; i++ {
 		fire := base.AddDate(0, 0, i*7)
-		for fire.Weekday() != h.Weekday {
+		for fire.Weekday() != weekday {
 			fire = fire.AddDate(0, 0, 1)
 		}
 		times[i] = time.Date(fire.Year(), fire.Month(), fire.Day(), h.Hour, h.Minute, 0, 0, fire.Location())

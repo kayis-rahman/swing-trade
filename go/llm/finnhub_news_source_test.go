@@ -9,7 +9,7 @@ import (
 
 func TestFinnhubNewsSourceParses(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`[{"headline":"TCS launches platform","url":"https://news.example/tcs","summary":"` + repeatX(1001) + `","datetime":1726394400},{"headline":"TCS launches platform"}]`))
+		_, _ = w.Write([]byte(`[{"headline":"TCS launches platform","url":"https://news.example/tcs","summary":"` + repeatX(1001) + `","datetime":1726394400},{"headline":"TCS launches platform"}]`))
 	}))
 	defer srv.Close()
 

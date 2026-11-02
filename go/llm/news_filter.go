@@ -60,13 +60,16 @@ var neutralKeywords = []tradingKeyword{
 // NewsFilterService filters and ranks news articles by relevance.
 type NewsFilterService struct{}
 
+// NewNewsFilterService creates a NewsFilterService.
 func NewNewsFilterService() *NewsFilterService { return &NewsFilterService{} }
 
+// FilteredArticle wraps an article with its relevance score.
 type FilteredArticle struct {
 	Article domain.NewsArticle
 	Score   float64
 }
 
+// ArticleSentimentAnalysis summarizes sentiment counts.
 type ArticleSentimentAnalysis struct {
 	PositiveCount int
 	NegativeCount int
@@ -74,6 +77,7 @@ type ArticleSentimentAnalysis struct {
 	TotalCount    int
 }
 
+// FilterRelevantArticles filters and ranks articles by relevance.
 func (s *NewsFilterService) FilterRelevantArticles(articles []domain.NewsArticle) []domain.NewsArticle {
 	var filtered []FilteredArticle
 	for _, a := range articles {
@@ -120,11 +124,12 @@ func (s *NewsFilterService) evaluateArticle(article domain.NewsArticle) *Filtere
 
 func (s *NewsFilterService) calculateRelevanceScore(article domain.NewsArticle, ageHours int64) float64 {
 	score := 1.0
-	if ageHours <= recentHours {
+	switch {
+	case ageHours <= recentHours:
 		// fresh
-	} else if ageHours <= freshHours {
+	case ageHours <= freshHours:
 		score *= 0.8
-	} else {
+	default:
 		score *= 0.5
 	}
 	if isHighQualitySource(article.Source) {
@@ -231,6 +236,7 @@ func calculateAgeHours(pd *time.Time) int64 {
 	return int64(now.Sub(*pd).Hours())
 }
 
+// AnalyzeArticleSentiment counts sentiment categories.
 func (s *NewsFilterService) AnalyzeArticleSentiment(articles []domain.NewsArticle) ArticleSentimentAnalysis {
 	positiveCount := 0
 	negativeCount := 0
@@ -251,11 +257,12 @@ func (s *NewsFilterService) AnalyzeArticleSentiment(articles []domain.NewsArticl
 				break
 			}
 		}
-		if hasPositive && !hasNegative {
+		switch {
+		case hasPositive && !hasNegative:
 			positiveCount++
-		} else if hasNegative && !hasPositive {
+		case hasNegative && !hasPositive:
 			negativeCount++
-		} else {
+		default:
 			neutralCount++
 		}
 	}
@@ -267,6 +274,7 @@ func (s *NewsFilterService) AnalyzeArticleSentiment(articles []domain.NewsArticl
 	}
 }
 
+// GetSentimentSummary returns a human-readable sentiment summary.
 func (s *NewsFilterService) GetSentimentSummary(articles []domain.NewsArticle) string {
 	analysis := s.AnalyzeArticleSentiment(articles)
 	if len(articles) == 0 {

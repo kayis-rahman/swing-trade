@@ -15,6 +15,7 @@ import (
 
 const finnhubNewsURL = "https://finnhub.io/api/v1/news"
 
+// FinnhubNewsSource fetches news articles from Finnhub.
 type FinnhubNewsSource struct {
 	apiKey      string
 	maxArticles int
@@ -22,6 +23,7 @@ type FinnhubNewsSource struct {
 	baseURL     string
 }
 
+// NewFinnhubNewsSource creates a FinnhubNewsSource.
 func NewFinnhubNewsSource(apiKey string, maxArticles int, httpClient *http.Client) *FinnhubNewsSource {
 	if maxArticles <= 0 {
 		maxArticles = 15
@@ -37,8 +39,10 @@ func NewFinnhubNewsSource(apiKey string, maxArticles int, httpClient *http.Clien
 	}
 }
 
+// Type returns the source type identifier.
 func (s *FinnhubNewsSource) Type() string { return "finnhub" }
 
+// Fetch retrieves news articles for symbol.
 func (s *FinnhubNewsSource) Fetch(ctx context.Context, symbol string) ([]domain.NewsArticle, error) {
 	if s.apiKey == "" {
 		return nil, nil
@@ -55,7 +59,7 @@ func (s *FinnhubNewsSource) Fetch(ctx context.Context, symbol string) ([]domain.
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("finnhub returned HTTP %d", resp.StatusCode)
 	}
@@ -63,12 +67,21 @@ func (s *FinnhubNewsSource) Fetch(ctx context.Context, symbol string) ([]domain.
 	if err != nil {
 		return nil, err
 	}
-	type finnhubArticle struct {
-		Headline string `json:"headline"`
-		URL      string `json:"url"`
-		Summary  string `json:"summary"`
-		Datetime int64  `json:"datetime"`
+	out, err := parseFinnhubArticles(body, symbol, s.maxArticles)
+	if err != nil {
+		return nil, err
 	}
+	return out, nil
+}
+
+type finnhubArticle struct {
+	Headline string `json:"headline"`
+	URL      string `json:"url"`
+	Summary  string `json:"summary"`
+	Datetime int64  `json:"datetime"`
+}
+
+func parseFinnhubArticles(body []byte, symbol string, maxArticles int) ([]domain.NewsArticle, error) {
 	var root []finnhubArticle
 	if err := json.Unmarshal(body, &root); err != nil {
 		return nil, err
@@ -84,7 +97,7 @@ func (s *FinnhubNewsSource) Fetch(ctx context.Context, symbol string) ([]domain.
 		if seen[key] {
 			continue
 		}
-		if len(out) >= s.maxArticles {
+		if len(out) >= maxArticles {
 			continue
 		}
 		seen[key] = true
@@ -111,7 +124,5 @@ func (s *FinnhubNewsSource) Fetch(ctx context.Context, symbol string) ([]domain.
 		})
 	}
 	return out, nil
-}
 
-// Type returns Java-style lower? Provide type() alias
-func (s *FinnhubNewsSource) typeLower() string { return "finnhub" }
+}

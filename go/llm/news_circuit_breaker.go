@@ -8,12 +8,13 @@ import (
 
 // NewsCircuitBreaker provides a minimal closed/open/half-open circuit breaker.
 type NewsCircuitBreaker struct {
-	failures int
+	failures  int
 	threshold int
 	openUntil time.Time
-	mu       sync.Mutex
+	mu        sync.Mutex
 }
 
+// NewNewsCircuitBreaker creates a NewsCircuitBreaker.
 func NewNewsCircuitBreaker(threshold int) *NewsCircuitBreaker {
 	if threshold <= 0 {
 		threshold = 3
@@ -21,8 +22,10 @@ func NewNewsCircuitBreaker(threshold int) *NewsCircuitBreaker {
 	return &NewsCircuitBreaker{threshold: threshold}
 }
 
+// ErrCircuitOpen is returned when the circuit breaker is open.
 var ErrCircuitOpen = errors.New("news circuit breaker open")
 
+// Allow reports whether a call may proceed.
 func (cb *NewsCircuitBreaker) Allow() error {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -37,6 +40,7 @@ func (cb *NewsCircuitBreaker) Allow() error {
 	return nil
 }
 
+// Success records a successful call.
 func (cb *NewsCircuitBreaker) Success() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -44,6 +48,7 @@ func (cb *NewsCircuitBreaker) Success() {
 	cb.openUntil = time.Time{}
 }
 
+// Failure records a failed call.
 func (cb *NewsCircuitBreaker) Failure() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()

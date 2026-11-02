@@ -19,8 +19,10 @@ func ReadOnlyPoolConfig(databaseURL string) (*pgxpool.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse DATABASE_URL: invalid connection string")
 	}
-	if config.ConnConfig.Host != "192.168.0.100" || config.ConnConfig.Port != 5435 || config.ConnConfig.Database != "swingtrade_db" {
-		return nil, fmt.Errorf("DATABASE_URL must target the authorized development database")
+	development := config.ConnConfig.Host == "192.168.0.100" && config.ConnConfig.Port == 5435 && config.ConnConfig.Database == "swingtrade_db"
+	stage := config.ConnConfig.Host == "swing_trade_stage_postgres" && config.ConnConfig.Port == 5432 && config.ConnConfig.Database == "swingtrade_stage"
+	if !development && !stage {
+		return nil, fmt.Errorf("DATABASE_URL must target the authorized development or stage database")
 	}
 	config.ConnConfig.RuntimeParams["default_transaction_read_only"] = "on"
 	return config, nil

@@ -30,6 +30,7 @@ type Querier interface {
 	ListHolidaysByDateRange(ctx context.Context, arg ListHolidaysByDateRangeParams) ([]ListHolidaysByDateRangeRow, error)
 	ListLatestSignals(ctx context.Context) ([]Signal, error)
 	ListNseCalendarCoverageYears(ctx context.Context, arg ListNseCalendarCoverageYearsParams) ([]ListNseCalendarCoverageYearsRow, error)
+	ListStrategyConfigs(ctx context.Context) ([]StrategyConfig, error)
 	ListUpcomingHolidays(ctx context.Context, holidayDate pgtype.Date) ([]ListUpcomingHolidaysRow, error)
 	SearchFyersSymbols(ctx context.Context, arg SearchFyersSymbolsParams) ([]FyersSymbolMaster, error)
 }

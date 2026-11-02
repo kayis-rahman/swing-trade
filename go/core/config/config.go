@@ -12,6 +12,7 @@ type Config struct {
 	HTTPAddr                        string
 	APIKey                          string
 	APIKeyEnabled                   bool
+	AdminDisabled                   bool
 	PublicRateLimitPerMinute        int
 	CORSAllowedOrigins              []string
 	DatabaseURL                     string
@@ -40,6 +41,13 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 		apiKeyEnabled, err = strconv.ParseBool(strings.TrimSpace(value))
 		if err != nil {
 			return Config{}, fmt.Errorf("API_KEY_AUTH_ENABLED must be a boolean: %w", err)
+		}
+	}
+	adminDisabled := false
+	if value, ok := lookup("API_ADMIN_DISABLED"); ok && strings.TrimSpace(value) != "" {
+		adminDisabled, err = strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return Config{}, fmt.Errorf("API_ADMIN_DISABLED must be a boolean: %w", err)
 		}
 	}
 	apiKey, _ := lookup("API_KEY")
@@ -79,6 +87,7 @@ func Load(lookup func(string) (string, bool)) (Config, error) {
 
 		APIKey:                          apiKey,
 		APIKeyEnabled:                   apiKeyEnabled,
+		AdminDisabled:                   adminDisabled,
 		PublicRateLimitPerMinute:        limit,
 		CORSAllowedOrigins:              origins,
 		DatabaseURL:                     strings.TrimSpace(databaseURL),

@@ -63,6 +63,19 @@ func TestPublicRateLimitHasJavaCompatibleHeaders(t *testing.T) {
 	}
 }
 
+func TestDisabledAdminRoutesAreUnavailable(t *testing.T) {
+	cfg := testConfig()
+	cfg.AdminDisabled = true
+	handler := handlerFor(t, cfg)
+	for _, path := range []string{"/api/admin", "/api/admin/health"} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("GET %s = %d, want 404", path, response.Code)
+		}
+	}
+}
+
 func TestAdminKeyFailsClosedAndAuthorizedKeyPasses(t *testing.T) {
 	cfg := testConfig()
 	cfg.APIKeyEnabled = true

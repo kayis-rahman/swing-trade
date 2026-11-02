@@ -23,6 +23,7 @@ func TestLoadMapsExistingJavaEnvironmentProperties(t *testing.T) {
 	values := map[string]string{
 		"SERVER_PORT":                      "9090",
 		"API_KEY_AUTH_ENABLED":             "true",
+		"API_ADMIN_DISABLED":               "true",
 		"API_KEY":                          "local-test-key",
 		"API_PUBLIC_RATE_LIMIT_PER_MINUTE": "7",
 		"CORS_ALLOWED_ORIGINS":             "http://localhost:3000, https://dashboard.example",
@@ -33,7 +34,7 @@ func TestLoadMapsExistingJavaEnvironmentProperties(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if got.HTTPAddr != "127.0.0.1:9090" || !got.APIKeyEnabled || got.APIKey != "local-test-key" || got.PublicRateLimitPerMinute != 7 || !got.GPUHubAPIKeyConfigured {
+	if got.HTTPAddr != "127.0.0.1:9090" || !got.APIKeyEnabled || !got.AdminDisabled || got.APIKey != "local-test-key" || got.PublicRateLimitPerMinute != 7 || !got.GPUHubAPIKeyConfigured {
 		t.Fatalf("environment mapping mismatch: %+v", got)
 	}
 	if len(got.CORSAllowedOrigins) != 2 || got.CORSAllowedOrigins[1] != "https://dashboard.example" {
@@ -66,6 +67,7 @@ func TestLoadRejectsInvalidBoundaryConfiguration(t *testing.T) {
 		"invalid limit":           {"API_PUBLIC_RATE_LIMIT_PER_MINUTE": "0"},
 		"missing enabled API key": {"API_KEY_AUTH_ENABLED": "true"},
 		"bad boolean":             {"API_KEY_AUTH_ENABLED": "sometimes"},
+		"bad admin disabled":      {"API_ADMIN_DISABLED": "sometimes"},
 		"bad eod boolean":         {"EOD_INGESTION_ENABLED": "later"},
 		"bad backfill boolean":    {"BENCHMARK_BACKFILL_ON_STARTUP": "maybe"},
 		"bad backfill years":      {"BENCHMARK_BACKFILL_YEARS": "0"},

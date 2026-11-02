@@ -91,3 +91,18 @@ CREATE TABLE signals (
     strategy_version INTEGER NOT NULL DEFAULT 1,
     params_hash VARCHAR(64)
 );
+
+CREATE TABLE strategy_config (
+    id BIGSERIAL PRIMARY KEY,
+    variant_id VARCHAR(40) NOT NULL,
+    version INTEGER NOT NULL,
+    strategy_type VARCHAR(30) NOT NULL,
+    params JSONB NOT NULL,
+    overlays JSONB NOT NULL DEFAULT '{}',
+    params_hash CHAR(64) NOT NULL,
+    mode VARCHAR(16) NOT NULL DEFAULT 'OFF',
+    paper_capital NUMERIC(15,2) NOT NULL DEFAULT 500000,
+    is_current BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

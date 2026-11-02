@@ -65,7 +65,7 @@ func run(ctx context.Context) error {
 		}
 	}
 
-	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, stores.watchlist, stores.holidays, stores.settings, stores.ingestion, stores.reconciliation, stores.signals)
+	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, stores.watchlist, stores.holidays, stores.settings, stores.ingestion, stores.reconciliation, stores.signals, stores.strategyConfigs)
 	if err != nil {
 		return fmt.Errorf("initialize HTTP platform: %w", err)
 	}
@@ -85,21 +85,23 @@ func run(ctx context.Context) error {
 
 // apiStores groups the read-only stores the HTTP platform consumes.
 type apiStores struct {
-	watchlist      data.WatchlistReadStore
-	holidays       data.HolidayReadStore
-	settings       data.SettingsReadStore
-	ingestion      data.IngestionStatusLookup
-	reconciliation data.ReconciliationPreview
-	signals        data.SignalReadStore
+	watchlist       data.WatchlistReadStore
+	holidays        data.HolidayReadStore
+	settings        data.SettingsReadStore
+	ingestion       data.IngestionStatusLookup
+	reconciliation  data.ReconciliationPreview
+	signals         data.SignalReadStore
+	strategyConfigs data.StrategyConfigReadStore
 }
 
 // buildDataStores wires every read store against the live pool.
 func buildDataStores(pool *pgxpool.Pool) (apiStores, error) {
 	stores := apiStores{
-		watchlist: data.NewWatchlistReader(pool),
-		holidays:  data.NewHolidayReader(pool),
-		settings:  data.NewSettingsReader(pool),
-		signals:   data.NewSignalReader(pool),
+		watchlist:       data.NewWatchlistReader(pool),
+		holidays:        data.NewHolidayReader(pool),
+		settings:        data.NewSettingsReader(pool),
+		signals:         data.NewSignalReader(pool),
+		strategyConfigs: data.NewStrategyConfigReader(pool),
 	}
 	status, err := data.NewIngestionStatusService(stores.watchlist, data.NewCandleReader(pool), time.Now)
 	if err != nil {

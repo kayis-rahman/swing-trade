@@ -3,6 +3,7 @@ package llm
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/kayis-rahman/swing-trade/go/core/domain"
@@ -108,14 +109,15 @@ func (SentimentAnalyzer) ParseResponse(jsonResponse string) SentimentOutput {
 			Catalysts  []string `json:"catalysts"`
 		}
 		if err := json.Unmarshal([]byte(extractJSONFromReasoning(jsonResponse)), &conv); err == nil && conv.Score != "" {
-			score := domain.SentimentScore(strings.ToUpper(conv.Score))
-			conf := conv.Confidence
-			if conf == nil {
-				c := 0.5
-				conf = &c
+			if score, ok := parseSentimentScore(conv.Score); ok {
+				conf := conv.Confidence
+				if conf == nil {
+					c := 0.5
+					conf = &c
+				}
+				src := "LLM"
+				return NewSentimentOutput(score, conv.Summary, conf, conv.RedFlags, conv.Catalysts, src)
 			}
-			src := "LLM"
-			return NewSentimentOutput(score, conv.Summary, conf, conv.RedFlags, conv.Catalysts, src)
 		}
 	}
 	return parseWithJackson(jsonResponse)
@@ -139,9 +141,19 @@ func parseWithJackson(text string) SentimentOutput {
 				} else if v, ok := root["sentiment"]; ok {
 					scoreStr = fmt.Sprint(v)
 				}
+				score, ok := parseSentimentScore(scoreStr)
+				if !ok {
+					return parsePlainText(text)
+				}
 				conf := 0.5
 				if v, ok := root["confidence"]; ok {
-					if f, ok := toFloat(v); ok {
+					if v == nil {
+						conf = 0.0
+					} else {
+						f, ok2 := toFloat(v)
+						if !ok2 {
+							return parsePlainText(text)
+						}
 						conf = f
 					}
 				}
@@ -162,7 +174,7 @@ func parseWithJackson(text string) SentimentOutput {
 					}
 				}
 				c := conf
-				return NewSentimentOutput(domain.SentimentScore(strings.ToUpper(scoreStr)), summary, &c, red, cat, "LLM")
+				return NewSentimentOutput(score, summary, &c, red, cat, "LLM")
 			}
 		}
 	}
@@ -191,6 +203,21 @@ func toFloat(v any) (float64, bool) {
 	return 0, false
 }
 
+// parseSentimentScore validates a score string.
+func parseSentimentScore(s string) (domain.SentimentScore, bool) {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "POSITIVE":
+		return domain.SentimentScorePositive, true
+	case "NEUTRAL":
+		return domain.SentimentScoreNeutral, true
+	case "NEGATIVE":
+		return domain.SentimentScoreNegative, true
+	case "UNKNOWN":
+		return domain.SentimentScoreUnknown, true
+	}
+	return "", false
+}
+
 // parsePlainText handles parity behavior.
 func parsePlainText(text string) SentimentOutput {
 	if strings.TrimSpace(text) == "" {
@@ -198,29 +225,119 @@ func parsePlainText(text string) SentimentOutput {
 		return NewSentimentOutput(domain.SentimentScoreUnknown, "Empty response", &c, []string{}, []string{}, "DEFAULT")
 	}
 	lower := strings.ToLower(text)
-	// very simple
-	sentiment := domain.SentimentScoreUnknown
+	positive := containsAnyUnqualifiedKeyword(lower,
+		"positive", "bullish", "favorable", "favourable", "optimistic", "upbeat",
+		"supportive", "improving") ||
+		containsAnyPhrase(lower, "earnings beat", "guidance raised", "strong demand",
+			"growth accelerates", "target raised", "upgrade to")
+	negative := containsAnyUnqualifiedKeyword(lower,
+		"negative", "bearish", "unfavorable", "unfavourable", "pessimistic", "weak",
+		"deteriorating", "adverse", "concerning") ||
+		containsAnyPhrase(lower, "earnings miss", "guidance cut", "weak demand",
+			"growth slows", "target cut", "downgrade to")
+
+	var sentiment domain.SentimentScore
 	conf := 0.0
-	positive := strings.Contains(lower, "positive") || strings.Contains(lower, "bullish")
-	negative := strings.Contains(lower, "negative") || strings.Contains(lower, "bearish")
-	switch {
-	case positive && !negative:
-		sentiment = domain.SentimentScorePositive
+	if positive != negative {
+		if positive {
+			sentiment = domain.SentimentScorePositive
+		} else {
+			sentiment = domain.SentimentScoreNegative
+		}
 		conf = 0.4
-	case negative && !positive:
-		sentiment = domain.SentimentScoreNegative
-		conf = 0.4
-	case strings.Contains(lower, "mixed") || strings.Contains(lower, "balanced"):
+	} else if containsAnyPhrase(lower, "mixed", "balanced", "unchanged", "no material impact", "limited impact") {
 		sentiment = domain.SentimentScoreNeutral
 		conf = 0.2
+	} else {
+		sentiment = domain.SentimentScoreUnknown
+		conf = 0.0
 	}
-	summary := text
-	if len(summary) > 150 {
-		summary = summary[:150]
+
+	var summary string
+	if len(text) > 150 {
+		summary = text[:150]
+		summary = regexp.MustCompile(`\.$`).ReplaceAllString(summary, "")
+	} else {
+		summary = strings.TrimSpace(text)
 	}
-	summary = strings.TrimSpace(summary)
 	c := conf
 	return NewSentimentOutput(sentiment, summary, &c, []string{}, []string{}, "KEYWORD")
+}
+
+// containsAnyUnqualifiedKeyword handles parity behavior.
+func containsAnyUnqualifiedKeyword(lowerText string, keywords ...string) bool {
+	for _, keyword := range keywords {
+		if containsUnqualifiedKeyword(lowerText, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsUnqualifiedKeyword handles parity behavior.
+func containsUnqualifiedKeyword(lowerText, keyword string) bool {
+	from := 0
+	for {
+		rel := strings.Index(lowerText[from:], keyword)
+		if rel < 0 {
+			return false
+		}
+		index := from + rel
+		wholeWord := (index == 0 || !isAlnumByte(lowerText[index-1])) &&
+			(index+len(keyword) == len(lowerText) || !isAlnumByte(lowerText[index+len(keyword)]))
+		if wholeWord {
+			before := lowerText
+			if index-40 > 0 {
+				before = lowerText[index-40 : index]
+			} else if index > 0 {
+				before = lowerText[:index]
+			} else {
+				before = ""
+			}
+			afterEnd := index + len(keyword) + 45
+			if afterEnd > len(lowerText) {
+				afterEnd = len(lowerText)
+			}
+			after := ""
+			if index+len(keyword) < len(lowerText) {
+				after = lowerText[index+len(keyword):afterEnd]
+			}
+			negBefore := reNegBeforeUnqualified.MatchString(before)
+			peerAfter := rePeerAfter.MatchString(after)
+			if !negBefore && !peerAfter {
+				return true
+			}
+		}
+		from = index + len(keyword)
+		if from >= len(lowerText) {
+			return false
+		}
+	}
+}
+
+var (
+	reNegBeforeUnqualified = regexp.MustCompile(`.*\b(?:not|no|never|without|lack(?:s|ed)?(?:\s+of)?)\s*$`)
+	rePeerAfter            = regexp.MustCompile(`^\s+(?:only\s+)?(?:for|among)\s+(?:peers|competitors|rivals)\b.*`)
+	reNegBeforePhrase      = regexp.MustCompile(`.*\b(?:not|no|never|without|failed\s+to|did\s+not|didn't|lack(?:s|ed)?(?:\s+of)?)\b.*`)
+)
+
+// containsAnyPhrase handles parity behavior.
+func containsAnyPhrase(lowerText string, phrases ...string) bool {
+	for _, phrase := range phrases {
+		index := strings.Index(lowerText, phrase)
+		if index < 0 {
+			continue
+		}
+		start := index - 40
+		if start < 0 {
+			start = 0
+		}
+		before := lowerText[start:index]
+		if !reNegBeforePhrase.MatchString(before) {
+			return true
+		}
+	}
+	return false
 }
 
 // extractJSONFromReasoning handles parity behavior.
@@ -229,6 +346,15 @@ func extractJSONFromReasoning(text string) string {
 		return text
 	}
 	cleaned := text
+	reThinking := regexp.MustCompile(`(?s)<thinking>.*?</thinking>\s*`)
+	cleaned = reThinking.ReplaceAllString(cleaned, "")
+	reThink := regexp.MustCompile(`(?s)<think>.*?</think>\s*`)
+	cleaned = reThink.ReplaceAllString(cleaned, "")
+	reReasoning := regexp.MustCompile(`(?s)<reasoning>.*?</reasoning>\s*`)
+	cleaned = reReasoning.ReplaceAllString(cleaned, "")
+	reFence := regexp.MustCompile("(?m)^```(?:json)?$\\s*")
+	cleaned = reFence.ReplaceAllString(cleaned, "")
+
 	open := firstBrace(cleaned, '{')
 	if open < 0 {
 		return text
@@ -292,6 +418,10 @@ func firstBrace(text string, c byte) int {
 		}
 	}
 	return -1
+}
+
+func isAlnumByte(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
 }
 
 // floatPtr handles parity behavior.

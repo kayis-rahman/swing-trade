@@ -118,7 +118,7 @@ func NextWeeklyStrategyDigestRun(now time.Time) time.Time {
 
 func dateOnlyIST(t time.Time) time.Time {
 	local := t.In(ist)
-	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, ist)
 }
 
 func nextSundayFire(now time.Time, hour, minute int) time.Time {

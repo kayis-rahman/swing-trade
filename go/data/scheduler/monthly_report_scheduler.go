@@ -228,6 +228,24 @@ func FormatMonthlyReport(report map[string]any) string {
 	sb += "✅ <b>Avg Win:</b> <code>" + fmt.Sprint(report["avgWinAmount"]) + "</code>\n"
 	sb += "❌ <b>Avg Loss:</b> <code>" + fmt.Sprint(report["avgLossAmount"]) + "</code>\n"
 	sb += "📉 <b>Profit Factor:</b> <b>" + fmt.Sprint(report["profitFactor"]) + "</b>\n\n"
+
+	sb += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+	sb += "🎯 <b>EXIT REASONS</b>\n"
+	sb += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+	exitReasons, _ := report["exitReasons"].(map[string]any)
+	for _, reason := range []string{"STOP_LOSS", "TARGET_HIT", "MANUAL"} {
+		sb += "🔸 <b>" + reason + ":</b> <code>" + fmt.Sprint(exitReasons[reason]) + "</code>\n"
+	}
+	sb += "\n"
+
+	sb += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+	sb += "📡 <b>SIGNAL DISTRIBUTION</b>\n"
+	sb += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+	signalDistribution, _ := report["signalDistribution"].(map[string]any)
+	for _, typ := range []string{"BUY", "SELL", "HOLD"} {
+		sb += "🔸 <b>" + typ + ":</b> <code>" + fmt.Sprint(signalDistribution[typ]) + "</code>\n"
+	}
+
 	return sb
 }
 

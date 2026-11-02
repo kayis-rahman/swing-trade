@@ -60,6 +60,16 @@ func run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		writePool, err := db.NewLocalOrWritablePool(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return fmt.Errorf("connect writable database: %w", err)
+		}
+		defer writePool.Close()
+		writer, err := data.NewSettingsWriter(writePool)
+		if err != nil {
+			return fmt.Errorf("create settings writer: %w", err)
+		}
+		stores.settingsWriter = writer
 		if err := wireIngestionJobs(ctx, logger, cfg, pool, stores.settings, stores.holidays, stores.watchlist); err != nil {
 			return err
 		}
@@ -120,11 +130,6 @@ func buildDataStores(pool *pgxpool.Pool) (apiStores, error) {
 		return apiStores{}, fmt.Errorf("create reconciliation preview: %w", err)
 	}
 	stores.reconciliation = preview
-	writer, err := data.NewSettingsWriter(pool)
-	if err != nil {
-		return apiStores{}, fmt.Errorf("create settings writer: %w", err)
-	}
-	stores.settingsWriter = writer
 	return stores, nil
 }
 

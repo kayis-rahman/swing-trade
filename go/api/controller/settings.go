@@ -252,7 +252,8 @@ func decodeStringMap(r *http.Request) (map[string]string, error) {
 
 func validPositiveDecimal(raw string) bool {
 	for _, r := range raw {
-		if !(r >= '0' && r <= '9' || r == '.' || r == '+' || r == '-' || r == 'e' || r == 'E') {
+		allowed := (r >= '0' && r <= '9') || r == '.' || r == '+' || r == '-' || r == 'e' || r == 'E'
+		if !allowed {
 			return false
 		}
 	}

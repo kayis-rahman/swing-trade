@@ -60,12 +60,22 @@ func run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		writePool, err := db.NewLocalOrWritablePool(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return fmt.Errorf("connect writable database: %w", err)
+		}
+		defer writePool.Close()
+		writer, err := data.NewSettingsWriter(writePool)
+		if err != nil {
+			return fmt.Errorf("create settings writer: %w", err)
+		}
+		stores.settingsWriter = writer
 		if err := wireIngestionJobs(ctx, logger, cfg, pool, stores.settings, stores.holidays, stores.watchlist); err != nil {
 			return err
 		}
 	}
 
-	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, stores.watchlist, stores.holidays, stores.settings, stores.ingestion, stores.reconciliation, stores.signals, stores.strategyConfigs)
+	handler, err := api.NewHandlerWithStores(cfg, logger, coreclock.System{}, stores.watchlist, stores.holidays, stores.settings, stores.ingestion, stores.reconciliation, stores.signals, stores.strategyConfigs, stores.settingsWriter)
 	if err != nil {
 		return fmt.Errorf("initialize HTTP platform: %w", err)
 	}
@@ -92,6 +102,7 @@ type apiStores struct {
 	reconciliation  data.ReconciliationPreview
 	signals         data.SignalReadStore
 	strategyConfigs data.StrategyConfigReadStore
+	settingsWriter  data.SettingsWriteStore
 }
 
 // buildDataStores wires every read store against the live pool.

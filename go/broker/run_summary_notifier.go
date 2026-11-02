@@ -95,8 +95,9 @@ func FormatRunSummary(summary JobRunSummary) string {
 		}
 	}
 	text := b.String()
-	if len(text) > maxRunDescription {
-		text = text[:maxRunDescription] + "..."
+	runes := []rune(text)
+	if len(runes) > maxRunDescription {
+		text = string(runes[:maxRunDescription]) + "..."
 	}
 	return text
 }

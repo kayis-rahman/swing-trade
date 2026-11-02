@@ -278,5 +278,3 @@ func Evidence(trades []ShadowClosedTrade, asOf time.Time) (float64, bool) {
 func PickVariant(candidates []Candidate, rule ArbitrationRule, evidenceByVariant map[string]float64) *string {
 	return pickVariant(candidates, rule, evidenceByVariant)
 }
-
-// Need import fmt for error (we didn't use fmt? yes). Add import.

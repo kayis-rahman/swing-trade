@@ -906,6 +906,11 @@ CI/stage pipeline is not a gate for this project -> dev-stack + this checklist i
 - Frontend dev proxy remains pointed at the Go backend on port 8081.
 - No stage deployment performed.
 
+## 2026-10-28 Phase 6 slice D (fm/swing-trade-go-p6-signals-scans-v1)
+
+- Ported SignalArbiter tournament logic (highest confidence, open-position/champion precedence, evidence ranking) to Go as strategy.Arbiter* helpers with Java parity tests.
+- Candidate-scan pause/resume/cancel state handling remains pending orchestrator landing by sibling worker; this slice defines the arbiter surface only.
+
 ## 2026-11-01 Go Phase 6 slice C (fm/swing-trade-go-p6-orchestrator-v1)
 
 - New Go package `go/api/orchestrator` added: run/stage domain types and enums, run and stage state machines, persistence ports, in-memory stores, cancellation/interrupt bookkeeping, progress/summary assembly, orphan reaper, and run-summary notifier hook. Sibling slices can program against these interfaces.

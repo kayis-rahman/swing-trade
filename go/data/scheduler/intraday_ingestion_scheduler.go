@@ -113,6 +113,12 @@ func (s *IntradayIngestionScheduler) IngestSessionBars(ctx context.Context) {
 	}
 }
 
+// Name identifies this scheduler in soak reports.
+func (s *IntradayIngestionScheduler) Name() string { return "intraday-ingestion" }
+
+// Run executes the scheduler's primary job once; it satisfies SoakScheduler.
+func (s *IntradayIngestionScheduler) Run(ctx context.Context) { s.IngestSessionBars(ctx) }
+
 // StartLoop sleeps until the next weekday 15:45 IST fire time and runs the
 // job until ctx is cancelled.
 func (s *IntradayIngestionScheduler) StartLoop(ctx context.Context) {

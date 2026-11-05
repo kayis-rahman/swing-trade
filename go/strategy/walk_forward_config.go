@@ -7,13 +7,14 @@ import (
 
 // WalkForwardConfig mirrors Java record.
 type WalkForwardConfig struct {
-	TrainMonths    int
-	TestMonths     int
-	StepMonths     int
-	HoldoutMonths  int
-	UnlockHoldout  bool
+	TrainMonths   int
+	TestMonths    int
+	StepMonths    int
+	HoldoutMonths int
+	UnlockHoldout bool
 }
 
+// NewWalkForwardConfig constructs and validates a WalkForwardConfig.
 func NewWalkForwardConfig(trainMonths, testMonths, stepMonths, holdoutMonths int, unlockHoldout bool) (WalkForwardConfig, error) {
 	if trainMonths <= 0 || testMonths <= 0 || stepMonths <= 0 {
 		return WalkForwardConfig{}, fmt.Errorf("trainMonths/testMonths/stepMonths must be positive")
@@ -27,6 +28,7 @@ func NewWalkForwardConfig(trainMonths, testMonths, stepMonths, holdoutMonths int
 	}, nil
 }
 
+// WalkForwardConfigDefaults returns the default WalkForwardConfig.
 func WalkForwardConfigDefaults() WalkForwardConfig {
 	c, _ := NewWalkForwardConfig(24, 6, 6, 6, false)
 	return c

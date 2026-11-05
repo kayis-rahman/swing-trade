@@ -20,27 +20,32 @@ type IntradayBar struct {
 
 var nseZone = time.FixedZone("Asia/Kolkata", 5*60*60+30*60)
 
+// NewIntradayBar constructs and validates an intraday bar.
 func NewIntradayBar(timestamp time.Time, open, high, low, close coredecimal.Decimal, volume int64) (IntradayBar, error) {
 	if timestamp.IsZero() {
-		return IntradayBar{}, fmt.Errorf("Timestamp and OHLC values are required")
+		return IntradayBar{}, fmt.Errorf("timestamp and OHLC values are required")
 	}
 	if high.Cmp(low) < 0 || high.Cmp(open) < 0 || high.Cmp(close) < 0 ||
 		low.Cmp(open) > 0 || low.Cmp(close) > 0 || volume < 0 {
-		return IntradayBar{}, fmt.Errorf("Invalid OHLCV bar")
+		return IntradayBar{}, fmt.Errorf("invalid OHLCV bar")
 	}
 	return IntradayBar{
 		Timestamp: timestamp, Open: open, High: high, Low: low, Close: close, Volume: volume,
 	}, nil
 }
 
+// SessionDate returns the UTC-midnight session date for the bar.
 func (b IntradayBar) SessionDate() time.Time {
-	return b.Timestamp.In(nseZone)
+	t := b.Timestamp.In(nseZone)
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }
 
+// SessionDateLocal returns the NSE calendar date of the bar.
 func (b IntradayBar) SessionDateLocal() string {
 	return b.Timestamp.In(nseZone).Format("2006-01-02")
 }
 
+// AsCandle converts the intraday bar to an OHLCV candle.
 func (b IntradayBar) AsCandle(symbol string) domain.OhlcvCandle {
-	return domain.OhlcvCandleOf(symbol, b.Timestamp.In(nseZone).Truncate(24*time.Hour), b.Open, b.High, b.Low, b.Close, b.Volume)
+	return domain.OhlcvCandleOf(symbol, b.SessionDate(), b.Open, b.High, b.Low, b.Close, b.Volume)
 }

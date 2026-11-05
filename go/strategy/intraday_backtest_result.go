@@ -8,10 +8,10 @@ import (
 
 // IntradayBacktestResult mirrors Java record.
 type IntradayBacktestResult struct {
-	InitialCapital       coredecimal.Decimal
-	FinalCapital         coredecimal.Decimal
-	NetPnL               coredecimal.Decimal
-	Trades               []IntradayBacktestTrade
-	OpenPosition         *OpenPosition
+	InitialCapital        coredecimal.Decimal
+	FinalCapital          coredecimal.Decimal
+	NetPnL                coredecimal.Decimal
+	Trades                []IntradayBacktestTrade
+	OpenPosition          *OpenPosition
 	OpenPositionEntryTime *time.Time
 }

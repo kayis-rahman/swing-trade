@@ -8,9 +8,9 @@ import (
 
 // IntradayBacktestTrade mirrors Java record.
 type IntradayBacktestTrade struct {
-	Strategy  string
-	EntryTime time.Time
-	ExitTime  time.Time
+	Strategy   string
+	EntryTime  time.Time
+	ExitTime   time.Time
 	EntryPrice coredecimal.Decimal
 	ExitPrice  coredecimal.Decimal
 	Quantity   int

@@ -73,6 +73,18 @@ func RegisterSettingsRoutes(mux *http.ServeMux, store data.SettingsReadStore, lo
 		}
 		writeSettingsResponse(w, clk, settings)
 	})
+	mux.HandleFunc("GET /api/settings/llm", func(w http.ResponseWriter, r *http.Request) {
+		if unavailable(w, store, clk) {
+			return
+		}
+		settings, err := readLlmSettings(r, store)
+		if err != nil {
+			writeSettingsReadError(w, r, logger, clk)
+			return
+		}
+		addLlmSecretConfiguredFlags(r, store, settings)
+		writeSettingsResponse(w, clk, settings)
+	})
 	mux.HandleFunc("GET /api/settings/scanning", func(w http.ResponseWriter, r *http.Request) {
 		if unavailable(w, store, clk) {
 			return
@@ -109,6 +121,40 @@ func readSettings(r *http.Request, store data.SettingsReadStore, defaults map[st
 		settings[key] = value
 	}
 	return settings, nil
+}
+
+
+func readLlmSettings(r *http.Request, store data.SettingsReadStore) (map[string]string, error) {
+	defaults := map[string]string{
+		"llm.base_url":        "",
+		"llm.backend":         "openai",
+		"openai.base_url":     "",
+		"openai.model":        "",
+		"ollama.base_url":     "",
+		"ollama.model":        "",
+		"llamacpp.model":      "",
+		"laya.base_url":       "",
+		"laya.model":          "",
+		"pi-agent.provider":   "openai-codex",
+		"pi-agent.model":      "gpt-5.6-luna",
+		"llm.pdf.base_url":    "",
+		"llm.pdf.model":       "",
+	}
+	return readSettings(r, store, defaults)
+}
+
+func addLlmSecretConfiguredFlags(r *http.Request, store data.SettingsReadStore, settings map[string]string) {
+	for _, key := range []string{"openai.api_key", "ollama.api_key", "gpuhub.api_key"} {
+		configured := false
+		value, found, err := store.GetSetting(r.Context(), key)
+		if err == nil && found && strings.TrimSpace(value) != "" {
+			configured = true
+		}
+		settings[key+".configured"] = "false"
+		if configured {
+			settings[key+".configured"] = "true"
+		}
+	}
 }
 
 func writeSettingsResponse(w http.ResponseWriter, clk clock.Clock, settings map[string]string) {

@@ -127,30 +127,30 @@ func readSettings(r *http.Request, store data.SettingsReadStore, defaults map[st
 	return settings, nil
 }
 
-
 func readLlmSettings(r *http.Request, store data.SettingsReadStore) (map[string]string, error) {
 	defaults := map[string]string{
-		"llm.base_url":      llmSettingDefault("llm.base_url", "http://localhost:8080/v1"),
-		"llm.backend":       llmSettingDefault("llm.backend", "local"),
-		"openai.base_url":   llmSettingDefault("openai.base_url", "https://api.openai.com/v1"),
-		"openai.model":      llmSettingDefault("openai.model", "gpt-4o"),
-		"ollama.base_url":   llmSettingDefault("ollama.base_url", "http://localhost:11434/v1"),
-		"ollama.model":      llmSettingDefault("ollama.model", "qwen3.5:4b"),
-		"llamacpp.model":    llmSettingDefault("llamacpp.model", "/home/dietpi/.synapse/models/Qwen3.5-2B_Q4_k_m.gguf"),
-		"laya.base_url":     llmSettingDefault("laya.base_url", ""),
-		"laya.model":        llmSettingDefault("laya.model", ""),
-		"pi-agent.provider": llmSettingDefault("pi-agent.provider", "openai-codex"),
-		"pi-agent.model":    llmSettingDefault("pi-agent.model", "gpt-5.6-luna"),
-		"llm.pdf.base_url":  llmSettingDefault("llm.pdf.base_url", ""),
-		"llm.pdf.model":     llmSettingDefault("llm.pdf.model", "gemma-4-E2B"),
+		"llm.base_url":      llmSettingDefault("http://localhost:8080/v1", "LLM_BASE_URL"),
+		"llm.backend":       llmSettingDefault("local", "LLM_BACKEND"),
+		"openai.base_url":   llmSettingDefault("https://api.openai.com/v1", "OPENAI_BASE_URL"),
+		"openai.model":      llmSettingDefault("gpt-4o", "OPENAI_MODEL"),
+		"ollama.base_url":   llmSettingDefault("http://localhost:11434/v1", "OLLAMA_BASE_URL"),
+		"ollama.model":      llmSettingDefault("qwen3.5:4b", "OLLAMA_MODEL"),
+		"llamacpp.model":    llmSettingDefault("/home/dietpi/.synapse/models/Qwen3.5-2B_Q4_k_m.gguf", "LLAMACPP_MODEL"),
+		"laya.base_url":     llmSettingDefault("https://u425-84cf-d540ae09.singapore-b.gpuhub.com:8443/v1", "LLM_LAYA_BASE_URL", "LLM_GPUHUB_BASE_URL"),
+		"laya.model":        llmSettingDefault("Ornith-1.5-35B-A3B-AWQ", "LLM_LAYA_MODEL"),
+		"pi-agent.provider": llmSettingDefault("openai-codex", "PI_AGENT_PROVIDER"),
+		"pi-agent.model":    llmSettingDefault("gpt-5.6-luna", "PI_AGENT_MODEL"),
+		"llm.pdf.base_url":  llmSettingDefault("", "LLM_PDF_BASE_URL"),
+		"llm.pdf.model":     llmSettingDefault("gemma-4-E2B", "LLM_PDF_MODEL"),
 	}
 	return readSettings(r, store, defaults)
 }
 
-func llmSettingDefault(settingKey, propertyDefault string) string {
-	envKey := strings.ToUpper(strings.ReplaceAll(settingKey, ".", "_"))
-	if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
-		return value
+func llmSettingDefault(propertyDefault string, envKeys ...string) string {
+	for _, envKey := range envKeys {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			return value
+		}
 	}
 	return propertyDefault
 }

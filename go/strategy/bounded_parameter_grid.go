@@ -14,7 +14,6 @@ func ExpandParameterGrid(ranges map[string][]any, maxCandidates int) ([]map[stri
 	if maxCandidates < 1 {
 		return nil, fmt.Errorf("maxCandidates must be positive")
 	}
-	// sorted keys
 	keys := make([]string, 0, len(ranges))
 	for k := range ranges {
 		keys = append(keys, k)
@@ -22,10 +21,10 @@ func ExpandParameterGrid(ranges map[string][]any, maxCandidates int) ([]map[stri
 	sort.Strings(keys)
 
 	result := make([]map[string]any, 0)
-	var rec func(index int, current map[string]any)
-	rec = func(index int, current map[string]any) {
+	var rec func(index int, current map[string]any) error
+	rec = func(index int, current map[string]any) error {
 		if len(result) >= maxCandidates {
-			panic(fmt.Errorf("parameter grid exceeds maxCandidates=%d", maxCandidates))
+			return fmt.Errorf("parameter grid exceeds maxCandidates=%d", maxCandidates)
 		}
 		if index == len(keys) {
 			cp := make(map[string]any, len(current))
@@ -33,32 +32,31 @@ func ExpandParameterGrid(ranges map[string][]any, maxCandidates int) ([]map[stri
 				cp[k] = v
 			}
 			result = append(result, cp)
-			return
+			return nil
 		}
 		k := keys[index]
 		vals := ranges[k]
 		if strings.TrimSpace(k) == "" {
-			panic(fmt.Errorf("parameter names and values are required"))
-		}
-		// blank check
-		// Java checks entry.getKey().isBlank()
-		if len(k) == 0 {
-			panic(fmt.Errorf("parameter names and values are required"))
+			return fmt.Errorf("parameter names and values are required")
 		}
 		if len(vals) == 0 {
-			panic(fmt.Errorf("parameter names and values are required"))
+			return fmt.Errorf("parameter names and values are required")
 		}
 		for _, v := range vals {
 			if v == nil {
-				panic(fmt.Errorf("parameter values cannot be null"))
+				return fmt.Errorf("parameter values cannot be null")
 			}
 			current[k] = v
-			rec(index+1, current)
+			if err := rec(index+1, current); err != nil {
+				return err
+			}
 		}
 		delete(current, k)
+		return nil
 	}
-	rec(0, map[string]any{})
-	// Java returns unmodifiable copies; Go returns copies already.
+	if err := rec(0, map[string]any{}); err != nil {
+		return nil, err
+	}
 	out := make([]map[string]any, len(result))
 	copy(out, result)
 	return out, nil

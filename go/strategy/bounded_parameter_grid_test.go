@@ -27,13 +27,10 @@ func TestExpandParameterGridEmpty(t *testing.T) {
 }
 
 func TestExpandParameterGridExceeds(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("expected panic")
-		}
-	}()
 	ranges := map[string][]any{"a": {1, 2, 3}}
-	_, _ = ExpandParameterGrid(ranges, 2)
+	if _, err := ExpandParameterGrid(ranges, 2); err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestWalkForwardEvaluationIsComplete(t *testing.T) {

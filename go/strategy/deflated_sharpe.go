@@ -7,7 +7,7 @@ import (
 
 const eulerMascheroni = 0.5772156649015329
 
-// DeflatedSharpeRatio mirrors Java's DeflatedSharpeRatio (plan §6.4).
+// ComputeDeflatedSharpeRatio mirrors Java's DeflatedSharpeRatio (plan §6.4).
 //
 // It returns the probability that the true Sharpe ratio exceeds zero after
 // correcting for selection bias across numTrials independent trials.

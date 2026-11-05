@@ -29,6 +29,7 @@ func NewWalkForwardEvaluation(folds []Fold, avgWin, avgReturn float64, totalTrad
 	}
 }
 
+// IsComplete reports whether the evaluation has expectedFolds folds.
 func (w WalkForwardEvaluation) IsComplete(expectedFolds int) bool {
 	return len(w.Folds) == expectedFolds
 }

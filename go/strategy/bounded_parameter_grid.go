@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// BoundedParameterGrid mirrors Java's deterministic, bounded Cartesian product.
+// ExpandParameterGrid mirrors Java's deterministic, bounded Cartesian product.
 func ExpandParameterGrid(ranges map[string][]any, maxCandidates int) ([]map[string]any, error) {
 	if len(ranges) == 0 {
 		return []map[string]any{{}}, nil
@@ -25,7 +25,7 @@ func ExpandParameterGrid(ranges map[string][]any, maxCandidates int) ([]map[stri
 	var rec func(index int, current map[string]any)
 	rec = func(index int, current map[string]any) {
 		if len(result) >= maxCandidates {
-			panic(fmt.Errorf("Parameter grid exceeds maxCandidates=%d", maxCandidates))
+			panic(fmt.Errorf("parameter grid exceeds maxCandidates=%d", maxCandidates))
 		}
 		if index == len(keys) {
 			cp := make(map[string]any, len(current))
@@ -38,19 +38,19 @@ func ExpandParameterGrid(ranges map[string][]any, maxCandidates int) ([]map[stri
 		k := keys[index]
 		vals := ranges[k]
 		if strings.TrimSpace(k) == "" {
-			panic(fmt.Errorf("Parameter names and values are required"))
+			panic(fmt.Errorf("parameter names and values are required"))
 		}
 		// blank check
 		// Java checks entry.getKey().isBlank()
 		if len(k) == 0 {
-			panic(fmt.Errorf("Parameter names and values are required"))
+			panic(fmt.Errorf("parameter names and values are required"))
 		}
-		if vals == nil || len(vals) == 0 {
-			panic(fmt.Errorf("Parameter names and values are required"))
+		if len(vals) == 0 {
+			panic(fmt.Errorf("parameter names and values are required"))
 		}
 		for _, v := range vals {
 			if v == nil {
-				panic(fmt.Errorf("Parameter values cannot be null"))
+				panic(fmt.Errorf("parameter values cannot be null"))
 			}
 			current[k] = v
 			rec(index+1, current)

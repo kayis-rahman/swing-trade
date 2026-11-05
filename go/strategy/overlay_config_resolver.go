@@ -1,6 +1,6 @@
 package strategy
 
-// OverlayConfigResolver mirrors Java.
+// OverlayRegimeGate mirrors Java overlay resolver.
 func OverlayRegimeGate(overlays map[string]any) *RegimeGateConfig {
 	if !overlayEnabled(overlays, "regimeGate") {
 		return nil
@@ -9,6 +9,7 @@ func OverlayRegimeGate(overlays map[string]any) *RegimeGateConfig {
 	return &c
 }
 
+// OverlaySentimentGate mirrors Java overlay resolver.
 func OverlaySentimentGate(overlays map[string]any) *SentimentGateConfig {
 	if !overlayEnabled(overlays, "sentimentGate") {
 		return nil

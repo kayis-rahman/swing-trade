@@ -15,6 +15,7 @@ type PortfolioEquityPoint struct {
 	PositionMarketValue coredecimal.Decimal
 }
 
+// NewPortfolioEquityPointTotal mirrors Java source-compatible constructor (equity-only).
 func NewPortfolioEquityPointTotal(date time.Time, equity coredecimal.Decimal) PortfolioEquityPoint {
 	return PortfolioEquityPoint{
 		Date: date, Equity: equity, SettledCash: equity,

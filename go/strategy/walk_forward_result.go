@@ -2,9 +2,9 @@ package strategy
 
 // WalkForwardResult mirrors Java record.
 type WalkForwardResult struct {
-	Folds                 []WalkForwardFold
+	Folds                   []WalkForwardFold
 	ConcatenatedEquityCurve []DailyEquityPoint
-	SharpeStdDev          float64
-	Unstable              bool
-	HoldoutUnlocked       bool
+	SharpeStdDev            float64
+	Unstable                bool
+	HoldoutUnlocked         bool
 }

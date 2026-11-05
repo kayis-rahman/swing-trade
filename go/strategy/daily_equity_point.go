@@ -13,6 +13,7 @@ type DailyEquityPoint struct {
 	Equity coredecimal.Decimal
 }
 
+// NewDailyEquityPoint mirrors the Java record constructor.
 func NewDailyEquityPoint(date time.Time, equity coredecimal.Decimal) (DailyEquityPoint, error) {
 	if date.IsZero() {
 		return DailyEquityPoint{}, fmt.Errorf("date and equity cannot be null")

@@ -177,3 +177,79 @@ func TestSettingsReadFailureReturnsJavaApiEnvelope(t *testing.T) {
 		t.Fatalf("settings error response = %d %#v", response.Code, body)
 	}
 }
+
+func TestLlmSettingsReadReturnsJavaDefaultsAndSettings(t *testing.T) {
+	for _, key := range []string{"LLM_BASE_URL", "LLM_BACKEND", "OPENAI_BASE_URL", "OPENAI_MODEL", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "LLAMACPP_MODEL", "LLM_LAYA_BASE_URL", "LLM_GPUHUB_BASE_URL", "LLM_LAYA_MODEL", "PI_AGENT_PROVIDER", "PI_AGENT_MODEL", "LLM_PDF_BASE_URL", "LLM_PDF_MODEL", "OPENAI_API_KEY", "OLLAMA_API_KEY", "GPUHUB_API_KEY"} {
+		t.Setenv(key, "")
+	}
+	mux := http.NewServeMux()
+	RegisterSettingsRoutes(mux, fakeSettingsReader{settings: map[string]string{}}, slog.New(slog.NewTextHandler(io.Discard, nil)), fixedClock{now: time.Now()})
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/settings/llm", nil))
+	var body struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != http.StatusOK || body.Data["llm.backend"] != "local" || body.Data["llm.base_url"] != "http://localhost:8080/v1" || body.Data["openai.model"] != "gpt-4o" || body.Data["ollama.model"] != "qwen3.5:4b" || body.Data["openai.api_key.configured"] != "false" || body.Data["ollama.api_key.configured"] != "false" || body.Data["gpuhub.api_key.configured"] != "false" {
+		t.Fatalf("LLM settings defaults = %d %#v", response.Code, body.Data)
+	}
+	if _, leaked := body.Data["openai.api_key"]; leaked {
+		t.Fatal("response exposed an LLM API key")
+	}
+}
+
+func TestLlmSettingsReadAppliesEnvironmentOverrides(t *testing.T) {
+	t.Setenv("LLM_BACKEND", "openai")
+	t.Setenv("LLM_PDF_BASE_URL", "http://pdf.example.test/v1")
+	t.Setenv("OPENAI_API_KEY", "sk-test")
+	mux := http.NewServeMux()
+	RegisterSettingsRoutes(mux, fakeSettingsReader{settings: map[string]string{"llm.backend": "ollama"}}, slog.New(slog.NewTextHandler(io.Discard, nil)), fixedClock{now: time.Now()}, false)
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/settings/llm", nil))
+	var body struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != http.StatusOK || body.Data["llm.backend"] != "ollama" || body.Data["llm.pdf.base_url"] != "http://pdf.example.test/v1" || body.Data["openai.api_key.configured"] != "true" {
+		t.Fatalf("LLM settings env override = %d %#v", response.Code, body.Data)
+	}
+}
+
+func TestLlmSettingsReadPropagatesStoreErrors(t *testing.T) {
+	mux := http.NewServeMux()
+	RegisterSettingsRoutes(mux, fakeSettingsReader{err: errors.New("database unavailable")}, slog.New(slog.NewTextHandler(io.Discard, nil)), fixedClock{now: time.Now()})
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/settings/llm", nil))
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("GET /api/settings/llm with store error = %d, want 500 body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestLlmSettingsReadAgreesWithGpuHubForEnvironmentKey(t *testing.T) {
+	t.Setenv("GPUHUB_API_KEY", "secret")
+	mux := http.NewServeMux()
+	RegisterSettingsRoutes(mux, fakeSettingsReader{settings: map[string]string{}}, slog.New(slog.NewTextHandler(io.Discard, nil)), fixedClock{now: time.Now()}, true)
+	llmResponse := httptest.NewRecorder()
+	mux.ServeHTTP(llmResponse, httptest.NewRequest(http.MethodGet, "/api/settings/llm", nil))
+	gpuHubResponse := httptest.NewRecorder()
+	mux.ServeHTTP(gpuHubResponse, httptest.NewRequest(http.MethodGet, "/api/settings/gpuhub", nil))
+	var llmBody struct {
+		Data map[string]string `json:"data"`
+	}
+	var gpuHubBody struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := json.Unmarshal(llmResponse.Body.Bytes(), &llmBody); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(gpuHubResponse.Body.Bytes(), &gpuHubBody); err != nil {
+		t.Fatal(err)
+	}
+	if llmBody.Data["gpuhub.api_key.configured"] != "true" || llmBody.Data["gpuhub.api_key.configured"] != gpuHubBody.Data["gpuhub.api_key.configured"] {
+		t.Fatalf("LLM configured=%#v GPUHub configured=%#v", llmBody.Data, gpuHubBody.Data)
+	}
+}

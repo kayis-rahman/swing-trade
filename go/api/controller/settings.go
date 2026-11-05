@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -73,6 +74,21 @@ func RegisterSettingsRoutes(mux *http.ServeMux, store data.SettingsReadStore, lo
 		}
 		writeSettingsResponse(w, clk, settings)
 	})
+	mux.HandleFunc("GET /api/settings/llm", func(w http.ResponseWriter, r *http.Request) {
+		if unavailable(w, store, clk) {
+			return
+		}
+		settings, err := readLlmSettings(r, store)
+		if err != nil {
+			writeSettingsReadError(w, r, logger, clk)
+			return
+		}
+		if err := addLlmSecretConfiguredFlags(r, store, settings, gpuHubKeyConfiguredFromEnvironment); err != nil {
+			writeSettingsReadError(w, r, logger, clk)
+			return
+		}
+		writeSettingsResponse(w, clk, settings)
+	})
 	mux.HandleFunc("GET /api/settings/scanning", func(w http.ResponseWriter, r *http.Request) {
 		if unavailable(w, store, clk) {
 			return
@@ -109,6 +125,61 @@ func readSettings(r *http.Request, store data.SettingsReadStore, defaults map[st
 		settings[key] = value
 	}
 	return settings, nil
+}
+
+func readLlmSettings(r *http.Request, store data.SettingsReadStore) (map[string]string, error) {
+	defaults := map[string]string{
+		"llm.base_url":      llmSettingDefault("http://localhost:8080/v1", "LLM_BASE_URL"),
+		"llm.backend":       llmSettingDefault("local", "LLM_BACKEND"),
+		"openai.base_url":   llmSettingDefault("https://api.openai.com/v1", "OPENAI_BASE_URL"),
+		"openai.model":      llmSettingDefault("gpt-4o", "OPENAI_MODEL"),
+		"ollama.base_url":   llmSettingDefault("http://localhost:11434/v1", "OLLAMA_BASE_URL"),
+		"ollama.model":      llmSettingDefault("qwen3.5:4b", "OLLAMA_MODEL"),
+		"llamacpp.model":    llmSettingDefault("/home/dietpi/.synapse/models/Qwen3.5-2B_Q4_k_m.gguf", "LLAMACPP_MODEL"),
+		"laya.base_url":     llmSettingDefault("https://u425-84cf-d540ae09.singapore-b.gpuhub.com:8443/v1", "LLM_LAYA_BASE_URL", "LLM_GPUHUB_BASE_URL"),
+		"laya.model":        llmSettingDefault("Ornith-1.5-35B-A3B-AWQ", "LLM_LAYA_MODEL"),
+		"pi-agent.provider": llmSettingDefault("openai-codex", "PI_AGENT_PROVIDER"),
+		"pi-agent.model":    llmSettingDefault("gpt-5.6-luna", "PI_AGENT_MODEL"),
+		"llm.pdf.base_url":  llmSettingDefault("", "LLM_PDF_BASE_URL"),
+		"llm.pdf.model":     llmSettingDefault("gemma-4-E2B", "LLM_PDF_MODEL"),
+	}
+	return readSettings(r, store, defaults)
+}
+
+func llmSettingDefault(propertyDefault string, envKeys ...string) string {
+	for _, envKey := range envKeys {
+		if value := strings.TrimSpace(os.Getenv(envKey)); value != "" {
+			return value
+		}
+	}
+	return propertyDefault
+}
+
+func llmSecretEnvConfigured(settingKey string) bool {
+	envKey := strings.ToUpper(strings.ReplaceAll(settingKey, ".", "_"))
+	return strings.TrimSpace(os.Getenv(envKey)) != ""
+}
+
+func addLlmSecretConfiguredFlags(r *http.Request, store data.SettingsReadStore, settings map[string]string, environmentGPUHubKeyConfigured bool) error {
+	for _, key := range []string{"openai.api_key", "ollama.api_key", "gpuhub.api_key"} {
+		configured := llmSecretEnvConfigured(key)
+		if key == "gpuhub.api_key" && environmentGPUHubKeyConfigured {
+			configured = true
+		}
+		if !configured {
+			value, found, err := store.GetSetting(r.Context(), key)
+			if err != nil {
+				return err
+			}
+			configured = found && strings.TrimSpace(value) != ""
+		}
+		if configured {
+			settings[key+".configured"] = "true"
+		} else {
+			settings[key+".configured"] = "false"
+		}
+	}
+	return nil
 }
 
 func writeSettingsResponse(w http.ResponseWriter, clk clock.Clock, settings map[string]string) {

@@ -105,7 +105,7 @@ func TestBacktestMetricHelpers(t *testing.T) {
 		t.Fatalf("MaxDrawdownPct(nil) = %s", got.String())
 	}
 	if got := SharpeRatio(curve); got == 0 {
-		// May be zero for this tiny curve only if deviation zero; accept either finite.
+		t.Fatal("SharpeRatio() should be nonzero")
 	}
 	high := d(t, "1000")
 	_ = CagrPct(initial, high, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))

@@ -43,6 +43,11 @@ func (d Decimal) String() string {
 	return fmt.Sprintf("%s%s.%0*s", prefix, whole.String(), MoneyScale, fraction.String())
 }
 
+// MarshalJSON renders the decimal as a JSON number, preserving its fixed scale.
+func (d Decimal) MarshalJSON() ([]byte, error) {
+	return []byte(d.String()), nil
+}
+
 // Cmp compares two decimals numerically and returns -1, 0, or 1.
 func (d Decimal) Cmp(other Decimal) int {
 	return d.value().Cmp(other.value())

@@ -25,7 +25,7 @@ var (
 // NewIntradayCostModel mirrors Java's two-arg constructor and validation.
 func NewIntradayCostModel(brokeragePerOrder, slippageRate coredecimal.Decimal) (IntradayCostModel, error) {
 	if brokeragePerOrder.Cmp(coredecimal.Decimal{}) < 0 || slippageRate.Cmp(coredecimal.Decimal{}) < 0 {
-		return IntradayCostModel{}, fmt.Errorf("Costs must be non-negative")
+		return IntradayCostModel{}, fmt.Errorf("costs must be non-negative")
 	}
 	return IntradayCostModel{brokeragePerOrder: brokeragePerOrder, slippageRate: slippageRate}, nil
 }
@@ -36,8 +36,11 @@ func DefaultIntradayCostModel() IntradayCostModel {
 	return model
 }
 
+// BrokeragePerOrder returns the per-order brokerage.
 func (m IntradayCostModel) BrokeragePerOrder() coredecimal.Decimal { return m.brokeragePerOrder }
-func (m IntradayCostModel) SlippageRate() coredecimal.Decimal      { return m.slippageRate }
+
+// SlippageRate returns the slippage rate.
+func (m IntradayCostModel) SlippageRate() coredecimal.Decimal { return m.slippageRate }
 
 // BuyFill mirrors BigDecimal reference * (1 + slippageRate).
 func (m IntradayCostModel) BuyFill(reference coredecimal.Decimal) coredecimal.Decimal {
@@ -66,7 +69,7 @@ func (m IntradayCostModel) SellFill(reference coredecimal.Decimal) coredecimal.D
 // RoundTripCost mirrors Java's roundTripCost.
 func (m IntradayCostModel) RoundTripCost(buy, sell coredecimal.Decimal, quantity int) (coredecimal.Decimal, error) {
 	if quantity <= 0 {
-		return coredecimal.Decimal{}, fmt.Errorf("Quantity must be positive")
+		return coredecimal.Decimal{}, fmt.Errorf("quantity must be positive")
 	}
 	buyTurnover := new(big.Rat).Mul(ratOf(buy), big.NewRat(int64(quantity), 1))
 	sellTurnover := new(big.Rat).Mul(ratOf(sell), big.NewRat(int64(quantity), 1))

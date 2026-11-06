@@ -33,7 +33,7 @@ Reference: `phase-5-llm-news-sentiment.md` -> `## Gate G5 exit criteria`.
 | All recorded-response suites green | PARTIAL | `go/llm/client_test.go`, `sentiment_analyzer_test.go`, `synthesis_output_test.go`, `validator_test.go`, `pdf_extraction_test.go` and others | Full provider recorded-response corpus (all backends/sources) and green recorded suite across modules |
 | Degraded and fallback behavior match | PARTIAL | `news_circuit_breaker.go`, fallback sentiment path in `sentiment_analyzer.go` | Drill evidence for provider-down, malformed JSON, timeouts, SSH failure; stage_degraded parity report |
 | Metrics match | OPEN | Meter usage present; full metrics inventory still tracks Go parity | Metric golden comparison for LLM/sentiment counters |
-| No secret in fixtures | OPEN | not audited in this paperwork pass | Secret scan report over recorded fixtures |
+| No secret in fixtures | PARTIAL | `bin/scan-recorded-fixtures.sh` passes (exit 0); committed report at `docs/plans/go-migration/evidence/fixture-secret-scan-report.md` | Re-run/refresh report on future fixture changes; captain sign-off |
 
 Ledger: Phase 5 rows remain as currently marked; no row moved to `closed`.
 

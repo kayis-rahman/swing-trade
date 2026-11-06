@@ -219,7 +219,7 @@ func roundHalfUp(numerator, denominator *big.Int) *big.Int {
 // MulInt multiplies a money-scale decimal by an integer quantity.
 func (d Decimal) MulInt(n int) Decimal {
 	if n == 0 {
-		return Decimal{}
+		return Decimal{scale: d.Scale()}
 	}
 	return Decimal{units: new(big.Int).Mul(d.value(), big.NewInt(int64(n))), scale: d.Scale()}
 }

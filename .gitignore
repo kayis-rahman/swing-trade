@@ -100,3 +100,6 @@ dashboard/test-results/
 # Lavish Editor review workspace + local runtime pid file (never push)
 .lavish/
 .swing-trade-pids
+
+# Go built API binary
+go/api/swingtrade-api

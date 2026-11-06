@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -22,13 +23,13 @@ type paramSchemaResponse struct {
 }
 
 type paramDefResponse struct {
-	Name         string  `json:"name"`
-	Type         string  `json:"type"`
-	Min          *string `json:"min"`
-	Max          *string `json:"max"`
-	DefaultValue any     `json:"defaultValue"`
-	Description  string  `json:"description"`
-	Group        string  `json:"group"`
+	Name         string           `json:"name"`
+	Type         string           `json:"type"`
+	Min          *json.RawMessage `json:"min"`
+	Max          *json.RawMessage `json:"max"`
+	DefaultValue any              `json:"defaultValue"`
+	Description  string           `json:"description"`
+	Group        string           `json:"group"`
 }
 
 // RegisterStrategyTypeRoutes mirrors Java's StrategyTypeController.
@@ -87,11 +88,11 @@ func buildParamSchema(schema strategy.ParamSchema) paramSchemaResponse {
 			DefaultValue: def.DefaultValue,
 		}
 		if def.Min != nil {
-			value := def.Min.String()
+			value := json.RawMessage(def.Min.String())
 			item.Min = &value
 		}
 		if def.Max != nil {
-			value := def.Max.String()
+			value := json.RawMessage(def.Max.String())
 			item.Max = &value
 		}
 		response.Params = append(response.Params, item)

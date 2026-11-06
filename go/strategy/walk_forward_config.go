@@ -39,5 +39,17 @@ func (c WalkForwardConfig) HoldoutStart(overallEnd time.Time) time.Time {
 	if c.HoldoutMonths == 0 {
 		return overallEnd.AddDate(0, 0, 1)
 	}
-	return overallEnd.AddDate(0, -c.HoldoutMonths, 1)
+	// Mirror Java's LocalDate.minusMonths: subtract calendar months and clamp
+	// the day to the last valid day of the target month instead of letting the
+	// date overflow into the following month like time.AddDate does.
+	year, month, day := overallEnd.UTC().Date()
+	totalMonths := year*12 + int(month) - 1 - c.HoldoutMonths
+	newYear := totalMonths / 12
+	newMonth := time.Month(totalMonths%12 + 1)
+	lastDay := time.Date(newYear, newMonth+1, 0, 0, 0, 0, 0, time.UTC).Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	clamped := time.Date(newYear, newMonth, day, 0, 0, 0, 0, time.UTC)
+	return clamped.AddDate(0, 0, 1)
 }

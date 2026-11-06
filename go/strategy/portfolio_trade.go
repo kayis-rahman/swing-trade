@@ -8,24 +8,25 @@ import (
 
 // PortfolioTrade mirrors Java record.
 type PortfolioTrade struct {
-	Symbol                 string
-	EntryDate              time.Time
-	ExitDate               time.Time
-	EntryPrice             coredecimal.Decimal
-	ExitPrice              coredecimal.Decimal
-	StopLoss               coredecimal.Decimal
-	Target                 coredecimal.Decimal
-	Quantity               int
-	ExitReason             ExitReason
-	RiskPerShare           coredecimal.Decimal
-	PnL                    coredecimal.Decimal
-	PnLPct                 float64
-	HoldingDays            int
-	MaxAdverseExcursion    coredecimal.Decimal
-	MaxFavorableExcursion  coredecimal.Decimal
-	StrategyScoreAtEntry   coredecimal.Decimal
+	Symbol                string
+	EntryDate             time.Time
+	ExitDate              time.Time
+	EntryPrice            coredecimal.Decimal
+	ExitPrice             coredecimal.Decimal
+	StopLoss              coredecimal.Decimal
+	Target                coredecimal.Decimal
+	Quantity              int
+	ExitReason            ExitReason
+	RiskPerShare          coredecimal.Decimal
+	PnL                   coredecimal.Decimal
+	PnLPct                float64
+	HoldingDays           int
+	MaxAdverseExcursion   coredecimal.Decimal
+	MaxFavorableExcursion coredecimal.Decimal
+	StrategyScoreAtEntry  coredecimal.Decimal
 }
 
+// RMultiple returns the trade profit/loss expressed in initial risk units.
 func (t PortfolioTrade) RMultiple() float64 {
 	if t.RiskPerShare.Cmp(coredecimal.Decimal{}) <= 0 || t.Quantity == 0 {
 		return 0.0
@@ -39,6 +40,7 @@ func (t PortfolioTrade) RMultiple() float64 {
 	return pnlUnits / initialRisk
 }
 
+// IsWin reports whether the trade closed with positive PnL.
 func (t PortfolioTrade) IsWin() bool {
 	return t.PnL.Cmp(coredecimal.Decimal{}) > 0
 }

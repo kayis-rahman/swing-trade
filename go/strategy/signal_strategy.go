@@ -51,6 +51,43 @@ type SignalStrategy interface {
 	CrossFieldRules() []CrossFieldRule
 }
 
+// String returns the Java enum name for an IndicatorKey, supporting JSON/HTTP
+// rendering and diagnostics.
+func (k IndicatorKey) String() string {
+	switch k {
+	case IndicatorKeyEMA:
+		return "EMA"
+	case IndicatorKeyRSI:
+		return "RSI"
+	case IndicatorKeyATR:
+		return "ATR"
+	case IndicatorKeyVolume:
+		return "VOLUME"
+	case IndicatorKeyVolumeMA:
+		return "VOLUME_MA"
+	case IndicatorKeyHighestHigh:
+		return "HIGHEST_HIGH"
+	case IndicatorKeyLowestLow:
+		return "LOWEST_LOW"
+	case IndicatorKeyBBMiddle:
+		return "BB_MIDDLE"
+	case IndicatorKeyBBUpper:
+		return "BB_UPPER"
+	case IndicatorKeyBBLower:
+		return "BB_LOWER"
+	case IndicatorKeyKeltnerMiddle:
+		return "KELTNER_MIDDLE"
+	case IndicatorKeyKeltnerUpper:
+		return "KELTNER_UPPER"
+	case IndicatorKeyIndexClose:
+		return "INDEX_CLOSE"
+	case IndicatorKeyIndexEMA:
+		return "INDEX_EMA"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 // StrategyTypeRegistry mirrors Java's StrategyTypeRegistry: lookup of
 // registered SignalStrategy implementations by their stable type.
 //

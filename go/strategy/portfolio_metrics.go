@@ -37,6 +37,7 @@ type BenchmarkComparison struct {
 	Note      string
 }
 
+// BenchmarkComparisonStub returns a BenchmarkComparison marked unavailable.
 func BenchmarkComparisonStub() BenchmarkComparison {
 	return BenchmarkComparison{
 		Available: false,

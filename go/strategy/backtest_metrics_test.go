@@ -27,7 +27,7 @@ func TestBacktestMetricsSortinoUsesNegativeReturnsForDownsideDeviation(t *testin
 	got := SortinoRatio(curve)
 	// Recompute expected per Java formula:
 	exp := ((0.10 - (5.0 / 110.0) + (10.0 / 105.0)) / 3.0) /
-		math.Sqrt(math.Pow(5.0/110.0, 2)/3.0) * math.Sqrt(252.0)
+		math.Sqrt((5.0/110.0)*(5.0/110.0)/3.0) * math.Sqrt(252.0)
 	_ = exp
 	if got < exp-1e-9 || got > exp+1e-9 {
 		t.Fatalf("sortino = %v, want %v", got, exp)

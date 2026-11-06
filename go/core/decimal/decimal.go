@@ -31,7 +31,7 @@ func Parse(value string) (Decimal, error) {
 	return Decimal{units: units, scale: MoneyScale}, nil
 }
 
-// String returns the fixed-scale canonical representation.
+// Scale returns the decimal's fixed scale, defaulting to MoneyScale for zero values.
 func (d Decimal) Scale() int {
 	if d.scale == 0 {
 		return MoneyScale
@@ -228,7 +228,6 @@ func (d Decimal) MulInt(n int) Decimal {
 func FromUnits(units *big.Int) Decimal {
 	return Decimal{units: new(big.Int).Set(units), scale: MoneyScale}
 }
-
 
 func maxInt(a, b int) int {
 	if a > b {

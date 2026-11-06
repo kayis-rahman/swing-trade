@@ -76,7 +76,7 @@ func SortinoRatio(capitalCurve []coredecimal.Decimal) float64 {
 		dailyReturn := (decimalToFloat64(capitalCurve[i]) - decimalToFloat64(previous)) / decimalToFloat64(previous)
 		sumReturns += dailyReturn
 		downside := math.Min(dailyReturn, 0.0)
-		sumDownsideSquares += math.Pow(downside, 2)
+		sumDownsideSquares += downside * downside
 		observations++
 	}
 	if observations == 0 {
@@ -110,7 +110,7 @@ func SharpeRatio(capitalCurve []coredecimal.Decimal) float64 {
 	mean := sum / float64(len(returns))
 	variance := 0.0
 	for _, r := range returns {
-		variance += math.Pow(r-mean, 2)
+		variance += (r - mean) * (r - mean)
 	}
 	variance /= float64(len(returns))
 	deviation := math.Sqrt(variance)

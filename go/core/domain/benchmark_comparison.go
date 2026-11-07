@@ -1,5 +1,7 @@
 package domain
 
+import "strings"
+
 // BenchmarkComparison mirrors Java com.swingtrade.domain.BenchmarkComparison.
 type BenchmarkComparison struct {
 	BenchmarkName      string
@@ -26,7 +28,7 @@ const (
 
 // NewBenchmarkComparison constructs a BenchmarkComparison, validating its name.
 func NewBenchmarkComparison(benchmarkName string, strategyReturnPct, benchmarkReturnPct float64, availability BenchmarkAvailability) (BenchmarkComparison, error) {
-	if benchmarkName == "" {
+	if strings.TrimSpace(benchmarkName) == "" {
 		return BenchmarkComparison{}, &BenchmarkNameError{}
 	}
 	return BenchmarkComparison{

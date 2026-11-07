@@ -45,6 +45,12 @@ func (b IntradayBar) SessionDateLocal() string {
 	return b.Timestamp.In(nseZone).Format("2006-01-02")
 }
 
+// SessionTimeMinutes returns the IST wall-clock minutes since midnight for the bar.
+func (b IntradayBar) SessionTimeMinutes() int {
+	t := b.Timestamp.In(nseZone)
+	return t.Hour()*60 + t.Minute()
+}
+
 // AsCandle converts the intraday bar to an OHLCV candle.
 func (b IntradayBar) AsCandle(symbol string) domain.OhlcvCandle {
 	return domain.OhlcvCandleOf(symbol, b.SessionDate(), b.Open, b.High, b.Low, b.Close, b.Volume)

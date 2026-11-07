@@ -90,6 +90,10 @@ func (d Decimal) Sub(other Decimal) Decimal {
 	right := new(big.Int).Mul(other.value(), scaleUnit(scale-rightScale))
 	return Decimal{units: new(big.Int).Sub(left, right), scale: scale}
 }
+func (d Decimal) Mul(other Decimal) Decimal {
+	scale := d.Scale() + other.Scale()
+	return Decimal{units: new(big.Int).Mul(d.value(), other.value()), scale: scale}
+}
 
 // PercentOf computes numerator / denominator * 100, rounded HALF_UP to PercentScale.
 // A zero denominator returns scaled zero, matching Java FinancialScale.percentOf.
@@ -194,6 +198,30 @@ func ParseScale(value string, scale int) (Decimal, error) {
 // Units returns the underlying scaled integer for the decimal's own scale.
 func (d Decimal) Units() *big.Int {
 	return new(big.Int).Set(d.value())
+}
+
+// Money rounds the decimal to MoneyScale using HALF_UP, mirroring FinancialScale.money.
+func (d Decimal) Money() Decimal {
+	scale := d.Scale()
+	if scale == MoneyScale {
+		return d
+	}
+	if scale > MoneyScale {
+		div := scaleUnit(scale-MoneyScale)
+		q, r := new(big.Int), new(big.Int)
+		q.QuoRem(d.value(), div, r)
+		twoR := new(big.Int).Mul(r, big.NewInt(2))
+		if twoR.Cmp(div) >= 0 {
+			if d.value().Sign() < 0 {
+				q.Sub(q, big.NewInt(1))
+			} else {
+				q.Add(q, big.NewInt(1))
+			}
+		}
+		return Decimal{units: q, scale: MoneyScale}
+	}
+	// scale < MoneyScale: pad
+	return Decimal{units: new(big.Int).Mul(d.value(), scaleUnit(MoneyScale-scale)), scale: MoneyScale}
 }
 
 func (d Decimal) value() *big.Int {

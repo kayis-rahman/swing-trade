@@ -3,6 +3,7 @@ package strategy
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
@@ -87,7 +88,7 @@ func (e *IntradayBacktestEngine) RunAsOf(symbol string, input []IntradayBar, str
 }
 
 func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strategy SignalStrategy, params StrategyParamsView, forceFinalSquareOff bool) (IntradayBacktestResult, error) {
-	if symbol == "" || input == nil || strategy == nil {
+	if strings.TrimSpace(symbol) == "" || input == nil || strategy == nil {
 		return IntradayBacktestResult{}, fmt.Errorf("Symbol, bars, strategy and params are required")
 	}
 	var bars []IntradayBar
@@ -95,9 +96,6 @@ func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strateg
 		sd := bar.SessionDate()
 		if !e.isTradingSession(sd) {
 			continue
-		}
-		if !data.IsNormalSessionBarTime(bar.Timestamp) {
-			// data checks time-of-day using UTC wall? Java uses LocalTime independent. Use minute check.
 		}
 		if !isNormalSessionMinutes(bar.SessionTimeMinutes()) {
 			continue
@@ -253,9 +251,6 @@ func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strateg
 		OpenPositionEntryTime: openEntryTime,
 	}, nil
 }
-
-func (e *IntradayBacktestEngine) runAsOfWrapper() {}
-
 
 func isNormalSessionMinutes(mins int) bool {
 	start := 9*60 + 15

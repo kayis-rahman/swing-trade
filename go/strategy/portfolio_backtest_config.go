@@ -34,17 +34,11 @@ func NewPortfolioBacktestConfig(initialCapital coredecimal.Decimal, maxConcurren
 	if riskPerTradePct.Cmp(coredecimal.Decimal{}) <= 0 || riskPerTradePct.Cmp(mustParseDecimal("1")) > 0 {
 		return PortfolioBacktestConfig{}, fmt.Errorf("riskPerTradePct must be in (0,1]")
 	}
-	if slippagePct.Cmp(coredecimal.Decimal{}) < 0 {
-		slippagePct = coredecimal.Decimal{}
-	}
 	if costModel == nil {
 		costModel = ZerodhaDeliveryCostModel()
 	}
 	if atrPeriodForRanking <= 0 {
 		atrPeriodForRanking = 14
-	}
-	if brokeragePerTrade.Cmp(coredecimal.Decimal{}) < 0 {
-		brokeragePerTrade = coredecimal.Decimal{}
 	}
 	return PortfolioBacktestConfig{
 		InitialCapital:         initialCapital,

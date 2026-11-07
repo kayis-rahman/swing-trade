@@ -17,12 +17,14 @@ const (
 	intradaySquareOffCutoffMinutes = 15*60 + 20
 )
 
+// IntradayBacktestEngine mirrors Java intraday backtest engine.
 type IntradayBacktestEngine struct {
 	isTradingSession func(time.Time) bool
 	costs            IntradayCostModel
 	config           IntradayBacktestConfig
 }
 
+// NewIntradayBacktestEngine constructs an intraday backtest engine.
 func NewIntradayBacktestEngine(isTradingSession func(time.Time) bool, costs IntradayCostModel, config IntradayBacktestConfig) *IntradayBacktestEngine {
 	if isTradingSession == nil {
 		isTradingSession = func(time.Time) bool { return true }
@@ -30,22 +32,25 @@ func NewIntradayBacktestEngine(isTradingSession func(time.Time) bool, costs Intr
 	return &IntradayBacktestEngine{isTradingSession: isTradingSession, costs: costs, config: config}
 }
 
+// DefaultIntradayBacktestParams mirrors Java defaultParams().
 func DefaultIntradayBacktestParams() StrategyParamsView {
 	return StrategyParamsViewOf(map[string]any{})
 }
 
+// Run executes a full intraday backtest.
 func (e *IntradayBacktestEngine) Run(symbol string, input []IntradayBar, strategy SignalStrategy, params StrategyParamsView) (IntradayBacktestResult, error) {
 	return e.run(symbol, input, strategy, params, true)
 }
 
+// RunAsOf executes an intraday backtest as of a bar start.
 func (e *IntradayBacktestEngine) RunAsOf(symbol string, input []IntradayBar, strategy SignalStrategy, params StrategyParamsView, sessionDate time.Time, asOf time.Time) (IntradayBacktestResult, error) {
 	if input == nil || sessionDate.IsZero() || asOf.IsZero() {
-		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start")
+		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	ist := time.FixedZone("IST", 5*60*60+30*60)
 	asOfLocal := asOf.In(ist)
 	if asOfLocal.Second() != 0 || asOfLocal.Nanosecond() != 0 {
-		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start")
+		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	asOfMin := asOfLocal.Hour()*60 + asOfLocal.Minute()
 	starts := data.ExpectedNSESessionBarStarts(sessionDate, e.isTradingSession(sessionDate))
@@ -58,7 +63,7 @@ func (e *IntradayBacktestEngine) RunAsOf(symbol string, input []IntradayBar, str
 		}
 	}
 	if !found {
-		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start")
+		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	var visible []IntradayBar
 	hasAsOf := false
@@ -84,14 +89,14 @@ func (e *IntradayBacktestEngine) RunAsOf(symbol string, input []IntradayBar, str
 		}
 	}
 	if !hasAsOf {
-		return IntradayBacktestResult{}, fmt.Errorf("The selected as-of bar is missing")
+		return IntradayBacktestResult{}, fmt.Errorf("The selected as-of bar is missing") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	return e.run(symbol, visible, strategy, params, false)
 }
 
-func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strategy SignalStrategy, params StrategyParamsView, forceFinalSquareOff bool) (IntradayBacktestResult, error) {
+func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strategy SignalStrategy, params StrategyParamsView, forceFinalSquareOff bool) (IntradayBacktestResult, error) { //nolint:funlen
 	if strings.TrimSpace(symbol) == "" || input == nil || strategy == nil {
-		return IntradayBacktestResult{}, fmt.Errorf("Symbol, bars, strategy and params are required")
+		return IntradayBacktestResult{}, fmt.Errorf("Symbol, bars, strategy and params are required") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	var bars []IntradayBar
 	for _, bar := range input {
@@ -111,7 +116,7 @@ func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strateg
 	sort.Slice(bars, func(i, j int) bool { return bars[i].Timestamp.Before(bars[j].Timestamp) })
 	for i := 1; i < len(bars); i++ {
 		if !bars[i].Timestamp.After(bars[i-1].Timestamp) {
-			return IntradayBacktestResult{}, fmt.Errorf("Bars must have unique, increasing timestamps")
+			return IntradayBacktestResult{}, fmt.Errorf("Bars must have unique, increasing timestamps") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 		}
 	}
 	if len(bars) == 0 {
@@ -145,19 +150,20 @@ func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strateg
 			targetHit := !stopHit && bar.High.Cmp(position.Target) >= 0
 			barrierExit := stopHit || targetHit
 			exit := ExitHold()
-			if stopHit {
+			switch {
+			case stopHit:
 				ref := position.StopLoss
 				if bar.Open.Cmp(ref) < 0 {
 					ref = bar.Open
 				}
 				exit = ExitWith(ExitReasonStopLoss, ref, "Intraday stop")
-			} else if targetHit {
+			case targetHit:
 				ref := position.Target
 				if bar.Open.Cmp(ref) > 0 {
 					ref = bar.Open
 				}
 				exit = ExitWith(ExitReasonTargetHit, ref, "Intraday target")
-			} else {
+			default:
 				ex, err := strategy.EvaluateExit(ctx, i, *position, params)
 				if err == nil {
 					exit = ex
@@ -169,18 +175,19 @@ func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strateg
 			if exit.Exit || cutoff || cutoffBar || sessionEnd {
 				var reference coredecimal.Decimal
 				var reason string
-				if barrierExit {
+				switch {
+				case barrierExit:
 					if exit.ExitPrice != nil {
 						reference = *exit.ExitPrice
 					}
 					reason = string(exit.Reason)
-				} else if cutoff || cutoffBar {
+				case cutoff || cutoffBar:
 					reference = bar.Open
 					reason = "FORCED_SQUARE_OFF"
-				} else if exit.Exit && exit.ExitPrice != nil {
+				case exit.Exit && exit.ExitPrice != nil:
 					reference = *exit.ExitPrice
 					reason = string(exit.Reason)
-				} else {
+				default:
 					reference = bar.Close
 					reason = "FORCED_SESSION_END"
 				}

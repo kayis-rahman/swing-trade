@@ -16,7 +16,7 @@ Reference: `phase-4-strategy-backtest.md` -> `## Gate G4 exit criteria`.
 | Exit criterion | Status | Evidence in repo | Missing |
 | --- | --- | --- | --- |
 | Zero diff on decimal paths | OPEN | `go/strategy/decimal_num.go`, `decimal_math.go`, `market_context.go`, `market_context_indicators.go`; `F-STRAT-IND-01..11` rows are `parity-pending` | Golden-signal comparison over the full watchlist history; parallel-run output; Java golden vectors beyond the committed red tests |
-| Trade lists identical | OPEN | No backtest/portfolio/intraday backtest engine present in `go/strategy` | Backtest engines and their translated Java tests; trade-list comparison report |
+| Trade lists identical | OPEN | Intraday backtest engine now ported (`go/strategy/intraday_backtest_engine.go`); backtest/portfolio engines still absent | Backtest engines and their translated Java tests; trade-list comparison report |
 | Documented tolerances only on float paths that are float in Java too | PARTIAL | Porting notes in `phase-4-strategy-backtest.md`; float-path rationale documented | Final tolerance table with measured diffs; floats remain parity-pending |
 | Performance recorded | OPEN | none | Performance comparison on the Pi against Java |
 

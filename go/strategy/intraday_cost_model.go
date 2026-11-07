@@ -14,15 +14,23 @@ type IntradayCostModel struct {
 }
 
 var (
-	intradaySTTSell  = mustParseDecimal("0.00025")
-	intradayStampBuy = mustParseDecimal("0.00003")
-	intradayExchange = mustParseDecimal("0.0000307")
-	intradaySebi     = mustParseDecimal("0.0000001")
-	intradayGstRate  = mustParseDecimal("0.18")
+	intradaySTTSell  = mustParseDecimalScale("0.00025", 10)
+	intradayStampBuy = mustParseDecimalScale("0.00003", 10)
+	intradayExchange = mustParseDecimalScale("0.0000307", 10)
+	intradaySebi     = mustParseDecimalScale("0.0000001", 10)
+	intradayGstRate  = mustParseDecimalScale("0.18", 10)
 )
 
 func mustParseDecimal(s string) coredecimal.Decimal {
 	d, err := coredecimal.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
+func mustParseDecimalScale(s string, scale int) coredecimal.Decimal {
+	d, err := coredecimal.ParseScale(s, scale)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +46,7 @@ func qScalar(quantity int) coredecimal.Decimal {
 // slippage, mirroring Java's constructor.
 func NewIntradayCostModel(brokeragePerOrder, slippageRate coredecimal.Decimal) (IntradayCostModel, error) {
 	if brokeragePerOrder.Cmp(coredecimal.Decimal{}) < 0 || slippageRate.Cmp(coredecimal.Decimal{}) < 0 {
-		return IntradayCostModel{}, fmt.Errorf("Costs must be non-negative")
+		return IntradayCostModel{}, fmt.Errorf("Costs must be non-negative") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	return IntradayCostModel{brokeragePerOrder: brokeragePerOrder, slippageRate: slippageRate}, nil
 }
@@ -49,19 +57,22 @@ func DefaultIntradayCostModel() IntradayCostModel {
 	return m
 }
 
+// BuyFill returns the buy price after slippage.
 func (c IntradayCostModel) BuyFill(reference coredecimal.Decimal) coredecimal.Decimal {
 	one := mustParseDecimal("1")
 	return decimalProduct(reference, one.Add(c.slippageRate))
 }
 
+// SellFill returns the sell price after slippage.
 func (c IntradayCostModel) SellFill(reference coredecimal.Decimal) coredecimal.Decimal {
 	one := mustParseDecimal("1")
 	return decimalProduct(reference, one.Sub(c.slippageRate))
 }
 
+// RoundTripCost computes round-trip transaction costs.
 func (c IntradayCostModel) RoundTripCost(buy, sell coredecimal.Decimal, quantity int) (coredecimal.Decimal, error) {
 	if quantity <= 0 {
-		return coredecimal.Decimal{}, fmt.Errorf("Quantity must be positive")
+		return coredecimal.Decimal{}, fmt.Errorf("Quantity must be positive") //nolint:staticcheck // exact Java IllegalArgumentException message for parity
 	}
 	q := qScalar(quantity)
 	buyTurnover := decimalProduct(buy, q)

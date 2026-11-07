@@ -34,8 +34,6 @@ func DefaultIntradayBacktestParams() StrategyParamsView {
 	return StrategyParamsViewOf(map[string]any{})
 }
 
-func DefaultIntradayBacktestEngineParams() StrategyParamsView { return StrategyParamsViewOf(map[string]any{}) }
-
 func (e *IntradayBacktestEngine) Run(symbol string, input []IntradayBar, strategy SignalStrategy, params StrategyParamsView) (IntradayBacktestResult, error) {
 	return e.run(symbol, input, strategy, params, true)
 }
@@ -45,7 +43,11 @@ func (e *IntradayBacktestEngine) RunAsOf(symbol string, input []IntradayBar, str
 		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start")
 	}
 	ist := time.FixedZone("IST", 5*60*60+30*60)
-	asOfMin := asOf.In(ist).Hour()*60 + asOf.In(ist).Minute()
+	asOfLocal := asOf.In(ist)
+	if asOfLocal.Second() != 0 || asOfLocal.Nanosecond() != 0 {
+		return IntradayBacktestResult{}, fmt.Errorf("As-of time must be an expected session bar start")
+	}
+	asOfMin := asOfLocal.Hour()*60 + asOfLocal.Minute()
 	starts := data.ExpectedNSESessionBarStarts(sessionDate, e.isTradingSession(sessionDate))
 	found := false
 	for _, s := range starts {

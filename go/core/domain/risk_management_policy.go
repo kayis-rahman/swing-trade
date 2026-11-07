@@ -10,10 +10,12 @@ import (
 // RiskManagementPolicy mirrors Java's com.swingtrade.domain.RiskManagementPolicy.
 type RiskManagementPolicy func(ctx RiskManagementContext) RiskManagementDecision
 
+// RiskManagementPolicyNone mirrors Java's RiskManagementPolicy.none().
 func RiskManagementPolicyNone() RiskManagementPolicy {
 	return func(ctx RiskManagementContext) RiskManagementDecision { return RiskManagementDecisionHold() }
 }
 
+// RiskManagementContext mirrors Java's com.swingtrade.domain.RiskManagementPolicy.RiskManagementContext record.
 type RiskManagementContext struct {
 	EntryPrice            coredecimal.Decimal
 	InitialStop           coredecimal.Decimal
@@ -28,6 +30,7 @@ type RiskManagementContext struct {
 	HasCurrentATR         bool
 }
 
+// NewRiskManagementContextFull mirrors Java's full RiskManagementContext constructor.
 func NewRiskManagementContextFull(entryPrice, initialStop, target, currentClose, currentLow, currentHigh, highestCloseBeforeBar coredecimal.Decimal, holdingDays int, partialExitTaken bool, currentAtr coredecimal.Decimal, hasAtr bool) (RiskManagementContext, error) {
 	ctx := RiskManagementContext{
 		EntryPrice:            entryPrice,
@@ -50,11 +53,12 @@ func NewRiskManagementContextFull(entryPrice, initialStop, target, currentClose,
 
 func (c RiskManagementContext) validate() error {
 	if c.HoldingDays < 0 {
-		return fmt.Errorf("Risk-management context is invalid")
+		return fmt.Errorf("Risk-management context is invalid") //nolint:staticcheck // exact Java message
 	}
 	return nil
 }
 
+// RiskManagementDecision mirrors Java's com.swingtrade.domain.RiskManagementPolicy.RiskManagementDecision record.
 type RiskManagementDecision struct {
 	Exit             bool
 	StopPrice        coredecimal.Decimal
@@ -64,10 +68,12 @@ type RiskManagementDecision struct {
 	HasPartialRatio  bool
 }
 
+// RiskManagementDecisionHold mirrors Java's RiskManagementDecision.hold().
 func RiskManagementDecisionHold() RiskManagementDecision {
 	return RiskManagementDecision{Exit: false, Reason: "", StopPrice: coredecimal.Decimal{}, HasStopPrice: false}
 }
 
+// RiskManagementDecisionExit mirrors Java's RiskManagementDecision.exit().
 func RiskManagementDecisionExit(stopPrice coredecimal.Decimal, reason string) (RiskManagementDecision, error) {
 	blank := true
 	for _, r := range reason {
@@ -77,15 +83,16 @@ func RiskManagementDecisionExit(stopPrice coredecimal.Decimal, reason string) (R
 		}
 	}
 	if blank {
-		return RiskManagementDecision{}, fmt.Errorf("An exit decision requires a stop price and reason")
+		return RiskManagementDecision{}, fmt.Errorf("An exit decision requires a stop price and reason") //nolint:staticcheck // exact Java message
 	}
 	return RiskManagementDecision{Exit: true, StopPrice: stopPrice, HasStopPrice: true, Reason: reason}, nil
 }
 
+// RiskManagementDecisionPartialExit mirrors Java's RiskManagementDecision.partialExit().
 func RiskManagementDecisionPartialExit(exitPrice coredecimal.Decimal, ratio coredecimal.Decimal) (RiskManagementDecision, error) {
 	one, _ := coredecimal.Parse("1")
 	if ratio.Cmp(coredecimal.Decimal{}) <= 0 || ratio.Cmp(one) > 0 {
-		return RiskManagementDecision{}, fmt.Errorf("Partial exit ratio must be between 0 and 1")
+		return RiskManagementDecision{}, fmt.Errorf("Partial exit ratio must be between 0 and 1") //nolint:staticcheck // exact Java message
 	}
 	return RiskManagementDecision{Exit: false, StopPrice: exitPrice, HasStopPrice: true, Reason: "PARTIAL_TARGET", PartialExitRatio: ratio, HasPartialRatio: true}, nil
 }

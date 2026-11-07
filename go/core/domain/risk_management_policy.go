@@ -2,7 +2,7 @@ package domain
 
 import (
 	"fmt"
-	"strings"
+	"unicode"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
 )
@@ -69,7 +69,14 @@ func RiskManagementDecisionHold() RiskManagementDecision {
 }
 
 func RiskManagementDecisionExit(stopPrice coredecimal.Decimal, reason string) (RiskManagementDecision, error) {
-	if strings.TrimSpace(reason) == "" {
+	blank := true
+	for _, r := range reason {
+		if !unicode.IsSpace(r) {
+			blank = false
+			break
+		}
+	}
+	if blank {
 		return RiskManagementDecision{}, fmt.Errorf("An exit decision requires a stop price and reason")
 	}
 	return RiskManagementDecision{Exit: true, StopPrice: stopPrice, HasStopPrice: true, Reason: reason}, nil
@@ -77,7 +84,7 @@ func RiskManagementDecisionExit(stopPrice coredecimal.Decimal, reason string) (R
 
 func RiskManagementDecisionPartialExit(exitPrice coredecimal.Decimal, ratio coredecimal.Decimal) (RiskManagementDecision, error) {
 	one, _ := coredecimal.Parse("1")
-	if ratio.Cmp(coredecimal.Decimal{}) <= 0 || ratio.Cmp(one) >= 0 {
+	if ratio.Cmp(coredecimal.Decimal{}) <= 0 || ratio.Cmp(one) > 0 {
 		return RiskManagementDecision{}, fmt.Errorf("Partial exit ratio must be between 0 and 1")
 	}
 	return RiskManagementDecision{Exit: false, StopPrice: exitPrice, HasStopPrice: true, Reason: "PARTIAL_TARGET", PartialExitRatio: ratio, HasPartialRatio: true}, nil

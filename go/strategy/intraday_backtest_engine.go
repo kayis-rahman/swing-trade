@@ -185,7 +185,7 @@ func (e *IntradayBacktestEngine) run(symbol string, input []IntradayBar, strateg
 				sell := e.costs.SellFill(reference)
 				fees, err := e.costs.RoundTripCost(position.EntryPrice, sell, position.Quantity)
 				if err != nil {
-					fees = coredecimal.Decimal{}
+					return IntradayBacktestResult{}, err
 				}
 				diff := sell.Sub(position.EntryPrice)
 				pnl := diff.MulInt(position.Quantity).Sub(fees)
@@ -269,5 +269,3 @@ func barStartMatches(starts []time.Time, bar IntradayBar) bool {
 	return false
 }
 
-// package-level default params function used by Java tests
-var _ = time.Time{}

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	zerodhaSTTRate     = "0.001"
+	zerodhaSTTRate      = "0.001"
 	zerodhaExchangeRate = "0.0000297"
 	zerodhaSebiRate     = "0.000001"
 	zerodhaStampRate    = "0.00015"

@@ -16,6 +16,7 @@ import (
 	"github.com/kayis-rahman/swing-trade/go/core/config"
 	corelog "github.com/kayis-rahman/swing-trade/go/core/log"
 	"github.com/kayis-rahman/swing-trade/go/data"
+	"github.com/kayis-rahman/swing-trade/go/strategy"
 )
 
 type healthResponse struct {
@@ -81,6 +82,7 @@ func NewHandlerWithStores(cfg config.Config, logger *slog.Logger, clock corecloc
 	controller.RegisterWatchlistRoutes(mux, watchlist, logger, clock)
 	controller.RegisterSignalRoutes(mux, signals, logger, clock)
 	controller.RegisterStrategyConfigRoutes(mux, strategyConfigs, logger, clock)
+	controller.RegisterStrategyTypeRoutes(mux, nil, strategy.ParamSchemaValidator{}, logger, clock)
 	controller.RegisterIngestionRoutes(mux, ingestionStatus, logger, clock)
 	controller.RegisterIngestionReconcileRoute(mux, watchlist, reconciliation, logger, clock)
 	controller.RegisterSettingsRoutes(mux, settings, logger, clock, cfg.GPUHubAPIKeyConfigured)

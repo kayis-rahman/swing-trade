@@ -14,9 +14,11 @@ const (
 	Int32Max       = int32(1<<31 - 1)
 )
 
-// Decimal is an immutable fixed-scale decimal. The zero value is numeric zero.
+// Decimal is an immutable decimal with a fixed scale. The zero value is numeric zero
+// at MoneyScale.
 type Decimal struct {
 	units *big.Int
+	scale int
 }
 
 // Parse converts a base-10 value to MoneyScale places using HALF_UP rounding.
@@ -26,36 +28,67 @@ func Parse(value string) (Decimal, error) {
 	if err != nil {
 		return Decimal{}, err
 	}
-	return Decimal{units: units}, nil
+	return Decimal{units: units, scale: MoneyScale}, nil
 }
 
-// String returns the fixed-scale canonical representation.
+// Scale returns the decimal's fixed scale, defaulting to MoneyScale for zero values.
+func (d Decimal) Scale() int {
+	if d.scale == 0 {
+		return MoneyScale
+	}
+	return d.scale
+}
+
 func (d Decimal) String() string {
+	scale := d.Scale()
 	value := d.value()
 	negative := value.Sign() < 0
 	value.Abs(value)
 	whole, fraction := new(big.Int), new(big.Int)
-	whole.QuoRem(value, scaleUnit(MoneyScale), fraction)
+	whole.QuoRem(value, scaleUnit(scale), fraction)
 	prefix := ""
 	if negative {
 		prefix = "-"
 	}
-	return fmt.Sprintf("%s%s.%0*s", prefix, whole.String(), MoneyScale, fraction.String())
+	return fmt.Sprintf("%s%s.%0*s", prefix, whole.String(), scale, fraction.String())
+}
+
+// MarshalJSON renders the decimal as a JSON number, preserving its fixed scale.
+func (d Decimal) MarshalJSON() ([]byte, error) {
+	return []byte(d.String()), nil
 }
 
 // Cmp compares two decimals numerically and returns -1, 0, or 1.
 func (d Decimal) Cmp(other Decimal) int {
-	return d.value().Cmp(other.value())
+	leftScale := d.Scale()
+	rightScale := other.Scale()
+	if leftScale == rightScale {
+		return d.value().Cmp(other.value())
+	}
+	scale := maxInt(leftScale, rightScale)
+	left := new(big.Int).Mul(d.value(), scaleUnit(scale-leftScale))
+	right := new(big.Int).Mul(other.value(), scaleUnit(scale-rightScale))
+	return left.Cmp(right)
 }
 
 // Add returns the sum without mutating either operand.
 func (d Decimal) Add(other Decimal) Decimal {
-	return Decimal{units: new(big.Int).Add(d.value(), other.value())}
+	leftScale := d.Scale()
+	rightScale := other.Scale()
+	scale := maxInt(leftScale, rightScale)
+	left := new(big.Int).Mul(d.value(), scaleUnit(scale-leftScale))
+	right := new(big.Int).Mul(other.value(), scaleUnit(scale-rightScale))
+	return Decimal{units: new(big.Int).Add(left, right), scale: scale}
 }
 
 // Sub returns the difference without mutating either operand.
 func (d Decimal) Sub(other Decimal) Decimal {
-	return Decimal{units: new(big.Int).Sub(d.value(), other.value())}
+	leftScale := d.Scale()
+	rightScale := other.Scale()
+	scale := maxInt(leftScale, rightScale)
+	left := new(big.Int).Mul(d.value(), scaleUnit(scale-leftScale))
+	right := new(big.Int).Mul(other.value(), scaleUnit(scale-rightScale))
+	return Decimal{units: new(big.Int).Sub(left, right), scale: scale}
 }
 
 // PercentOf computes numerator / denominator * 100, rounded HALF_UP to PercentScale.
@@ -63,11 +96,11 @@ func (d Decimal) Sub(other Decimal) Decimal {
 func PercentOf(numerator, denominator Decimal) Decimal {
 	den := denominator.value()
 	if den.Sign() == 0 {
-		return Decimal{}
+		return Decimal{scale: PercentScale}
 	}
 	factor := new(big.Int).Mul(big.NewInt(100), new(big.Int).Exp(big.NewInt(10), big.NewInt(PercentScale), nil))
 	num := new(big.Int).Mul(numerator.value(), factor)
-	return Decimal{units: roundHalfUp(num, den)}
+	return Decimal{units: roundHalfUp(num, den), scale: PercentScale}
 }
 
 // WholeShares truncates toward zero and saturates at Java's Integer.MAX_VALUE.
@@ -148,7 +181,17 @@ func scaleUnit(scale int) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(scale)), nil)
 }
 
-// Units returns the underlying scaled integer (scale 4).
+// ParseScale converts a base-10 value to the requested scale using HALF_UP rounding.
+func ParseScale(value string, scale int) (Decimal, error) {
+	value = strings.TrimSpace(value)
+	units, err := scaledUnits(value, scale)
+	if err != nil {
+		return Decimal{}, err
+	}
+	return Decimal{units: units, scale: scale}, nil
+}
+
+// Units returns the underlying scaled integer for the decimal's own scale.
 func (d Decimal) Units() *big.Int {
 	return new(big.Int).Set(d.value())
 }
@@ -178,10 +221,17 @@ func (d Decimal) MulInt(n int) Decimal {
 	if n == 0 {
 		return Decimal{}
 	}
-	return Decimal{units: new(big.Int).Mul(d.value(), big.NewInt(int64(n)))}
+	return Decimal{units: new(big.Int).Mul(d.value(), big.NewInt(int64(n))), scale: d.Scale()}
 }
 
 // FromUnits constructs a MoneyScale decimal from scaled integer units.
 func FromUnits(units *big.Int) Decimal {
-	return Decimal{units: new(big.Int).Set(units)}
+	return Decimal{units: new(big.Int).Set(units), scale: MoneyScale}
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

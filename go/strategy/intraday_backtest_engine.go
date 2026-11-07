@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	intradayLastEntryBarMinutes   = 15 * 60
-	intradaySquareOffBarMinutes   = 15*60 + 15
+	intradayLastEntryBarMinutes    = 15 * 60
+	intradaySquareOffBarMinutes    = 15*60 + 15
 	intradaySquareOffCutoffMinutes = 15*60 + 20
 )
 
@@ -63,7 +63,7 @@ func (e *IntradayBacktestEngine) RunAsOf(symbol string, input []IntradayBar, str
 	var visible []IntradayBar
 	hasAsOf := false
 	for _, bar := range input {
-		if !bar.SessionDate().Equal(sessionDate) {
+		if bar.SessionDate().UTC().Format("2006-01-02") != sessionDate.UTC().Format("2006-01-02") {
 			continue
 		}
 		if bar.SessionTimeMinutes() > asOfMin {
@@ -261,13 +261,18 @@ func isNormalSessionMinutes(mins int) bool {
 }
 
 func barStartMatches(starts []time.Time, bar IntradayBar) bool {
+	barLocal := bar.Timestamp.In(nseZone)
 	for _, s := range starts {
-		ist := time.FixedZone("IST", 5*60*60+30*60)
-		si := s.In(ist)
-		if si.Hour()*60+si.Minute() == bar.SessionTimeMinutes() {
+		startLocal := s.In(nseZone)
+		if startLocal.Year() == barLocal.Year() &&
+			startLocal.Month() == barLocal.Month() &&
+			startLocal.Day() == barLocal.Day() &&
+			startLocal.Hour() == barLocal.Hour() &&
+			startLocal.Minute() == barLocal.Minute() &&
+			startLocal.Second() == barLocal.Second() &&
+			startLocal.Nanosecond() == barLocal.Nanosecond() {
 			return true
 		}
 	}
 	return false
 }
-

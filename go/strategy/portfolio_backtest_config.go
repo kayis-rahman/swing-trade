@@ -4,18 +4,32 @@ import (
 	"fmt"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
+	domain "github.com/kayis-rahman/swing-trade/go/core/domain"
 )
 
 // PortfolioBacktestConfig mirrors Java record.
 type PortfolioBacktestConfig struct {
-	InitialCapital         coredecimal.Decimal
-	MaxConcurrentPositions int
-	MaxCapitalPerPosition  coredecimal.Decimal
-	RiskPerTradePct        coredecimal.Decimal
-	SlippagePct            coredecimal.Decimal
-	CostModel              BacktestCostModel
-	ATRPeriodForRanking    int
-	BrokeragePerTrade      coredecimal.Decimal
+	InitialCapital          coredecimal.Decimal
+	MaxConcurrentPositions  int
+	MaxCapitalPerPosition   coredecimal.Decimal
+	RiskPerTradePct         coredecimal.Decimal
+	SlippagePct             coredecimal.Decimal
+	CostModel               BacktestCostModel
+	ATRPeriodForRanking     int
+	BrokeragePerTrade       coredecimal.Decimal
+	RiskManagementPolicy    domain.RiskManagementPolicy
+	PortfolioExposurePolicy domain.PortfolioExposurePolicy
+}
+
+// WithDefaultsPolicies fills nil risk and exposure policies with no-op defaults.
+func (c PortfolioBacktestConfig) WithDefaultsPolicies() PortfolioBacktestConfig {
+	if c.RiskManagementPolicy == nil {
+		c.RiskManagementPolicy = domain.RiskManagementPolicyNone()
+	}
+	if c.PortfolioExposurePolicy == nil {
+		c.PortfolioExposurePolicy = domain.PortfolioExposurePolicyNone()
+	}
+	return c
 }
 
 // NewPortfolioBacktestConfig mirrors Java constructor validation.

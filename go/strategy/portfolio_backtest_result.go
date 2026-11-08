@@ -4,6 +4,7 @@ import (
 	"time"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
+	domain "github.com/kayis-rahman/swing-trade/go/core/domain"
 )
 
 // PortfolioBacktestResult mirrors Java's com.swingtrade.strategy.PortfolioBacktestResult.
@@ -24,6 +25,6 @@ type PortfolioBacktestResult struct {
 	Trades              []BacktestTrade
 	EquityCurve         []PortfolioEquityPoint
 	RejectionReasons    []string
-	BenchmarkComparison BenchmarkComparison
+	BenchmarkComparison domain.BenchmarkComparison
 	StrategyVariantID   *string
 }

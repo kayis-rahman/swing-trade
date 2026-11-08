@@ -109,7 +109,7 @@ func returns(prices []float64, lookback int) []float64 {
 	for i := from + 1; i < len(prices); i++ {
 		previous := prices[i-1]
 		current := prices[i]
-		if previous <= 0 || current <= 0 {
+		if previous <= 0 || current <= 0 || math.IsNaN(previous) || math.IsInf(previous, 0) || math.IsNaN(current) || math.IsInf(current, 0) {
 			return []float64{}
 		}
 		result = append(result, current/previous-1.0)

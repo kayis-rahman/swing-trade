@@ -11,9 +11,35 @@ import (
 const portfolioSettlementT2Days = 1
 
 // PortfolioBacktestEngineSimulate runs the shared-capital portfolio backtest.
-func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config PortfolioBacktestConfig, evaluationStart, evaluationEnd time.Time, marketData map[string][]domain.OhlcvCandle, sectors map[string]string) (PortfolioBacktestResult, error) {
+func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config PortfolioBacktestConfig, evaluationStart, evaluationEnd time.Time, optional ...any) (PortfolioBacktestResult, error) {
 	if symbolResults == nil {
 		// allow empty
+	}
+	marketData := map[string][]domain.OhlcvCandle{}
+	sectors := map[string]string{}
+	var benchmark *domain.BenchmarkCandleSeries
+	var strategyVariantID *string
+	for _, arg := range optional {
+		switch v := arg.(type) {
+		case nil:
+			// ignore
+		case map[string][]domain.OhlcvCandle:
+			marketData = v
+		case map[string]string:
+			sectors = v
+		case *domain.BenchmarkCandleSeries:
+			benchmark = v
+		case domain.BenchmarkCandleSeries:
+			bv := v
+			benchmark = &bv
+		case *string:
+			strategyVariantID = v
+		case string:
+			if v != "" {
+				sv := v
+				strategyVariantID = &sv
+			}
+		}
 	}
 	if evaluationStart.IsZero() || evaluationEnd.IsZero() || evaluationStart.After(evaluationEnd) {
 		return PortfolioBacktestResult{}, fmt.Errorf("Portfolio inputs must be non-null and the window must be ordered")
@@ -173,15 +199,20 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 					s := sec
 					candidateSector = &s
 				}
-				// closing prices float
+				// closing prices float (sorted by date to match Java)
 				closingPrices := map[string][]float64{}
 				for sym, candles := range marketData {
-					for _, c := range candles {
-						// append close as float approx
-						_ = c
+					sorted := append([]domain.OhlcvCandle(nil), candles...)
+					// insertion sort by date
+					for i := 1; i < len(sorted); i++ {
+						j := i
+						for j > 0 && sorted[j-1].Date.After(sorted[j].Date) {
+							sorted[j-1], sorted[j] = sorted[j], sorted[j-1]
+							j--
+						}
 					}
 					var prices []float64
-					for _, c := range candles {
+					for _, c := range sorted {
 						prices = append(prices, decimalToFloat64(c.Close))
 					}
 					closingPrices[sym] = prices
@@ -232,34 +263,61 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 		equityCurve = append(equityCurve, equityCurvePoint)
 	}
 
-	// For simplicity, return minimal result without equity curve details.
 	finalCapital := config.InitialCapital
+	if len(equityCurve) > 0 {
+		finalCapital = equityCurve[len(equityCurve)-1].Equity
+	}
 	winners := 0
 	for _, t := range accepted {
 		if t.PnL.Cmp(coredecimal.Decimal{}) > 0 {
 			winners++
 		}
 	}
+	equityValues := make([]coredecimal.Decimal, len(equityCurve))
+	for i, p := range equityCurve {
+		equityValues[i] = p.Equity
+	}
+	maxDrawdown := MaxDrawdownPct(equityValues)
+	cagr := CagrPct(config.InitialCapital, finalCapital, evaluationStart, evaluationEnd)
+	totalReturn := TotalReturnPct(config.InitialCapital, finalCapital)
+	benchmarkComparison := domain.UnavailableBenchmark(decimalToFloat64(totalReturn))
+	if benchmark != nil {
+		benchmarkComparison = portfolioBenchmarkComparison(*benchmark, decimalToFloat64(totalReturn))
+	}
 	return PortfolioBacktestResult{
 		EvaluationStart:     evaluationStart,
 		EvaluationEnd:       evaluationEnd,
 		InitialCapital:     config.InitialCapital,
 		FinalCapital:       finalCapital,
-		TotalReturn:        coredecimal.PercentOf(finalCapital.Sub(config.InitialCapital), config.InitialCapital),
-		MaxDrawdownPct:     coredecimal.Decimal{},
-		SharpeRatio:        0,
-		CAGRPct:            0,
-		SortinoRatio:       0,
-		CalmarRatio:        0,
+		TotalReturn:        totalReturn,
+		MaxDrawdownPct:     maxDrawdown,
+		SharpeRatio:        SharpeRatio(equityValues),
+		CAGRPct:            cagr,
+		SortinoRatio:       SortinoRatio(equityValues),
+		CalmarRatio:        CalmarRatio(cagr, maxDrawdown),
 		TotalTrades:        len(accepted),
 		WinningTrades:      winners,
 		RejectedTrades:     rejected,
 		Trades:             accepted,
 		EquityCurve:        equityCurve,
 		RejectionReasons:   rejectionReasons,
-		BenchmarkComparison: BenchmarkComparisonStub(),
-		StrategyVariantID:   nil,
+		BenchmarkComparison: benchmarkComparison,
+		StrategyVariantID:   strategyVariantID,
 	}, nil
+}
+
+func portfolioBenchmarkComparison(series domain.BenchmarkCandleSeries, totalReturn float64) domain.BenchmarkComparison {
+	candles := series.Candles
+	if len(candles) < 2 {
+		return domain.UnavailableBenchmark(totalReturn)
+	}
+	first := candles[0]
+	last := candles[len(candles)-1]
+	if first.Close.Cmp(coredecimal.Decimal{}) <= 0 || last.Close.Cmp(coredecimal.Decimal{}) <= 0 {
+		return domain.UnavailableBenchmark(totalReturn)
+	}
+	returnPct := (decimalToFloat64(last.Close) - decimalToFloat64(first.Close)) / decimalToFloat64(first.Close) * 100.0
+	return domain.Nifty50PriceBenchmark(totalReturn, returnPct)
 }
 
 func openList(open map[string]BacktestTrade) []BacktestTrade {
@@ -342,6 +400,7 @@ func portfolioNextSettlementDate(exitDate time.Time, nextTradingDate map[time.Ti
 		if v, ok := nextTradingDate[exitDate]; ok {
 			return v
 		}
+		return exitDate.AddDate(0, 0, 1)
 	}
 	settlement := exitDate.AddDate(0, 0, 1)
 	for settlement.Weekday() == time.Saturday || settlement.Weekday() == time.Sunday {

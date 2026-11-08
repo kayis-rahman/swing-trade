@@ -35,10 +35,8 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 		case *string:
 			strategyVariantID = v
 		case string:
-			if v != "" {
-				sv := v
-				strategyVariantID = &sv
-			}
+			sv := v
+			strategyVariantID = &sv
 		}
 	}
 	if evaluationStart.IsZero() || evaluationEnd.IsZero() || evaluationStart.After(evaluationEnd) {

@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"math"
+	"strconv"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
 )
@@ -56,8 +57,14 @@ type CorrelationExposureLimit struct {
 
 
 func PortfolioExposurePolicyLimits(sectorLimit SectorExposureLimit, correlationLimit CorrelationExposureLimit) PortfolioExposurePolicy {
-	if sectorLimit.MaxPositions == 0 && sectorLimit.MaxCapitalFraction == 0 {
-		// still valid-ish
+	if sectorLimit.MaxPositions < 0 || !math.IsNaN(sectorLimit.MaxCapitalFraction) && !math.IsInf(sectorLimit.MaxCapitalFraction, 0) ||
+		sectorLimit.MaxCapitalFraction < 0 || sectorLimit.MaxCapitalFraction > 1 {
+		panic("Sector exposure limits must be non-negative and bounded")
+	}
+	if !math.IsNaN(correlationLimit.MaxAbsoluteCorrelation) && !math.IsInf(correlationLimit.MaxAbsoluteCorrelation, 0) ||
+		correlationLimit.MaxAbsoluteCorrelation < 0 || correlationLimit.MaxAbsoluteCorrelation > 1 ||
+		correlationLimit.LookbackDays < 2 {
+		panic("Correlation exposure limits must be bounded with a valid lookback")
 	}
 	return func(ctx PortfolioExposureContext) PortfolioExposureDecision {
 		var sectorHoldings []PortfolioExposureContextHolding
@@ -73,7 +80,7 @@ func PortfolioExposurePolicyLimits(sectorLimit SectorExposureLimit, correlationL
 		for _, h := range sectorHoldings {
 			sectorNotional = sectorNotional.Add(h.Notional)
 		}
-		frac, _ := coredecimal.Parse(fmt.Sprintf("%.4f", sectorLimit.MaxCapitalFraction))
+		frac, _ := coredecimal.Parse(strconv.FormatFloat(sectorLimit.MaxCapitalFraction, 'f', -1, 64))
 		capitalCap := ctx.InitialCapital.Mul(frac).Money()
 		if sectorNotional.Add(ctx.CandidateNotional).Cmp(capitalCap) > 0 {
 			return PortfolioExposureDecisionReject("SECTOR_CAPITAL_LIMIT")
@@ -143,3 +150,19 @@ func correlation(left, right []float64) float64 {
 }
 
 // MoneyCap stub placeholders for sector capital limit omitted intentionally; handled below.
+
+// NewSectorExposureLimit validates inputs like Java record.
+func NewSectorExposureLimit(maxPositions int, maxCapitalFraction float64) (SectorExposureLimit, error) {
+	if maxPositions < 0 || !math.IsNaN(maxCapitalFraction) && !math.IsInf(maxCapitalFraction, 0) || maxCapitalFraction < 0 || maxCapitalFraction > 1 {
+		return SectorExposureLimit{}, fmt.Errorf("Sector exposure limits must be non-negative and bounded")
+	}
+	return SectorExposureLimit{MaxPositions: maxPositions, MaxCapitalFraction: maxCapitalFraction}, nil
+}
+
+// NewCorrelationExposureLimit validates inputs like Java record.
+func NewCorrelationExposureLimit(maxAbsoluteCorrelation float64, lookbackDays int) (CorrelationExposureLimit, error) {
+	if !math.IsNaN(maxAbsoluteCorrelation) && !math.IsInf(maxAbsoluteCorrelation, 0) || maxAbsoluteCorrelation < 0 || maxAbsoluteCorrelation > 1 || lookbackDays < 2 {
+		return CorrelationExposureLimit{}, fmt.Errorf("Correlation exposure limits must be bounded with a valid lookback")
+	}
+	return CorrelationExposureLimit{MaxAbsoluteCorrelation: maxAbsoluteCorrelation, LookbackDays: lookbackDays}, nil
+}

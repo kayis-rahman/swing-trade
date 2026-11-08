@@ -8,13 +8,8 @@ import (
 	domain "github.com/kayis-rahman/swing-trade/go/core/domain"
 )
 
-const portfolioSettlementT2Days = 1
-
 // PortfolioBacktestEngineSimulate runs the shared-capital portfolio backtest.
-func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config PortfolioBacktestConfig, evaluationStart, evaluationEnd time.Time, optional ...any) (PortfolioBacktestResult, error) {
-	if symbolResults == nil {
-		// allow empty
-	}
+func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config PortfolioBacktestConfig, evaluationStart, evaluationEnd time.Time, optional ...any) (PortfolioBacktestResult, error) { //nolint:funlen
 	marketData := map[string][]domain.OhlcvCandle{}
 	sectors := map[string]string{}
 	var benchmark *domain.BenchmarkCandleSeries
@@ -40,10 +35,10 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 		}
 	}
 	if evaluationStart.IsZero() || evaluationEnd.IsZero() || evaluationStart.After(evaluationEnd) {
-		return PortfolioBacktestResult{}, fmt.Errorf("Portfolio inputs must be non-null and the window must be ordered")
+		return PortfolioBacktestResult{}, fmt.Errorf("Portfolio inputs must be non-null and the window must be ordered") //nolint:staticcheck // exact Java message
 	}
 	if config.InitialCapital.Cmp(coredecimal.Decimal{}) <= 0 || config.MaxConcurrentPositions <= 0 {
-		return PortfolioBacktestResult{}, fmt.Errorf("Portfolio capital and max positions must be positive")
+		return PortfolioBacktestResult{}, fmt.Errorf("Portfolio capital and max positions must be positive") //nolint:staticcheck // exact Java message
 	}
 	if config.RiskManagementPolicy == nil {
 		config.RiskManagementPolicy = domain.RiskManagementPolicyNone()
@@ -127,10 +122,10 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 				InitialStop:           held.StopLoss,
 				Target:                held.Target,
 				CurrentClose:          candle.Close,
-				CurrentLow:           candle.Low,
-				CurrentHigh:          candle.High,
+				CurrentLow:            candle.Low,
+				CurrentHigh:           candle.High,
 				HighestCloseBeforeBar: hc,
-				HoldingDays:          int(date.Sub(held.EntryDate).Hours() / 24),
+				HoldingDays:           int(date.Sub(held.EntryDate).Hours() / 24),
 			}
 			decision := config.RiskManagementPolicy(ctx)
 			if decision.Exit {
@@ -171,13 +166,18 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 		for _, candidate := range entriesByDate[date] {
 			notional := portfolioEntryNotional(candidate)
 			baseRejection := ""
+			openPosition := false
 			if _, ok := open[candidate.Symbol]; ok {
+				openPosition = true
+			}
+			switch {
+			case openPosition:
 				baseRejection = "OPEN_POSITION"
-			} else if len(open) >= config.MaxConcurrentPositions {
+			case len(open) >= config.MaxConcurrentPositions:
 				baseRejection = "MAX_CONCURRENT_POSITIONS"
-			} else if notional.Cmp(coredecimal.Decimal{}) <= 0 {
+			case notional.Cmp(coredecimal.Decimal{}) <= 0:
 				baseRejection = "INVALID_NOTIONAL"
-			} else if notional.Cmp(cash) > 0 {
+			case notional.Cmp(cash) > 0:
 				baseRejection = "INSUFFICIENT_CAPITAL"
 			}
 			exposureAccepted := true
@@ -186,9 +186,14 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 				// build open holdings
 				holdings := []domain.PortfolioExposureContextHolding{}
 				for _, h := range openList(open) {
+					var sector *string
+					if sec, ok := sectors[h.Symbol]; ok {
+						v := sec
+						sector = &v
+					}
 					holdings = append(holdings, domain.PortfolioExposureContextHolding{
 						Symbol:   h.Symbol,
-						Sector:   strPtr(sectors[h.Symbol]),
+						Sector:   sector,
 						Notional: portfolioEntryNotional(h),
 					})
 				}
@@ -217,8 +222,8 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 				}
 				decision := config.PortfolioExposurePolicy(domain.PortfolioExposureContext{
 					CandidateSymbol:   candidate.Symbol,
-					CandidateSector:    candidateSector,
-					CandidateNotional:  notional,
+					CandidateSector:   candidateSector,
+					CandidateNotional: notional,
 					InitialCapital:    config.InitialCapital,
 					OpenHoldings:      holdings,
 					ClosingPrices:     closingPrices,
@@ -255,7 +260,7 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 			Date:                date,
 			Equity:              cash.Add(unsettled).Add(positionValue),
 			SettledCash:         cash,
-			UnsettledProceeds:  unsettled,
+			UnsettledProceeds:   unsettled,
 			PositionMarketValue: positionValue,
 		}
 		equityCurve = append(equityCurve, equityCurvePoint)
@@ -285,20 +290,20 @@ func PortfolioBacktestEngineSimulate(symbolResults []BacktestResult, config Port
 	return PortfolioBacktestResult{
 		EvaluationStart:     evaluationStart,
 		EvaluationEnd:       evaluationEnd,
-		InitialCapital:     config.InitialCapital,
-		FinalCapital:       finalCapital,
-		TotalReturn:        totalReturn,
-		MaxDrawdownPct:     maxDrawdown,
-		SharpeRatio:        SharpeRatio(equityValues),
-		CAGRPct:            cagr,
-		SortinoRatio:       SortinoRatio(equityValues),
-		CalmarRatio:        CalmarRatio(cagr, maxDrawdown),
-		TotalTrades:        len(accepted),
-		WinningTrades:      winners,
-		RejectedTrades:     rejected,
-		Trades:             accepted,
-		EquityCurve:        equityCurve,
-		RejectionReasons:   rejectionReasons,
+		InitialCapital:      config.InitialCapital,
+		FinalCapital:        finalCapital,
+		TotalReturn:         totalReturn,
+		MaxDrawdownPct:      maxDrawdown,
+		SharpeRatio:         SharpeRatio(equityValues),
+		CAGRPct:             cagr,
+		SortinoRatio:        SortinoRatio(equityValues),
+		CalmarRatio:         CalmarRatio(cagr, maxDrawdown),
+		TotalTrades:         len(accepted),
+		WinningTrades:       winners,
+		RejectedTrades:      rejected,
+		Trades:              accepted,
+		EquityCurve:         equityCurve,
+		RejectionReasons:    rejectionReasons,
 		BenchmarkComparison: benchmarkComparison,
 		StrategyVariantID:   strategyVariantID,
 	}, nil
@@ -325,7 +330,6 @@ func openList(open map[string]BacktestTrade) []BacktestTrade {
 	}
 	return out
 }
-
 
 func portfolioEntryNotional(trade BacktestTrade) coredecimal.Decimal {
 	q, _ := coredecimal.Parse(fmt.Sprintf("%d", trade.Quantity))
@@ -389,6 +393,7 @@ func portfolioReplaceAccepted(accepted []BacktestTrade, original, replacement Ba
 	for i := range accepted {
 		if accepted[i] == original {
 			accepted[i] = replacement
+			break
 		}
 	}
 }
@@ -445,15 +450,6 @@ func portfolioNextTradingDates(dates []time.Time) map[time.Time]time.Time {
 	}
 	return next
 }
-
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	v := s
-	return &v
-}
-
 
 func coredecimalParseInt(n int) coredecimal.Decimal {
 	d, _ := coredecimal.Parse(fmt.Sprintf("%d", n))

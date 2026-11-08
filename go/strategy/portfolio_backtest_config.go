@@ -21,6 +21,7 @@ type PortfolioBacktestConfig struct {
 	PortfolioExposurePolicy domain.PortfolioExposurePolicy
 }
 
+// WithDefaultsPolicies fills nil risk and exposure policies with no-op defaults.
 func (c PortfolioBacktestConfig) WithDefaultsPolicies() PortfolioBacktestConfig {
 	if c.RiskManagementPolicy == nil {
 		c.RiskManagementPolicy = domain.RiskManagementPolicyNone()

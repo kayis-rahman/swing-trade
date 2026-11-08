@@ -90,6 +90,8 @@ func (d Decimal) Sub(other Decimal) Decimal {
 	right := new(big.Int).Mul(other.value(), scaleUnit(scale-rightScale))
 	return Decimal{units: new(big.Int).Sub(left, right), scale: scale}
 }
+
+// Mul returns the product without mutating either operand.
 func (d Decimal) Mul(other Decimal) Decimal {
 	scale := d.Scale() + other.Scale()
 	return Decimal{units: new(big.Int).Mul(d.value(), other.value()), scale: scale}
@@ -207,7 +209,7 @@ func (d Decimal) Money() Decimal {
 		return d
 	}
 	if scale > MoneyScale {
-		div := scaleUnit(scale-MoneyScale)
+		div := scaleUnit(scale - MoneyScale)
 		q, r := new(big.Int), new(big.Int)
 		q.QuoRem(d.value(), div, r)
 		twoR := new(big.Int).Mul(r, big.NewInt(2))

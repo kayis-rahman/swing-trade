@@ -68,6 +68,7 @@ func TestRunSignalBacktestUsesNextOpenAndSignalsForExit(t *testing.T) {
 	if got.Trades[0].PnL.Cmp(wantPnL) != 0 {
 		t.Fatalf("net PnL = %s, want gross less Java Zerodha-cost result %s", got.Trades[0].PnL, wantPnL)
 	}
+	t.Logf("observed trade: entry=%s exit=%s reason=%s quantity=%d net_pnl=%s", got.Trades[0].EntryPrice, got.Trades[0].ExitPrice, got.Trades[0].ExitReason, got.Trades[0].Quantity, got.Trades[0].PnL)
 }
 
 func TestRunSignalBacktestLiquidatesAtFinalClose(t *testing.T) {
@@ -93,6 +94,7 @@ func TestRunSignalBacktestLiquidatesAtFinalClose(t *testing.T) {
 	if result.TotalTrades != 1 || result.Trades[0].ExitReason != ExitReasonTimeStop || !result.Trades[0].ExitDate.Equal(candles[3].Date) {
 		t.Fatalf("final liquidation = %+v, want one TIME_STOP trade on final candle", result.Trades)
 	}
+	t.Logf("observed final-close liquidation: date=%s exit=%s reason=%s", result.Trades[0].ExitDate.Format(time.RFC3339), result.Trades[0].ExitPrice, result.Trades[0].ExitReason)
 }
 
 func TestRunSignalBacktestReturnsStrategyErrors(t *testing.T) {
@@ -105,6 +107,7 @@ func TestRunSignalBacktestReturnsStrategyErrors(t *testing.T) {
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("error = %v, want wrapped strategy error", err)
 	}
+	t.Logf("observed strategy error returned to caller: %v", err)
 }
 
 func signalBacktestCandles(count int) []domain.OhlcvCandle {

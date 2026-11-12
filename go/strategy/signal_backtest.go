@@ -13,12 +13,12 @@ import (
 // candles. It mirrors BacktestEngine's configured-strategy path, including
 // next-bar-open entries, risk-budget sizing, costs, mark-to-market equity, and
 // final-bar liquidation.
-func RunSignalBacktest(symbol string, candles []domain.OhlcvCandle, config BacktestConfig, strategy SignalStrategy, params StrategyParamsView) (BacktestResult, error) {
+func RunSignalBacktest(symbol string, candles []domain.OhlcvCandle, config BacktestConfig, strategy SignalStrategy, params StrategyParamsView) (BacktestResult, error) { //nolint:funlen
 	if symbol == "" {
 		return BacktestResult{}, fmt.Errorf("symbol cannot be null or blank")
 	}
 	if len(candles) == 0 || strategy == nil {
-		return BacktestResult{}, fmt.Errorf("Config, strategy and params cannot be null")
+		return BacktestResult{}, fmt.Errorf("Config, strategy and params cannot be null") //nolint:staticcheck // exact Java message
 	}
 	context, err := NewMarketContext(symbol, candles)
 	if err != nil {
@@ -29,7 +29,7 @@ func RunSignalBacktest(symbol string, candles []domain.OhlcvCandle, config Backt
 		first = 0
 	}
 	if first >= last {
-		return BacktestResult{}, fmt.Errorf("Insufficient candles for strategy warm-up")
+		return BacktestResult{}, fmt.Errorf("Insufficient candles for strategy warm-up") //nolint:staticcheck // exact Java message
 	}
 
 	capital := config.InitialCapital.Money()

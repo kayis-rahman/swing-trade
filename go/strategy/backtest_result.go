@@ -2,6 +2,7 @@ package strategy
 
 import (
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
+	"github.com/kayis-rahman/swing-trade/go/core/domain"
 )
 
 // BacktestResult mirrors Java's com.swingtrade.strategy.BacktestResult.
@@ -21,5 +22,5 @@ type BacktestResult struct {
 	CAGRPct             float64
 	SortinoRatio        float64
 	CalmarRatio         float64
-	BenchmarkComparison BenchmarkComparison
+	BenchmarkComparison domain.BenchmarkComparison
 }

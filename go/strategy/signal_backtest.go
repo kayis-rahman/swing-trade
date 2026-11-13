@@ -20,6 +20,11 @@ func RunSignalBacktest(symbol string, candles []domain.OhlcvCandle, config Backt
 	if len(candles) == 0 || strategy == nil {
 		return BacktestResult{}, fmt.Errorf("Config, strategy and params cannot be null") //nolint:staticcheck // exact Java message
 	}
+	adjustedCandles := make([]domain.OhlcvCandle, len(candles))
+	for i, candle := range candles {
+		adjustedCandles[i] = candle.AdjustedForAnalysis()
+	}
+	candles = adjustedCandles
 	context, err := NewMarketContext(symbol, candles)
 	if err != nil {
 		return BacktestResult{}, err

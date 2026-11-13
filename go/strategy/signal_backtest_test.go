@@ -77,6 +77,45 @@ func TestRunSignalBacktestUsesNextOpenAndSignalsForExit(t *testing.T) {
 	t.Logf("observed trade: entry=%s exit=%s reason=%s quantity=%d net_pnl=%s", got.Trades[0].EntryPrice, got.Trades[0].ExitPrice, got.Trades[0].ExitReason, got.Trades[0].Quantity, got.Trades[0].PnL)
 }
 
+func TestRunSignalBacktestUsesAdjustedPricesConsistently(t *testing.T) {
+	candles := signalBacktestCandles(4)
+	for i := range candles {
+		adjClose, _ := coredecimal.Parse("50")
+		candles[i].AdjClose = adjClose
+	}
+	stop, _ := coredecimal.Parse("49")
+	target, _ := coredecimal.Parse("55")
+	exitPrice, _ := coredecimal.Parse("51")
+	strategy := backtestSignalStrategy{
+		entry: func(bar int) (Decision, error) {
+			if bar == 1 {
+				return Decision{Type: domain.SignalTypeBuy, SuggestedStop: &stop, SuggestedTarget: &target}, nil
+			}
+			return Decision{Type: domain.SignalTypeHold}, nil
+		},
+		exit: func(bar int, _ OpenPosition) (ExitDecision, error) {
+			if bar == 2 {
+				return ExitWith(ExitReasonSignalExit, exitPrice, "adjusted exit"), nil
+			}
+			return ExitHold(), nil
+		},
+	}
+	config := BacktestConfigDefaults()
+	config.InitialCapital, _ = coredecimal.Parse("10000")
+	config.SlippagePct = coredecimal.Decimal{}
+	config.BrokeragePerTrade = coredecimal.Decimal{}
+	result, err := RunSignalBacktest("TEST", candles, config, strategy, StrategyParamsViewOf(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := result.Trades[0].EntryPrice; got.Cmp(mustParseDecimal("50")) != 0 {
+		t.Fatalf("entry price = %s, want adjusted open 50", got)
+	}
+	if got := result.Trades[0].ExitPrice; got.Cmp(mustParseDecimal("51")) != 0 {
+		t.Fatalf("exit price = %s, want adjusted signal price 51", got)
+	}
+}
+
 func TestRunSignalBacktestLiquidatesAtFinalClose(t *testing.T) {
 	candles := signalBacktestCandles(4)
 	stop, _ := coredecimal.Parse("99")

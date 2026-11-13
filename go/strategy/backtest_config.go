@@ -13,7 +13,7 @@ type BacktestConfig struct {
 // BacktestConfigDefaults returns the standard single-strategy backtest settings.
 func BacktestConfigDefaults() BacktestConfig {
 	return BacktestConfig{
-		InitialCapital:    mustParseDecimal("100000"),
+		InitialCapital:    mustParseDecimal("500000"),
 		RiskPerTradePct:   mustParseDecimal("0.01"),
 		SlippagePct:       mustParseDecimal("0.001"),
 		BrokeragePerTrade: mustParseDecimal("20"),

@@ -26,6 +26,12 @@ func (s backtestSignalStrategy) EvaluateExit(_ MarketContext, bar int, position 
 }
 func (backtestSignalStrategy) CrossFieldRules() []CrossFieldRule { return nil }
 
+func TestBacktestConfigDefaultsInitialCapital(t *testing.T) {
+	if got := BacktestConfigDefaults().InitialCapital; got.Cmp(mustParseDecimal("500000")) != 0 {
+		t.Fatalf("initial capital = %s, want 500000", got.String())
+	}
+}
+
 func TestRunSignalBacktestUsesNextOpenAndSignalsForExit(t *testing.T) {
 	candles := signalBacktestCandles(4)
 	stop, _ := coredecimal.Parse("99")

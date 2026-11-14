@@ -2,9 +2,9 @@ name: Go CI
 
 on:
   push:
-    branches: [main, fm/swing-trade-go-port-full-v8]
+    branches: [main]
   pull_request:
-    branches: [main, fm/swing-trade-go-port-full-v8]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:

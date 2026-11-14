@@ -23,10 +23,7 @@ psql -h 127.0.0.1 -p 55432 -U postgres -c "create role swingtrade_user login sup
 psql -h 127.0.0.1 -p 55432 -U postgres -c "create database swingtrade_golden owner swingtrade_user"
 
 # 2. build the API jar offline (the Gradle cache is warm; no network needed).
-#    NB: backend/gradle/wrapper/gradle-wrapper.jar is untracked+gitignored (*.jar) and is absent from a
-#    fresh clone, so ./gradlew fails with "Unable to access jarfile" until it is restored from a
-#    working checkout (e.g. ../swing-trade/backend/gradle/wrapper/). It was restored locally for this
-#    run and is not part of any diff.
+#    (backend/gradle/wrapper/gradle-wrapper.jar is tracked since 2026-11-14; earlier clones lacked it.)
 cd backend && ./gradlew :api:bootJar --offline -q
 
 # 3. run it. The Jackson 3 fix in §1 landed after the first capture, so a plain
@@ -140,7 +137,7 @@ return a body-less 400 rather than the `ErrorResponse` envelope.
 
 | Rule | Evidence (case) |
 | --- | --- |
-| `LocalDateTime` has **no zone offset** and **microsecond precision** (6 fractional digits) | `"timestamp":"2026-10-15T07:33:23.818683"` on every error envelope, `settings`, `positions-performance` |
+| `LocalDateTime` has **no zone offset** and **microsecond precision**; `ISO_LOCAL_DATE_TIME` trims trailing fraction zeros and omits a zero fraction (`2026-11-13T18:00:00`, `2026-11-13T18:00:00.5`, observed 2026-11-14) | `"timestamp":"2026-10-15T07:33:23.818683"` on every error envelope, `settings`, `positions-performance` |
 | `LocalDate` is a bare `yyyy-MM-dd` | `"analyzedAt":"2026-10-15"`, `"date":"2026-10-15"` |
 | `BigDecimal` is emitted as a **JSON number**, never quoted, and keeps its scale | `paper-portfolios`: `"currentCapital":10000000.0`, `"initialCapital":10000000.0`, `"realizedPnl":0.0` (entity fields typed `BigDecimal`; a `double` would print `1.0E7`); `intraday-paper-session-no-bars`: `"initialCapital":100000`, `"finalCapital":100000`, `"netPnl":0`. **Correction to the first capture**, which claimed BigDecimal was quoted because `settings-trading` shows `"trading.initial_capital":"500000"` — that endpoint returns `Map<String,String>` built from `app_settings`, so those values are Java Strings, not BigDecimal |
 | `double`/`float` values are emitted as JSON numbers | `sentiment/RELIANCE/latest`: `"confidence":0.5` |

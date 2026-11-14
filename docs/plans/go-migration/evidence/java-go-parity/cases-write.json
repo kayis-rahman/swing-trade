@@ -1,0 +1,17 @@
+[
+ {"id":"F-API-SETTINGS-02 valid","method":"POST","path":"/api/settings/broker","body":{"broker":"yahoo"}},
+ {"id":"F-API-SETTINGS-01 after broker","method":"GET","path":"/api/settings"},
+ {"id":"F-API-SETTINGS-02 blank","method":"POST","path":"/api/settings/broker","body":{"broker":" "}},
+ {"id":"F-API-SETTINGS-02 missing","method":"POST","path":"/api/settings/broker","body":{}},
+ {"id":"F-API-SETTINGS-02 reset","method":"POST","path":"/api/settings/broker","body":{"broker":"yahoo"}},
+ {"id":"F-API-SETTINGS-08 put","method":"PUT","path":"/api/settings/discord","body":{"discord.webhook.url":"https://discord.example/hook","discord.webhook.enabled":"true"}},
+ {"id":"F-API-SETTINGS-07 after put","method":"GET","path":"/api/settings/discord"},
+ {"id":"F-API-SETTINGS-18 put","method":"PUT","path":"/api/settings/trading","body":{"trading.mode":"paper","trading.initial_capital":"750000"}},
+ {"id":"F-API-SETTINGS-18 zero capital","method":"PUT","path":"/api/settings/trading","body":{"trading.initial_capital":"0"}},
+ {"id":"F-API-SETTINGS-18 bad capital","method":"PUT","path":"/api/settings/trading","body":{"trading.initial_capital":"abc"}},
+ {"id":"F-API-SETTINGS-17 after put","method":"GET","path":"/api/settings/trading"},
+ {"id":"F-API-SETTINGS-20 put","method":"PUT","path":"/api/settings/scanning","body":{"candidate-scan.max-concurrent":"6"}},
+ {"id":"F-API-SETTINGS-20 too many","method":"PUT","path":"/api/settings/scanning","body":{"candidate-scan.max-concurrent":"13"}},
+ {"id":"F-API-SETTINGS-20 missing","method":"PUT","path":"/api/settings/scanning","body":{}},
+ {"id":"F-API-SETTINGS-19 after put","method":"GET","path":"/api/settings/scanning"}
+]

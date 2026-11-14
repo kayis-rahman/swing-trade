@@ -36,9 +36,14 @@ function normalize(value: unknown, path: string): unknown {
   const record = value as Record<string, unknown>
   const normalized = Object.fromEntries(
     Object.keys(record)
+      .filter((key) => key !== 'timestamp')
       .sort()
       .map((key) => [key, normalize(record[key], path)])
   )
+  // systemInfo describes the serving runtime (JVM or Go) under Java's keys, so only its key set is comparable.
+  if (typeof normalized.systemInfo === 'object' && normalized.systemInfo !== null) {
+    normalized.systemInfo = Object.keys(normalized.systemInfo).sort()
+  }
   if (path === '/api/watchlist/all' && Array.isArray(normalized.data)) {
     normalized.data = [...normalized.data].sort((left, right) => {
       const leftId = Number((left as Record<string, unknown>).id)

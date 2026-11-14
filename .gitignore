@@ -4,6 +4,7 @@
 # Package files
 *.jar
 !libs/fyersjavasdk-1.9.0.jar
+!backend/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 *.nar

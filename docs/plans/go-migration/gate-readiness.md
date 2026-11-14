@@ -15,12 +15,12 @@ Reference: `phase-4-strategy-backtest.md` -> `## Gate G4 exit criteria`.
 
 | Exit criterion | Status | Evidence in repo | Missing |
 | --- | --- | --- | --- |
-| Zero diff on decimal paths | OPEN | `go/strategy/decimal_num.go`, `decimal_math.go`, `market_context.go`, `market_context_indicators.go`; `F-STRAT-IND-01..11` rows are `parity-pending` | Golden-signal comparison over the full watchlist history; parallel-run output; Java golden vectors beyond the committed red tests |
-| Trade lists identical | OPEN | Intraday backtest engine now ported (`go/strategy/intraday_backtest_engine.go`); backtest/portfolio engines still absent | Backtest engines and their translated Java tests; trade-list comparison report |
+| Zero diff on decimal paths | PARTIAL | `TechnicalIndicators` (`F-STRAT-IND-01..10`) match Java-emitted vectors bit for bit (`TestIndicatorsMatchJavaVectorsBitForBit`, [evidence](evidence/java-go-endpoint-parity.md#indicator-vectors)); `F-STRAT-IND-11` onward remain `parity-pending` | Golden-signal comparison over the full watchlist history; parallel-run output; Java vectors for gates, strategies and the market context |
+| Trade lists identical | OPEN | Intraday, portfolio and signal-driven backtest engines ported (`go/strategy/intraday_backtest_engine.go`, `portfolio_backtest_engine.go`, `signal_backtest.go`) | Java-versus-Go trade-list comparison report over real history |
 | Documented tolerances only on float paths that are float in Java too | PARTIAL | Porting notes in `phase-4-strategy-backtest.md`; float-path rationale documented | Final tolerance table with measured diffs; floats remain parity-pending |
 | Performance recorded | OPEN | none | Performance comparison on the Pi against Java |
 
-Ledger: no `F-STRAT-IND-*` row moved to `closed`; all remain `parity-pending`.
+Ledger: `F-STRAT-IND-01..10` are `closed` on Java-vector evidence; the remaining `F-STRAT-IND-*` rows are `parity-pending`.
 
 Gate G4 verdict: NOT READY. Signature: ______________ Date: ______________
 
@@ -47,7 +47,7 @@ Reference: `phase-6-orchestration-writes.md` -> `## Gate G6 exit criteria`.
 | --- | --- | --- | --- |
 | Run outputs equal | PARTIAL | `go` job orchestrator package, signal arbiter, candidate scans and writes | Full E2E comparison on a scratch database; Java-versus-Go run summaries and persisted signals |
 | SSE streams equal | OPEN | `WriteSSE` helper exists in `go/api/sse.go` and is exercised by `go/api/helpers_test.go`, but no stream endpoint or consumer uses it | SSE stream endpoints/consumers, heartbeat and ordering implementation, and parity tests |
-| Playwright green | OPEN | existing Playwright suite only | Unchanged Playwright run against Go on scratch stack |
+| Playwright green | OPEN | Unchanged suite run against Go on a scratch stack on 2026-11-14: 123 passed, 14 failed, 5 skipped with the public rate window lifted ([evidence](evidence/java-go-endpoint-parity.md#playwright-against-go)) | Go routes for positions, OpenAPI `/api-docs`, strategy report, job runs and orchestrator views, and JVM/application metric names |
 | Two weekly cycles without duplicate or missed jobs | OPEN | scheduler-off gates remain default false | Two-cycle scheduler soak report (digests included) |
 
 In-flight at baseline: none; the signal pipeline/scans slices landed in #166. Telegram is intentionally not ported (Discord schedulers landed in slice F).

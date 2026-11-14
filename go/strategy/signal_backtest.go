@@ -3,6 +3,7 @@ package strategy
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
@@ -14,10 +15,10 @@ import (
 // next-bar-open entries, risk-budget sizing, costs, mark-to-market equity, and
 // final-bar liquidation.
 func RunSignalBacktest(symbol string, candles []domain.OhlcvCandle, config BacktestConfig, strategy SignalStrategy, params StrategyParamsView) (BacktestResult, error) { //nolint:funlen
-	if symbol == "" {
-		return BacktestResult{}, fmt.Errorf("symbol cannot be null or blank")
+	if strings.TrimSpace(symbol) == "" {
+		return BacktestResult{}, fmt.Errorf("Symbol cannot be null or blank") //nolint:staticcheck // exact Java message
 	}
-	if len(candles) == 0 || strategy == nil {
+	if strategy == nil {
 		return BacktestResult{}, fmt.Errorf("Config, strategy and params cannot be null") //nolint:staticcheck // exact Java message
 	}
 	adjustedCandles := make([]domain.OhlcvCandle, len(candles))
@@ -99,7 +100,7 @@ func RunSignalBacktest(symbol string, candles []domain.OhlcvCandle, config Backt
 
 func closeSignalTrade(symbol string, open OpenPosition, exitPrice coredecimal.Decimal, exitDate time.Time, exitIndex int, reason ExitReason, config BacktestConfig) BacktestTrade {
 	filledExit := exitPrice.Mul(oneMinus(config.SlippagePct))
-	quantity := coredecimalDecimalInt(open.Quantity)
+	quantity := coredecimalParseInt(open.Quantity)
 	grossPnL := filledExit.Sub(open.EntryPrice).Mul(quantity)
 	costs := ZerodhaDeliveryCostModel()(open.EntryPrice, filledExit, open.Quantity, config.BrokeragePerTrade)
 	pnl := grossPnL.Sub(costs).Money()
@@ -117,7 +118,7 @@ func markToMarketSignal(capital coredecimal.Decimal, open *OpenPosition, close c
 	if open == nil {
 		return capital
 	}
-	unrealized := close.Sub(open.EntryPrice).Mul(coredecimalDecimalInt(open.Quantity))
+	unrealized := close.Sub(open.EntryPrice).Mul(coredecimalParseInt(open.Quantity))
 	return capital.Add(unrealized).Money()
 }
 
@@ -135,10 +136,10 @@ func buildSignalBacktestResult(symbol string, trades []BacktestTrade, curve []co
 	}
 	avgGain, avgLoss := coredecimal.Decimal{}, coredecimal.Decimal{}
 	if wins > 0 {
-		avgGain = decimalQuotientRounded(gainTotal, coredecimalDecimalInt(wins), coredecimal.PercentScale)
+		avgGain = decimalQuotientRounded(gainTotal, coredecimalParseInt(wins), coredecimal.PercentScale)
 	}
 	if losses > 0 {
-		avgLoss = absDecimal(decimalQuotientRounded(lossTotal, coredecimalDecimalInt(losses), coredecimal.PercentScale))
+		avgLoss = absDecimal(decimalQuotientRounded(lossTotal, coredecimalParseInt(losses), coredecimal.PercentScale))
 	}
 	winRate := 0.0
 	if len(trades) > 0 {
@@ -161,8 +162,8 @@ func buildSignalBacktestResult(symbol string, trades []BacktestTrade, curve []co
 }
 
 func riskBudgetShares(capital, riskPct, riskPerShare coredecimal.Decimal) int {
-	riskBudget := new(big.Rat).Mul(decimalRat(capital), decimalRat(riskPct))
-	shares := new(big.Rat).Quo(riskBudget, decimalRat(riskPerShare))
+	riskBudget := new(big.Rat).Mul(ratOf(capital), ratOf(riskPct))
+	shares := new(big.Rat).Quo(riskBudget, ratOf(riskPerShare))
 	if shares.Sign() <= 0 {
 		return 0
 	}
@@ -171,14 +172,6 @@ func riskBudgetShares(capital, riskPct, riskPerShare coredecimal.Decimal) int {
 		return int(coredecimal.Int32Max)
 	}
 	return int(whole.Int64())
-}
-
-func decimalRat(value coredecimal.Decimal) *big.Rat {
-	return new(big.Rat).SetFrac(value.Units(), new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(value.Scale())), nil))
-}
-
-func coredecimalDecimalInt(value int) coredecimal.Decimal {
-	return coredecimal.FromUnits(big.NewInt(int64(value) * 10_000))
 }
 
 func onePlus(value coredecimal.Decimal) coredecimal.Decimal  { return oneDecimal().Add(value) }

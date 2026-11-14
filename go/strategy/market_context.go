@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	coredecimal "github.com/kayis-rahman/swing-trade/go/core/decimal"
@@ -64,11 +65,11 @@ func MarketContextOf(symbol string, candles []domain.OhlcvCandle) MarketContext 
 
 // NewMarketContext validates and builds a daily market context.
 func NewMarketContext(symbol string, candles []domain.OhlcvCandle) (MarketContext, error) {
-	if symbol == "" {
-		return MarketContext{}, fmt.Errorf("symbol cannot be null or blank")
+	if strings.TrimSpace(symbol) == "" {
+		return MarketContext{}, fmt.Errorf("Symbol cannot be null or blank") //nolint:staticcheck // exact Java message
 	}
 	if len(candles) == 0 {
-		return MarketContext{}, fmt.Errorf("candles cannot be null or empty")
+		return MarketContext{}, fmt.Errorf("Candles cannot be null or empty") //nolint:staticcheck // exact Java message
 	}
 	ctx := MarketContext{
 		symbol:      symbol,

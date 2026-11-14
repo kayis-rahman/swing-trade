@@ -49,6 +49,7 @@ reports/
 *.log
 *.tmp
 *.temp
+__pycache__/
 
 # Environment files
 .env

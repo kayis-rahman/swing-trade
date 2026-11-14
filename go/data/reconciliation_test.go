@@ -221,3 +221,23 @@ func TestNewReconcilerValidatesDependencies(t *testing.T) {
 		t.Fatal("nil dependencies accepted")
 	}
 }
+
+// ParseYahooChart dates daily bars at exchange-local (IST) midnight, which is
+// the previous day in UTC; the reconciler must match them on the IST calendar
+// date like Java's LocalDate.
+func TestReconciliationPreviewMatchesYahooBarsOnExchangeDate(t *testing.T) {
+	ist := time.FixedZone("IST", 5*60*60+30*60)
+	bar := intradayBar(t, "TCS", utcDay(2026, 9, 15), barClock(15, 15), "4000")
+	bar.Timeframe = "1d"
+	bar.Date = time.Date(2026, 9, 15, 0, 0, 0, 0, ist)
+	provider := &intradayProvider{fetches: map[string][]YahooCandle{"TCS": {bar}}}
+	reconciler := newReconcilerForTest(t, &fakeCoverage{verified: true}, &fakeRangeStore{}, provider)
+
+	report, err := reconciler.PreviewReconciliation(context.Background(), "TCS", utcDay(2026, 9, 15), utcDay(2026, 9, 15))
+	if err != nil {
+		t.Fatalf("PreviewReconciliation() error = %v", err)
+	}
+	if report.Status != "COMPLETED" || len(report.SourceIncomplete) != 0 {
+		t.Fatalf("status = %q, source incomplete = %s; want the IST-dated bar to cover 2026-09-15", report.Status, report.SourceIncomplete)
+	}
+}

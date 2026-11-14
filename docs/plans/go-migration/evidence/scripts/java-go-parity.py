@@ -28,7 +28,7 @@ import urllib.request
 
 VOLATILE_KEYS = {"timestamp", "uptime", "uptimeSeconds", "javaVersion", "memory",
                  "freeMemory", "totalMemory", "maxMemory", "usedMemory", "responseTimeMs",
-                 "checkedAt", "lastChecked", "traceId", "path"}
+                 "checkedAt", "lastChecked", "traceId"}
 
 
 def call(base: str, case: dict) -> tuple[int, object]:

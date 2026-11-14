@@ -101,12 +101,12 @@ func MarketContextOfIntraday(symbol string, candles []domain.OhlcvCandle, timest
 
 // NewMarketContextIntraday attaches session timestamps to a daily context.
 func NewMarketContextIntraday(symbol string, candles []domain.OhlcvCandle, timestamps []time.Time) (MarketContext, error) {
-	if len(timestamps) != len(candles) {
-		return MarketContext{}, fmt.Errorf("intraday timestamps must match candle count")
-	}
 	ctx, err := NewMarketContext(symbol, candles)
 	if err != nil {
 		return MarketContext{}, err
+	}
+	if len(timestamps) != len(candles) {
+		return MarketContext{}, fmt.Errorf("Intraday timestamps must match candle count") //nolint:staticcheck // exact Java message
 	}
 	ts := append([]time.Time(nil), timestamps...)
 	ctx.intradayTimestamps = ts

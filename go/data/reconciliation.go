@@ -207,7 +207,8 @@ func (reconciler *Reconciler) incompleteSourceDates(
 	}
 	validSource := make(map[string]YahooCandle, len(source))
 	for _, candle := range source {
-		key := utcDateOnly(candle.Date).Format(time.DateOnly)
+		// The bar's own calendar date: Yahoo bars are dated at exchange-local midnight.
+		key := candle.Date.Format(time.DateOnly)
 		if _, ok := expectedSet[key]; !ok {
 			continue
 		}
@@ -253,10 +254,4 @@ func sortedStoredDates(storedSet map[string]struct{}) []time.Time {
 	}
 	sort.Slice(storedDates, func(i, j int) bool { return storedDates[i].Before(storedDates[j]) })
 	return storedDates
-}
-
-// utcDateOnly maps a provider candle instant to the stored UTC-midnight date.
-func utcDateOnly(t time.Time) time.Time {
-	utc := t.UTC()
-	return time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
 }

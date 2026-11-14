@@ -16,7 +16,8 @@
 
 ## What was NOT run (pending)
 
-- Java backend run: no JDK 21 available locally. Recorded golden outputs remain the baseline.
+- Java backend run: not run in this pass. The 2026-11-14 side-by-side run in
+  [java-go-endpoint-parity.md](java-go-endpoint-parity.md) supersedes it.
 - Orchestrator runs and stage details: Go has the in-process `orchestrator` package but
   no HTTP routes/store wiring in `server.go` yet, so runs cannot be driven through the API.
 - Persisted signal generation and the three SSE streams (`/api/signals/generate-all/stream`,

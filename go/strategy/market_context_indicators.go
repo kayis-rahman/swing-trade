@@ -106,7 +106,7 @@ func computeATR(highs, lows, closes []decimalNum, period int) []decimalNum {
 }
 
 func maxDecimal(a, b decimalNum) decimalNum {
-	if a.coefficient.Cmp(b.coefficient) >= 0 {
+	if a.compare(b) >= 0 {
 		return a
 	}
 	return b
@@ -121,7 +121,7 @@ func computeHighest(series []decimalNum, period int) []decimalNum {
 		}
 		mx := series[start]
 		for j := start + 1; j <= i; j++ {
-			if series[j].coefficient.Cmp(mx.coefficient) > 0 {
+			if series[j].compare(mx) > 0 {
 				mx = series[j]
 			}
 		}
@@ -139,7 +139,7 @@ func computeLowest(series []decimalNum, period int) []decimalNum {
 		}
 		mn := series[start]
 		for j := start + 1; j <= i; j++ {
-			if series[j].coefficient.Cmp(mn.coefficient) < 0 {
+			if series[j].compare(mn) < 0 {
 				mn = series[j]
 			}
 		}

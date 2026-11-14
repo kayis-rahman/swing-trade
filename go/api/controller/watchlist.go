@@ -86,8 +86,11 @@ func formatOptionalTimestamp(value *time.Time) *string {
 	return &formatted
 }
 
+// javaLocalDateTime matches Jackson's ISO_LOCAL_DATE_TIME for LocalDateTime:
+// no offset, seconds always present, and the fraction printed only to its last
+// significant digit (omitted when zero). Java clocks tick in microseconds.
 func javaLocalDateTime(value time.Time) string {
-	return value.Format("2006-01-02T15:04:05.000000")
+	return value.Truncate(time.Microsecond).Format("2006-01-02T15:04:05.999999")
 }
 
 func stringValuePtr(value string) *string { return &value }

@@ -26,9 +26,9 @@ SERVER_PORT=8090 go run ./go/api/cmd/swingtrade-api
 
 ## Java
 
-A Java 21 JDK is not installed in this environment, so the comparator could not
-start the backend. Java recorded outputs in `docs/plans/go-migration/evidence/goldens`
-remain the comparison baseline; re-run against a Java instance once JDK is available.
+JDK 21 is available as `/opt/homebrew/opt/openjdk@21`. Run Java and Go side by side against the
+same cluster and compare them with `scripts/java-go-parity.py`; the commands and the
+2026-11-14 results are in [java-go-endpoint-parity.md](java-go-endpoint-parity.md).
 
 ## Cleanup
 

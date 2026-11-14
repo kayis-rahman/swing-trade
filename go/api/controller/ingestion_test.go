@@ -59,14 +59,14 @@ func TestIngestionStatusEndpointMatchesJavaEnvelopeAndFormats(t *testing.T) {
 		`"dataQuality":"excellent"`,
 		`"hasData":true`,
 		`"isActive":true`,
-		`"lastSyncedAt":"2026-10-24T16:30:00.000000"`,
+		`"lastSyncedAt":"2026-10-24T16:30:00"`,
 		`"name":"Tata Consultancy"`,
 		`"symbol":"NEW"`,
 		`"dataQuality":"no_data"`,
 		`"lastCandleDate":null`,
 		`"success":true`,
 		`"error":null`,
-		`"timestamp":"2026-10-25T07:00:00.000000"`,
+		`"timestamp":"2026-10-25T07:00:00"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("response missing %s: %s", want, body)
@@ -124,27 +124,45 @@ func reconcileRequest(path string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, path, nil)
 }
 
+// The expected messages and envelope were observed from the Java API's
+// GlobalExceptionHandler for the same requests.
 func TestReconcileEndpointValidatesParameters(t *testing.T) {
 	mux := http.NewServeMux()
-	RegisterIngestionReconcileRoute(mux, fakeWatchlistReader{}, &fakeReconciler{}, discardIngestionLogger(), fixedClock{now: time.Now()})
+	RegisterIngestionReconcileRoute(mux, fakeWatchlistReader{}, &fakeReconciler{}, discardIngestionLogger(), fixedClock{now: time.Date(2026, 9, 20, 10, 0, 0, 0, time.UTC)})
 
-	for name, path := range map[string]string{
-		"missing dates":  "/api/ingestion/reconcile",
-		"malformed date": "/api/ingestion/reconcile?from=14-09-2026&to=2026-09-18",
-		"reversed":       "/api/ingestion/reconcile?from=2026-09-18&to=2026-09-14",
-		"over ten days":  "/api/ingestion/reconcile?from=2026-09-01&to=2026-09-12",
+	for path, message := range map[string]string{
+		"/api/ingestion/reconcile":                               "Missing required parameter: from",
+		"/api/ingestion/reconcile?from=2026-09-14":               "Missing required parameter: to",
+		"/api/ingestion/reconcile?from=14-09-2026&to=2026-09-18": "Invalid value for 'from': expected LocalDate",
+		"/api/ingestion/reconcile?from=2026-09-14&to=2026-13-01": "Invalid value for 'to': expected LocalDate",
+		"/api/ingestion/reconcile?from=2026-09-18&to=2026-09-14": "reconciliation range must be at most 10 calendar days",
+		"/api/ingestion/reconcile?from=2026-09-01&to=2026-09-12": "reconciliation range must be at most 10 calendar days",
 	} {
-		t.Run(name, func(t *testing.T) {
+		t.Run(path, func(t *testing.T) {
 			response := httptest.NewRecorder()
 			mux.ServeHTTP(response, reconcileRequest(path))
-			if response.Code != http.StatusBadRequest {
-				t.Fatalf("GET %s = %d: %s", path, response.Code, response.Body.String())
-			}
-			body := response.Body.String()
-			if !strings.Contains(body, `"error":"VALIDATION_ERROR"`) || !strings.Contains(body, `"status":400`) {
-				t.Fatalf("validation envelope = %s", body)
+			want := `{"code":"VALIDATION_ERROR","fieldErrors":[],"message":"` + message +
+				`","path":"/api/ingestion/reconcile","status":400,"timestamp":"2026-09-20T10:00:00"}`
+			if response.Code != http.StatusBadRequest || strings.TrimSpace(response.Body.String()) != want {
+				t.Fatalf("GET %s = %d %s, want 400 %s", path, response.Code, response.Body.String(), want)
 			}
 		})
+	}
+}
+
+func TestJavaLocalDateTimeTrimsTrailingFractionZeros(t *testing.T) {
+	for _, tc := range []struct {
+		nanos int
+		want  string
+	}{
+		{0, "2026-09-20T10:00:00"},
+		{500_000_000, "2026-09-20T10:00:00.5"},
+		{123_000, "2026-09-20T10:00:00.000123"},
+		{818_683_999, "2026-09-20T10:00:00.818683"},
+	} {
+		if got := javaLocalDateTime(time.Date(2026, 9, 20, 10, 0, 0, tc.nanos, time.UTC)); got != tc.want {
+			t.Fatalf("javaLocalDateTime(%d ns) = %q, want %q", tc.nanos, got, tc.want)
+		}
 	}
 }
 
@@ -212,8 +230,9 @@ func TestReconcileEndpointAggregatesWatchlistReports(t *testing.T) {
 	}
 	body := response.Body.String()
 	if !strings.Contains(body, `"reports":[`) || !strings.Contains(body, `"symbol":"TCS"`) ||
-		!strings.Contains(body, `"symbol":"INFY"`) || !strings.Contains(body, `"status":"CALENDAR_INCOMPLETE"`) {
-		t.Fatalf("aggregated envelope = %s", body)
+		!strings.Contains(body, `"symbol":"INFY"`) || !strings.Contains(body, `"status":"CALENDAR_INCOMPLETE"`) ||
+		!strings.Contains(body, `],"status":"unknown"}`) {
+		t.Fatalf("aggregated envelope (Java maps a non-COMPLETED report to OperationStatus unknown) = %s", body)
 	}
 	if reconciler.calls != 2 {
 		t.Fatalf("reconciler calls = %d, want one per active symbol", reconciler.calls)
@@ -265,5 +284,15 @@ func TestReconcileEndpointSanitizesFailures(t *testing.T) {
 	body := response.Body.String()
 	if !strings.Contains(body, "Failed to reconcile") || strings.Contains(body, "secret provider detail") {
 		t.Fatalf("failure envelope = %s", body)
+	}
+}
+
+func TestJavaOperationStatusLowercasesKnownNames(t *testing.T) {
+	for status, want := range map[string]string{
+		"COMPLETED": "completed", "STARTED": "started", "SOURCE_INCOMPLETE": "unknown", "CALENDAR_INCOMPLETE": "unknown",
+	} {
+		if got := javaOperationStatus(status); got != want {
+			t.Fatalf("javaOperationStatus(%q) = %q, want %q", status, got, want)
+		}
 	}
 }

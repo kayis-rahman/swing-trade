@@ -21,7 +21,7 @@ func newFyersSymbolTestStore(t *testing.T) (context.Context, *FyersSymbolStore, 
 	schema := createCandleTestSchema(t, ctx, adminPool)
 
 	databaseURL := os.Getenv("SWINGTRADE_TEST_DATABASE_URL")
-	config, err := db.ReadOnlyPoolConfig(databaseURL)
+	config, err := db.IntegrationTestPoolConfig(databaseURL)
 	if err != nil {
 		t.Fatal("development database is not an authorized test target")
 	}

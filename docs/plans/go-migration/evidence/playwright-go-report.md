@@ -1,5 +1,8 @@
 # Playwright against Go API - run report
 
+> Superseded on 2026-11-14 by the Playwright section of [java-go-endpoint-parity.md](java-go-endpoint-parity.md):
+> the stage-sanity rows below labelled "Go parity bug" were HTTP 429 rate-limit responses, not response differences.
+
 Run date: 2026-11-02. Branch: `fm/swing-trade-go-playwright-on-go-v1`.
 Stack: disposable PostgreSQL 16 on 127.0.0.1:55433 (go_port_test), Go API on 127.0.0.1:8081, Vite dashboard on 127.0.0.1:3003 (proxies /api to Go).
 Stats from Playwright: expected=116, unexpected=20, skipped=7, total=143.

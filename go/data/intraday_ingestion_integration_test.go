@@ -22,7 +22,7 @@ func newIntradayTestService(t *testing.T, provider HistoricalCandleProvider) (*I
 	ctx, adminPool := newCandleIntegrationPool(t)
 	schema := createCandleTestSchema(t, ctx, adminPool)
 
-	config, err := db.ReadOnlyPoolConfig(os.Getenv("SWINGTRADE_TEST_DATABASE_URL"))
+	config, err := db.IntegrationTestPoolConfig(os.Getenv("SWINGTRADE_TEST_DATABASE_URL"))
 	if err != nil {
 		t.Fatal("development database is not an authorized test target")
 	}

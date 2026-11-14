@@ -74,7 +74,7 @@ func TestWatchlistReadEndpointsMatchJavaGoldenShape(t *testing.T) {
 			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 				t.Fatal(err)
 			}
-			if string(body["success"]) != "true" || string(body["error"]) != "null" || string(body["timestamp"]) != `"2026-10-15T07:00:00.000000"` {
+			if string(body["success"]) != "true" || string(body["error"]) != "null" || string(body["timestamp"]) != `"2026-10-15T07:00:00"` {
 				t.Fatalf("envelope does not match Java ApiResponse: %s", response.Body.String())
 			}
 		})

@@ -66,7 +66,7 @@ func newCandleIntegrationPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	t.Cleanup(cancel)
-	config, err := db.ReadOnlyPoolConfig(databaseURL)
+	config, err := db.IntegrationTestPoolConfig(databaseURL)
 	if err != nil {
 		t.Fatal("development database is not an authorized test target")
 	}

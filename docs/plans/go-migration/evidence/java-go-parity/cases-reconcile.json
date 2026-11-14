@@ -1,0 +1,87 @@
+[
+ {
+  "id": "rec-missing-from",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-missing-to",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-11-01",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-bad-from",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=x&to=2026-11-02",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-bad-to",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-11-01&to=2026-13-02",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-reversed",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-11-05&to=2026-11-01",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-all",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-10-01&to=2026-10-05",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-symbol",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-10-01&to=2026-10-05&symbol=reliance",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-symbol-unknown",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-10-01&to=2026-10-05&symbol=NOPE",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-calendar-unverified",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2028-01-03&to=2028-01-05",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "rec-empty-from",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=&to=2026-10-05"
+ },
+ {
+  "id": "rec-empty-symbol",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile?from=2026-10-01&to=2026-10-05&symbol=",
+  "unordered": [
+   "storedDates"
+  ]
+ }
+]

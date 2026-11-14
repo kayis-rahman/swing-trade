@@ -1,0 +1,113 @@
+[
+ {
+  "id": "F-API-HEALTH-01",
+  "method": "GET",
+  "path": "/api/health"
+ },
+ {
+  "id": "F-API-HEALTH-02",
+  "method": "GET",
+  "path": "/api/health/details"
+ },
+ {
+  "id": "F-API-HEALTH-03",
+  "method": "GET",
+  "path": "/api/health/database"
+ },
+ {
+  "id": "F-API-HEALTH-04",
+  "method": "GET",
+  "path": "/api/health/market-data"
+ },
+ {
+  "id": "F-API-HEALTH-05",
+  "method": "GET",
+  "path": "/api/health/llm"
+ },
+ {
+  "id": "F-API-HEALTH-06",
+  "method": "GET",
+  "path": "/api/health/full"
+ },
+ {
+  "id": "F-API-INGEST-07",
+  "method": "GET",
+  "path": "/api/ingestion/status"
+ },
+ {
+  "id": "F-API-INGEST-08",
+  "method": "GET",
+  "path": "/api/ingestion/reconcile",
+  "unordered": [
+   "storedDates"
+  ]
+ },
+ {
+  "id": "F-API-INGEST-10",
+  "method": "GET",
+  "path": "/api/holidays/today"
+ },
+ {
+  "id": "F-API-INGEST-11",
+  "method": "GET",
+  "path": "/api/holidays"
+ },
+ {
+  "id": "F-API-WATCH-01",
+  "method": "GET",
+  "path": "/api/watchlist"
+ },
+ {
+  "id": "F-API-WATCH-02",
+  "method": "GET",
+  "path": "/api/watchlist/all",
+  "unordered": [
+   "data"
+  ]
+ },
+ {
+  "id": "F-API-SETTINGS-01",
+  "method": "GET",
+  "path": "/api/settings"
+ },
+ {
+  "id": "F-API-SETTINGS-03",
+  "method": "GET",
+  "path": "/api/settings/llm"
+ },
+ {
+  "id": "F-API-SETTINGS-05",
+  "method": "GET",
+  "path": "/api/settings/gpuhub"
+ },
+ {
+  "id": "F-API-SETTINGS-07",
+  "method": "GET",
+  "path": "/api/settings/discord"
+ },
+ {
+  "id": "F-API-SETTINGS-17",
+  "method": "GET",
+  "path": "/api/settings/trading"
+ },
+ {
+  "id": "F-API-SETTINGS-19",
+  "method": "GET",
+  "path": "/api/settings/scanning"
+ },
+ {
+  "id": "F-API-ADMIN-02",
+  "method": "GET",
+  "path": "/api/admin/symbols/status"
+ },
+ {
+  "id": "F-API-SIGNALS-02",
+  "method": "GET",
+  "path": "/api/signals/latest"
+ },
+ {
+  "id": "F-API-STRATTYPE-01",
+  "method": "GET",
+  "path": "/api/strategy-types"
+ }
+]

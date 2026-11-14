@@ -53,7 +53,7 @@ func (r *StrategyConfigReader) ListStrategyConfigs(ctx context.Context) ([]Strat
 			ID: row.ID, VariantID: row.VariantID, Version: row.Version, StrategyType: row.StrategyType,
 			Params: row.Params, Overlays: row.Overlays, ParamsHash: row.ParamsHash, Mode: row.Mode,
 			PaperCapital: json.Number(*capital), Current: row.IsCurrent, Notes: nullableText(row.Notes),
-			CreatedAt: row.CreatedAt.Time.Format("2006-01-02T15:04:05.000000"),
+			CreatedAt: row.CreatedAt.Time.Format("2006-01-02T15:04:05.999999"),
 		})
 	}
 	return result, nil

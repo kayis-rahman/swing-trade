@@ -151,7 +151,7 @@ func writeHealth(w http.ResponseWriter, clk clock.Clock, response healthResponse
 		AvailableProcessors: runtime.NumCPU(), FreeMemoryMB: memoryMegabytes(memory.HeapIdle - memory.HeapReleased),
 		MaxMemoryMB: memoryMegabytes(memory.HeapSys), TotalMemoryMB: memoryMegabytes(memory.HeapAlloc),
 	}
-	response.Timestamp = clk.Now().Format("2006-01-02T15:04:05.000000")
+	response.Timestamp = javaLocalDateTime(clk.Now())
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(response)

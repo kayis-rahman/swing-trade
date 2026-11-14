@@ -32,7 +32,7 @@ func TestHealthReadEndpointsPreserveLegacyWireShape(t *testing.T) {
 			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 				t.Fatal(err)
 			}
-			if body["status"] != "UP" || body["timestamp"] != "2026-10-24T12:00:00.000000" {
+			if body["status"] != "UP" || body["timestamp"] != "2026-10-24T12:00:00" {
 				t.Fatalf("health envelope = %#v", body)
 			}
 			info, ok := body["systemInfo"].(map[string]any)

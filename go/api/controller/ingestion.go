@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -76,14 +77,6 @@ func formatDateOnly(value *time.Time) *string {
 	return &formatted
 }
 
-type validationErrorResponse struct {
-	Status    int    `json:"status"`
-	Error     string `json:"error"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-	Path      string `json:"path"`
-}
-
 // RegisterIngestionReconcileRoute adds the read-only reconciliation preview
 // endpoint, including Java's VALIDATION_ERROR envelope for bad ranges.
 func RegisterIngestionReconcileRoute(
@@ -102,84 +95,116 @@ func RegisterIngestionReconcileRoute(
 			return
 		}
 		query := r.URL.Query()
-		from, fromErr := time.Parse("2006-01-02", query.Get("from"))
-		to, toErr := time.Parse("2006-01-02", query.Get("to"))
-		if fromErr != nil || toErr != nil {
-			writeValidationError(w, r, clk, "invalid reconciliation date: from and to must be yyyy-mm-dd")
-			return
-		}
-		if to.Before(from) || from.AddDate(0, 0, 10).Before(to) {
-			writeValidationError(w, r, clk, data.ErrInvalidReconciliationRange.Error())
-			return
-		}
-		symbol := strings.ToUpper(strings.TrimSpace(query.Get("symbol")))
-		if symbol != "" {
-			report, err := reconciler.PreviewReconciliation(r.Context(), symbol, from, to)
-			if errors.Is(err, data.ErrInvalidReconciliationRange) {
-				writeValidationError(w, r, clk, err.Error())
+		from, message := requiredLocalDateParam(query, "from")
+		if message == "" {
+			var to time.Time
+			to, message = requiredLocalDateParam(query, "to")
+			if message == "" {
+				serveReconciliation(w, r, watchlist, reconciler, logger, clk, from, to)
 				return
 			}
-			if err != nil {
-				logger.ErrorContext(r.Context(), "reconciliation preview failed", "module", "api")
-				writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
-					Data: nil, Error: stringValuePtr("Failed to reconcile"),
-					Timestamp: javaLocalDateTime(clk.Now()),
-				})
-				return
-			}
-			writeResponseJSON(w, http.StatusOK, apiEnvelope{
-				Data: reconciliationReportJSON(report), Error: nil, Success: true,
-				Timestamp: javaLocalDateTime(clk.Now()),
-			})
+		}
+		writeValidationError(w, r, clk, message)
+	})
+}
+
+// requiredLocalDateParam mirrors Spring's binding of a required LocalDate
+// request parameter and the GlobalExceptionHandler messages for each failure;
+// Spring converts a blank value to null, which also counts as missing.
+func requiredLocalDateParam(query url.Values, name string) (time.Time, string) {
+	if strings.TrimSpace(query.Get(name)) == "" {
+		return time.Time{}, "Missing required parameter: " + name
+	}
+	value, err := time.Parse(time.DateOnly, query.Get(name))
+	if err != nil {
+		return time.Time{}, "Invalid value for '" + name + "': expected LocalDate"
+	}
+	return value, ""
+}
+
+func serveReconciliation(
+	w http.ResponseWriter,
+	r *http.Request,
+	watchlist data.WatchlistReadStore,
+	reconciler data.ReconciliationPreview,
+	logger *slog.Logger,
+	clk clock.Clock,
+	from, to time.Time,
+) {
+	query := r.URL.Query()
+	if to.Before(from) || from.AddDate(0, 0, 10).Before(to) {
+		writeValidationError(w, r, clk, data.ErrInvalidReconciliationRange.Error())
+		return
+	}
+	symbol := strings.ToUpper(strings.TrimSpace(query.Get("symbol")))
+	if symbol != "" {
+		report, err := reconciler.PreviewReconciliation(r.Context(), symbol, from, to)
+		if errors.Is(err, data.ErrInvalidReconciliationRange) {
+			writeValidationError(w, r, clk, err.Error())
 			return
 		}
-		if watchlist == nil {
-			writeResponseJSON(w, http.StatusServiceUnavailable, apiEnvelope{
-				Data: nil, Error: stringValuePtr("reconciliation preview is unavailable"),
-				Timestamp: javaLocalDateTime(clk.Now()),
-			})
-			return
-		}
-		entries, err := watchlist.ListActiveWatchlist(r.Context())
 		if err != nil {
-			logger.ErrorContext(r.Context(), "reconciliation watchlist read failed", "module", "api")
+			logger.ErrorContext(r.Context(), "reconciliation preview failed", "module", "api")
 			writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
 				Data: nil, Error: stringValuePtr("Failed to reconcile"),
 				Timestamp: javaLocalDateTime(clk.Now()),
 			})
 			return
 		}
-		reports := make([]map[string]any, 0, len(entries))
-		overall := "COMPLETED"
-		for _, entry := range entries {
-			if entry.Symbol == "" {
-				continue
-			}
-			report, err := reconciler.PreviewReconciliation(r.Context(), entry.Symbol, from, to)
-			if err != nil {
-				logger.ErrorContext(r.Context(), "reconciliation preview failed", "module", "api", "symbol", entry.Symbol)
-				writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
-					Data: nil, Error: stringValuePtr("Failed to reconcile"),
-					Timestamp: javaLocalDateTime(clk.Now()),
-				})
-				return
-			}
-			reports = append(reports, reconciliationReportJSON(report))
-			if overall == "COMPLETED" && report.Status != "COMPLETED" {
-				overall = report.Status
-			}
-		}
 		writeResponseJSON(w, http.StatusOK, apiEnvelope{
-			Data: map[string]any{"reports": reports, "status": overall}, Error: nil, Success: true,
+			Data: reconciliationReportJSON(report), Error: nil, Success: true,
 			Timestamp: javaLocalDateTime(clk.Now()),
 		})
+		return
+	}
+	if watchlist == nil {
+		writeResponseJSON(w, http.StatusServiceUnavailable, apiEnvelope{
+			Data: nil, Error: stringValuePtr("reconciliation preview is unavailable"),
+			Timestamp: javaLocalDateTime(clk.Now()),
+		})
+		return
+	}
+	entries, err := watchlist.ListActiveWatchlist(r.Context())
+	if err != nil {
+		logger.ErrorContext(r.Context(), "reconciliation watchlist read failed", "module", "api")
+		writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
+			Data: nil, Error: stringValuePtr("Failed to reconcile"),
+			Timestamp: javaLocalDateTime(clk.Now()),
+		})
+		return
+	}
+	reports := make([]map[string]any, 0, len(entries))
+	overall := "completed"
+	for _, entry := range entries {
+		if entry.Symbol == "" {
+			continue
+		}
+		report, err := reconciler.PreviewReconciliation(r.Context(), entry.Symbol, from, to)
+		if err != nil {
+			logger.ErrorContext(r.Context(), "reconciliation preview failed", "module", "api", "symbol", entry.Symbol)
+			writeResponseJSON(w, http.StatusInternalServerError, apiEnvelope{
+				Data: nil, Error: stringValuePtr("Failed to reconcile"),
+				Timestamp: javaLocalDateTime(clk.Now()),
+			})
+			return
+		}
+		reports = append(reports, reconciliationReportJSON(report))
+		if overall == "completed" && report.Status != "COMPLETED" {
+			overall = javaOperationStatus(report.Status)
+		}
+	}
+	writeResponseJSON(w, http.StatusOK, apiEnvelope{
+		Data: map[string]any{"reports": reports, "status": overall}, Error: nil, Success: true,
+		Timestamp: javaLocalDateTime(clk.Now()),
 	})
 }
 
+// writeValidationError renders Java's GlobalExceptionHandler ErrorResponse
+// for VALIDATION_ERROR: the path excludes the query string.
 func writeValidationError(w http.ResponseWriter, r *http.Request, clk clock.Clock, message string) {
-	writeResponseJSON(w, http.StatusBadRequest, validationErrorResponse{
-		Status: http.StatusBadRequest, Error: "VALIDATION_ERROR", Message: message,
-		Timestamp: javaLocalDateTime(clk.Now()), Path: r.URL.RequestURI(),
+	writeResponseJSON(w, http.StatusBadRequest, holidayExceptionResponse{
+		Code: "VALIDATION_ERROR", FieldErrors: []string{}, Message: message,
+		Path: r.URL.Path, Status: http.StatusBadRequest, Timestamp: javaLocalDateTime(clk.Now()),
 	})
 }
 
@@ -229,4 +254,14 @@ func formatDateList(dates []time.Time) []string {
 		formatted = append(formatted, date.Format(time.DateOnly))
 	}
 	return formatted
+}
+
+// javaOperationStatus mirrors IngestionController.OperationStatus: from()
+// maps unknown names to UNKNOWN and Jackson writes the lower-case toString().
+func javaOperationStatus(status string) string {
+	switch status {
+	case "STARTED", "COMPLETED", "ADDED", "REMOVED":
+		return strings.ToLower(status)
+	}
+	return "unknown"
 }

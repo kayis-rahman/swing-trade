@@ -23,7 +23,7 @@ func TestStrategyConfigReader(t *testing.T) {
 	if err != nil || len(rows) != 1 {
 		t.Fatalf("rows=%v err=%v", rows, err)
 	}
-	if rows[0].PaperCapital != "500000.00" || string(rows[0].Params) != `{"lookback":5}` || rows[0].CreatedAt != "2026-01-02T03:04:05.000000" {
+	if rows[0].PaperCapital != "500000.00" || string(rows[0].Params) != `{"lookback":5}` || rows[0].CreatedAt != "2026-01-02T03:04:05" {
 		t.Fatalf("unexpected row: %+v", rows[0])
 	}
 	mock.ExpectQuery("SELECT id, variant_id").WillReturnError(errors.New("database failure"))
